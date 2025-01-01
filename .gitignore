@@ -1,0 +1,9 @@
+/*
+*csproj.user
+
+!/src/
+
+!.gitignore
+!Directory.Build.props
+!MonoDetour.sln
+!README.md
