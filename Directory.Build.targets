@@ -1,0 +1,18 @@
+<Project>
+  <!-- References -->
+  <ItemGroup>
+    <PackageReference Include="MonoMod.RuntimeDetour" Version="25.2.0" />
+    <!-- <PackageReference Include="MonoMod.RuntimeDetour" Version="21.12.13.1" /> -->
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- https://github.com/manuelroemer/Nullable -->
+    <PackageReference
+      Include="Nullable"
+      Version="1.3.1"
+      PrivateAssets="all"
+    />
+  </ItemGroup>
+
+</Project>

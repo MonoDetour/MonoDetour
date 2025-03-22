@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoDetour", "src\MonoDetou
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApp", "src\TestApp\TestApp.csproj", "{E5269CF6-93C0-45F0-B24B-C2B6985A4F73}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoDetour.ILWeaver", "src\MonoDetour.ILWeaver\MonoDetour.ILWeaver.csproj", "{40F75F19-5FC4-48BB-9B53-BE37F9A199FD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,9 +28,14 @@ Global
 		{E5269CF6-93C0-45F0-B24B-C2B6985A4F73}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E5269CF6-93C0-45F0-B24B-C2B6985A4F73}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E5269CF6-93C0-45F0-B24B-C2B6985A4F73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40F75F19-5FC4-48BB-9B53-BE37F9A199FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40F75F19-5FC4-48BB-9B53-BE37F9A199FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40F75F19-5FC4-48BB-9B53-BE37F9A199FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40F75F19-5FC4-48BB-9B53-BE37F9A199FD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{19BDBE5C-70B0-42A9-A7CE-FB0E3B752106} = {4653E22C-E122-4B3F-BDF9-AFBAE05088D4}
 		{E5269CF6-93C0-45F0-B24B-C2B6985A4F73} = {4653E22C-E122-4B3F-BDF9-AFBAE05088D4}
+		{40F75F19-5FC4-48BB-9B53-BE37F9A199FD} = {4653E22C-E122-4B3F-BDF9-AFBAE05088D4}
 	EndGlobalSection
 EndGlobal

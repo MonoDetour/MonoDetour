@@ -2,13 +2,21 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+
+    <!-- Disable at some point. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../MonoDetour/MonoDetour.csproj"/>
+    <ProjectReference Include="../MonoDetour.ILWeaver/MonoDetour.ILWeaver.csproj"/>
   </ItemGroup>
+
+  <Target Name="ExecuteApp" AfterTargets="PostBuildEvent" Condition="'$(TargetFramework)' == 'net7.0'">
+    <Exec Command="$(TargetDir)$(TargetName)"/>
+  </Target>
+
 </Project>
