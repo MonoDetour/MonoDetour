@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+    <!-- <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier> -->
 
     <!-- Disable at some point. -->
     <GenerateDocumentationFile>false</GenerateDocumentationFile>

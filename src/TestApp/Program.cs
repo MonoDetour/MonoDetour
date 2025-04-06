@@ -6,7 +6,7 @@ using MonoMod.RuntimeDetour;
 
 static class Program
 {
-    internal static HookManager m = new();
+    internal static MonoDetourManager m = new();
 
     static void Main()
     {
@@ -29,15 +29,22 @@ static class Program
             m,
             static il =>
             {
-                Console.WriteLine("hi");
-                ILWeaver w = new(il);
-                w.GotoMatch(
-                        GotoType.FirstPredicate,
-                        x => x.MatchLdarg(0),
-                        x => true,
-                        x => x.Match(OpCodes.Ldsfld)
-                    )
-                    .Accept();
+                try
+                {
+                    Console.WriteLine("hi");
+                    ILWeaver w = new(il);
+                    w.GotoMatch(
+                            GotoType.FirstPredicate,
+                            x => x.MatchLdarg(0),
+                            x => true,
+                            x => x.Match(OpCodes.Ldsfld)
+                        )
+                        .Accept();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                }
             }
         );
 
@@ -62,10 +69,10 @@ static class Program
     }
 }
 
-[MonoDetourHooks(typeof(PlatformerController))]
+[MonoDetourTargets(typeof(PlatformerController))]
 class PlatformerControllerPatches
 {
-    [MonoDetour(DetourType.Prefix)]
+    [MonoDetourHook<PrefixDetour>()]
     internal static void MyPatch1(ref On.PlatformerController.SpinBounce.Params a)
     {
         Console.WriteLine("hello: " + a.power.ToString());
@@ -73,7 +80,7 @@ class PlatformerControllerPatches
         a.power += 1;
     }
 
-    [MonoDetour(DetourType.Postfix)]
+    [MonoDetourHook(DetourType.Postfix)]
     internal static void MyPatchPrintBar(in On.PlatformerController.SpinBounce.Params a)
     {
         Console.WriteLine("bar");

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
@@ -146,5 +147,17 @@ internal static class MonoDetourUtils
             parameterType = parameterType.GetElementType()!;
 
         return true;
+    }
+
+    public static void ThrowIfInvalidDetourType(
+        Type detourType,
+        [CallerArgumentExpression(nameof(detourType))] string name = ""
+    )
+    {
+        if (!typeof(IMonoDetourHookEmitter).IsAssignableFrom(detourType))
+            throw new ArgumentException(
+                $"{nameof(MonoDetourInfo)}.{nameof(MonoDetourInfo.DetourType)} must implement {nameof(IMonoDetourHookEmitter)}.",
+                name
+            );
     }
 }

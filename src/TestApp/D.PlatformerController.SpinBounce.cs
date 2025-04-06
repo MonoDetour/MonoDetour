@@ -22,20 +22,14 @@ public static class SpinBounce
 #endif
     }
 
-    public static void Prefix(global::MonoDetour.HookManager manager, MethodParams args) =>
-        manager.HookGenReflectedHook(
-            args,
-            new() { DetourType = DetourType.Prefix, Manipulator = args }
-        );
+    public static void Prefix(global::MonoDetour.MonoDetourManager manager, MethodParams args) =>
+        manager.HookGenReflectedHook(args, new(DetourType.Postfix));
 
-    public static void Postfix(global::MonoDetour.HookManager manager, MethodParams args) =>
-        manager.HookGenReflectedHook(
-            args,
-            new() { DetourType = DetourType.Postfix, Manipulator = args }
-        );
+    public static void Postfix(global::MonoDetour.MonoDetourManager manager, MethodParams args) =>
+        manager.HookGenReflectedHook(args, new(DetourType.Postfix));
 
     public static void ILHook(
-        global::MonoDetour.HookManager manager,
+        global::MonoDetour.MonoDetourManager manager,
         global::MonoMod.Cil.ILContext.Manipulator manipulator
     ) => manager.Hook(Target(), manipulator);
 

@@ -4,7 +4,7 @@ using System.Collections;
 public class PlatformerController
 {
     int num = 0;
-    bool bar = false;
+    private bool bar = false;
 
     public void SpinBounce(float power)
     {
@@ -18,7 +18,7 @@ public class PlatformerController
         // x.power = ref power2;
         // PlatformerControllerPatches.MyPatch2(ref x);
 
-        Console.WriteLine("continuing...");
+        Console.WriteLine($"continuing... {bar}, {num}");
 
         // var x = 5 * 2;
     }

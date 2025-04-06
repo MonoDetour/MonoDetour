@@ -200,33 +200,38 @@ public class ILWeaver(ILContext il)
         CodeBuilder err = new(new StringBuilder());
         if (matchedIndexes.Count > 0)
         {
-            err.WriteLine(
-                    $"- {nameof(ILWeaver)}.{nameof(GotoMatch)} matched all predicates more than once in the target method."
-                )
-                .IncreaseIndent()
-                .Write("- Total matches: ")
-                .WriteLine(matchedIndexes.Count)
-                .IncreaseIndent();
+            string GetMatchedTooManyError()
+            {
+                err.WriteLine(
+                        $"- {nameof(ILWeaver)}.{nameof(GotoMatch)} matched all predicates more than once in the target method."
+                    )
+                    .IncreaseIndent()
+                    .Write("- Total matches: ")
+                    .WriteLine(matchedIndexes.Count)
+                    .IncreaseIndent();
 
-            foreach (var match in matchedIndexes)
-                err.Write("- at indexes: ")
-                    .Write(match - predicates.Length + 1)
-                    .Write(" to ")
-                    .WriteLine(match);
+                foreach (var match in matchedIndexes)
+                    err.Write("- at indexes: ")
+                        .Write(match - predicates.Length + 1)
+                        .Write(" to ")
+                        .WriteLine(match);
 
-            err.DecreaseIndent()
-                .WriteLine("- HELP: Add more predicates to find a unique match.")
-                .IncreaseIndent()
-                .WriteLine($"- Documentation: {gotoMatchingDocsLink}")
-                .DecreaseIndent()
-                .WriteLine(
-                    $"- INFO: Use {nameof(ILWeaver)}.GotoMatchMultiple if you intend to match multiple instances."
-                )
-                .WriteLine(
-                    $"- INFO: Use {nameof(ILWeaver)}.GotoNext if you intend to only match the first valid instance."
-                );
+                err.DecreaseIndent()
+                    .WriteLine("- HELP: Add more predicates to find a unique match.")
+                    .IncreaseIndent()
+                    .WriteLine($"- Documentation: {gotoMatchingDocsLink}")
+                    .DecreaseIndent()
+                    .WriteLine(
+                        $"- INFO: Use {nameof(ILWeaver)}.GotoMatchMultiple if you intend to match multiple instances."
+                    )
+                    .WriteLine(
+                        $"- INFO: Use {nameof(ILWeaver)}.GotoNext if you intend to only match the first valid instance."
+                    );
 
-            return new ILWeaverAction(this, err.ToString());
+                return err.ToString();
+            }
+
+            return new ILWeaverAction(this, GetMatchedTooManyError);
         }
 
         // - ILWeaver.Find couldn't match all predicates.
@@ -240,57 +245,61 @@ public class ILWeaver(ILContext il)
         // [Detailed Info]
         // Best attempts are listed here.
         // The following attempts matched the number of predicates: 2
-        err
-        // .Write("Target method: ").WriteLine(Context.Method.FullName)
-        //     .Write("- Best attempts: predicates matched: ").Write(bestAttempts[0].count).WriteLine(" (see: [Detailed Info])")
-        .Write($"{nameof(ILWeaver)}.{nameof(GotoMatch)} couldn't match all predicates for method: ")
-            .WriteLine(Context.Method.FullName)
-            // .WriteLine("HELP: Instruction matching predicates must match a valid pattern in the target method's instructions.")
-            // .WriteLine("| NOTE: Other ILHooks could have modified the target method's instructions. <<CONDITIONAL>>")
-            // .WriteLine($"| HELP: Documentation: {gotoMatchingDocsLink}")
-            .Write("Matched predicates required: ")
-            .WriteLine(predicates.Length)
-            .Write("The following best attempts matched the number of predicates: ")
-            .WriteLine(bestAttempts[0].count);
-
-        if (bestAttempts[0].count == 0)
+        string GetNotMatchedAllError()
         {
-            err.WriteLine().WriteLine("<no meaningful data for 0 predicates matched>");
-            goto ret;
-        }
-
-        for (int i = 0; i < bestAttempts.Count; i++)
-        {
-            var (count, indexBeforeFailed) = bestAttempts[i];
-            var nextInstruction = Instructions[indexBeforeFailed + 1];
-            err.RemoveIndent()
-                .WriteLine()
-                .Write(i + 1)
-                .Write(". Matched predicates: ")
-                .Write(count)
-                .Write(" (at: ")
-                .Write(indexBeforeFailed - count + 1)
-                .Write(" to ")
-                .Write(indexBeforeFailed)
-                .WriteLine(')')
-                .IncreaseIndent()
-                .WriteLine("- next predicate didn't match instruction:")
-                .IncreaseIndent()
-                .Write("- ")
-                .Write(indexBeforeFailed + 1)
-                .Write(' ')
-                .WriteLine(nextInstruction.ToString())
-                .WriteLine(
-                    "- this instruction could be matched with any of the following predicates:"
+            err.Write(
+                    $"{nameof(ILWeaver)}.{nameof(GotoMatch)} couldn't match all predicates for method: "
                 )
-                .IncreaseIndent()
-                .WriteLine("- ignore OpCode and Operand:")
-                .IncreaseIndent()
-                .WriteLine("x => true");
+                .WriteLine(Context.Method.FullName)
+                // .WriteLine("HELP: Instruction matching predicates must match a valid pattern in the target method's instructions.")
+                // .WriteLine("| NOTE: Other ILHooks could have modified the target method's instructions. <<CONDITIONAL>>")
+                // .WriteLine($"| HELP: Documentation: {gotoMatchingDocsLink}")
+                .Write("Matched predicates required: ")
+                .WriteLine(predicates.Length)
+                .Write("The following best attempts matched the number of predicates: ")
+                .WriteLine(bestAttempts[0].count);
+
+            if (bestAttempts[0].count == 0)
+            {
+                err.WriteLine().WriteLine("<no meaningful data for 0 predicates matched>");
+            }
+            else
+            {
+                for (int i = 0; i < bestAttempts.Count; i++)
+                {
+                    var (count, indexBeforeFailed) = bestAttempts[i];
+                    var nextInstruction = Instructions[indexBeforeFailed + 1];
+                    err.RemoveIndent()
+                        .WriteLine()
+                        .Write(i + 1)
+                        .Write(". Matched predicates: ")
+                        .Write(count)
+                        .Write(" (at: ")
+                        .Write(indexBeforeFailed - count + 1)
+                        .Write(" to ")
+                        .Write(indexBeforeFailed)
+                        .WriteLine(')')
+                        .IncreaseIndent()
+                        .WriteLine("- next predicate didn't match instruction:")
+                        .IncreaseIndent()
+                        .Write("- ")
+                        .Write(indexBeforeFailed + 1)
+                        .Write(' ')
+                        .WriteLine(nextInstruction.ToString())
+                        .WriteLine(
+                            "- this instruction could be matched with any of the following predicates:"
+                        )
+                        .IncreaseIndent()
+                        .WriteLine("- ignore OpCode and Operand:")
+                        .IncreaseIndent()
+                        .WriteLine("x => true");
+                }
+            }
+
+            return err.ToString();
         }
 
-        ret:
-        return new ILWeaverAction(this, err.ToString());
+        return new ILWeaverAction(this, GetNotMatchedAllError);
     }
 
     /// <exception cref="ArgumentNullException"></exception>
@@ -517,7 +526,7 @@ public class ILWeaver(ILContext il)
 
 public class ILWeaverAction
 {
-    public ILWeaverAction(ILWeaver weaver, string? invalidActionMessage)
+    public ILWeaverAction(ILWeaver weaver, Func<string>? invalidActionMessage)
     {
         _weaver = weaver;
         _weaver._pendingAction = this;
@@ -525,39 +534,34 @@ public class ILWeaverAction
         if (invalidActionMessage is not null)
         {
             IsInvalid = true;
-            InvalidActionMessage = invalidActionMessage;
+            getInvalidActionMessage = invalidActionMessage;
         }
     }
 
     [MemberNotNullWhen(true, nameof(InvalidActionMessage))]
     public bool IsInvalid { get; }
-    public string? InvalidActionMessage { get; }
-    bool _throwIfInvalid = true;
-    readonly ILWeaver _weaver;
-
-    public ILWeaverAction ThrowIfInvalid(bool throwIfInvalid)
+    public string? InvalidActionMessage
     {
-        _throwIfInvalid = throwIfInvalid;
-        return this;
+        get => invalidActionMessage ??= getInvalidActionMessage?.Invoke();
     }
+    readonly Func<string>? getInvalidActionMessage;
+    string? invalidActionMessage;
+    readonly ILWeaver _weaver;
 
     /// <summary>
     /// Allows the ILWeaver instance to continue operating.<br/>
     /// </summary>
-    /// <remarks>
-    /// Throws if <see cref="IsInvalid"/> is <see cref="true"/> and <see cref="ThrowIfInvalid"/> hasn't been set to false.
-    /// </remarks>
+    /// <param name="throwIfInvalid">Throw when accepting an invalid action.</param>
     /// <returns>The ILWeaver.</returns>
     /// <exception cref="InvalidILWeaverActionException"></exception>
-    public ILWeaver Accept()
+    public ILWeaver Accept(bool throwIfInvalid = true)
     {
         _weaver._pendingAction = null;
 
-        if (_throwIfInvalid && IsInvalid)
+        if (throwIfInvalid && IsInvalid)
         {
             throw new InvalidILWeaverActionException(
-                $"(Invalid action was accepted. Thrown because {nameof(ILWeaverAction)}.{nameof(ThrowIfInvalid)} is true)\n"
-                    + InvalidActionMessage
+                $"Invalid action was accepted.\n" + InvalidActionMessage
             );
         }
 

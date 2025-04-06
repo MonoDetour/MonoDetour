@@ -18,11 +18,11 @@ public static class DoStuff
 #endif
     }
 
-    public static void Prefix(global::MonoDetour.HookManager manager, MethodParams args) =>
-        manager.HookGenReflectedHook(args, new() { DetourType = DetourType.Prefix });
+    public static void Prefix(global::MonoDetour.MonoDetourManager manager, MethodParams args) =>
+        manager.HookGenReflectedHook(args, new(DetourType.Prefix));
 
-    public static void Postfix(global::MonoDetour.HookManager manager, MethodParams args) =>
-        manager.HookGenReflectedHook(args, new() { DetourType = DetourType.Postfix });
+    public static void Postfix(global::MonoDetour.MonoDetourManager manager, MethodParams args) =>
+        manager.HookGenReflectedHook(args, new(DetourType.Postfix));
 
     public static MethodBase Target() =>
         typeof(global::PlatformerController).GetMethod(
