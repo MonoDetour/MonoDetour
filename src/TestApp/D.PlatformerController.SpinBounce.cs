@@ -23,15 +23,26 @@ public static class SpinBounce
     }
 
     public static void Prefix(global::MonoDetour.HookManager manager, MethodParams args) =>
-        manager.HookGenReflectedHook(args, new() { DetourType = DetourType.Prefix, Manipulator = args });
+        manager.HookGenReflectedHook(
+            args,
+            new() { DetourType = DetourType.Prefix, Manipulator = args }
+        );
 
     public static void Postfix(global::MonoDetour.HookManager manager, MethodParams args) =>
-        manager.HookGenReflectedHook(args, new() { DetourType = DetourType.Postfix, Manipulator = args });
+        manager.HookGenReflectedHook(
+            args,
+            new() { DetourType = DetourType.Postfix, Manipulator = args }
+        );
 
-    public static void ILHook(global::MonoDetour.HookManager manager, global::MonoMod.Cil.ILContext.Manipulator manipulator) =>
-        manager.Hook(Target(), manipulator);
-        // manager.HookGenReflectedHook(Target(), manipulator.Method, new() { DetourType = DetourType.ILHook });
+    public static void ILHook(
+        global::MonoDetour.HookManager manager,
+        global::MonoMod.Cil.ILContext.Manipulator manipulator
+    ) => manager.Hook(Target(), manipulator);
+
+    // manager.HookGenReflectedHook(Target(), manipulator.Method, new() { DetourType = DetourType.ILHook });
 
     public static MethodBase Target() =>
-        typeof(global::PlatformerController).GetMethod(nameof(global::PlatformerController.SpinBounce));
+        typeof(global::PlatformerController).GetMethod(
+            nameof(global::PlatformerController.SpinBounce)
+        )!;
 }

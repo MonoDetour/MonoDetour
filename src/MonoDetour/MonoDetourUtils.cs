@@ -18,32 +18,45 @@ internal static class MonoDetourUtils
         c.Emit(OpCodes.Ldloca, structParamIdx);
         c.Emit(OpCodes.Initobj, structType);
 
-        c.ForEachMatchingParam(structFields, (structField, methodParam) =>
-        {
-            c.Emit(OpCodes.Ldloca, structParamIdx);
+        c.ForEachMatchingParam(
+            structFields,
+            (structField, methodParam) =>
+            {
+                c.Emit(OpCodes.Ldloca, structParamIdx);
 #if NET7_0_OR_GREATER
-            c.Emit(OpCodes.Ldarga, methodParam.Index);
+                c.Emit(OpCodes.Ldarga, methodParam.Index);
 #else
-            c.Emit(OpCodes.Ldarg, methodParam.Index);
+                c.Emit(OpCodes.Ldarg, methodParam.Index);
 #endif
-            c.Emit(OpCodes.Stfld, structField);
-        });
+                c.Emit(OpCodes.Stfld, structField);
+            }
+        );
 
         return structParamIdx;
     }
 
-    public static void ApplyStructValuesToMethod(this ILCursor c, FieldInfo[] structFields, int structParamIdx)
+    public static void ApplyStructValuesToMethod(
+        this ILCursor c,
+        FieldInfo[] structFields,
+        int structParamIdx
+    )
     {
-        c.ForEachMatchingParam(structFields, (structField, methodParam) =>
-        {
-            c.Emit(OpCodes.Ldloca, structParamIdx);
-            c.Emit(OpCodes.Ldfld, structField);
-            c.Emit(OpCodes.Starg, methodParam.Index);
-        });
+        c.ForEachMatchingParam(
+            structFields,
+            (structField, methodParam) =>
+            {
+                c.Emit(OpCodes.Ldloca, structParamIdx);
+                c.Emit(OpCodes.Ldfld, structField);
+                c.Emit(OpCodes.Starg, methodParam.Index);
+            }
+        );
     }
 
-    public static void ForEachMatchingParam(this ILCursor c, FieldInfo[] fields,
-        Action<FieldInfo, ParameterDefinition> action)
+    public static void ForEachMatchingParam(
+        this ILCursor c,
+        FieldInfo[] fields,
+        Action<FieldInfo, ParameterDefinition> action
+    )
     {
         foreach (var field in fields)
         {
@@ -62,7 +75,10 @@ internal static class MonoDetourUtils
         }
     }
 
-    public static bool TryGetCustomAttribute<T>(MemberInfo member, [NotNullWhen(true)] out T? attribute)
+    public static bool TryGetCustomAttribute<T>(
+        MemberInfo member,
+        [NotNullWhen(true)] out T? attribute
+    )
         where T : Attribute
     {
         attribute = null;
@@ -113,7 +129,8 @@ internal static class MonoDetourUtils
     public static bool TryGetMonoDetourParameter(
         MethodBase method,
         [NotNullWhen(true)] out ParameterInfo? parameterInfo,
-        [NotNullWhen(true)] out Type? parameterType)
+        [NotNullWhen(true)] out Type? parameterType
+    )
     {
         parameterInfo = null;
         parameterType = null;

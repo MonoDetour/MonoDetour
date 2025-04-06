@@ -14,8 +14,7 @@ public class HookManager
 {
     public List<ILHook> ILHooks { get; } = [];
 
-    public void HookAllInExecutingAssembly() =>
-        HookAllInAssembly(Assembly.GetCallingAssembly());
+    public void HookAllInExecutingAssembly() => HookAllInAssembly(Assembly.GetCallingAssembly());
 
     public void HookAllInAssembly(Assembly assembly)
     {
@@ -62,28 +61,48 @@ public class HookManager
             throw new Exception("DeclaringType of Manipulator method's parameter Type is null.");
         }
 
-        var targetMethod = parameterType.DeclaringType.GetMethod("Target")
-            ?? throw new Exception("DeclaringType of Manipulator method's parameter Type does not have a method 'Target'.");
+        var targetMethod =
+            parameterType.DeclaringType.GetMethod("Target")
+            ?? throw new Exception(
+                "DeclaringType of Manipulator method's parameter Type does not have a method 'Target'."
+            );
 
         var targetReturnValue = targetMethod.Invoke(null, null);
         if (targetReturnValue is not MethodBase returnedTargetMethod)
-            throw new Exception("'Target' method in DeclaringType of Manipulator method's parameter Type doesn't return a MethodBase.");
+            throw new Exception(
+                "'Target' method in DeclaringType of Manipulator method's parameter Type doesn't return a MethodBase."
+            );
 
         return HookGenReflectedHook(returnedTargetMethod, manipulator, info);
     }
 
-    public ILHook HookGenReflectedHook(MethodBase target, MethodBase manipulator, MonoDetourInfo? info = null)
+    public ILHook HookGenReflectedHook(
+        MethodBase target,
+        MethodBase manipulator,
+        MonoDetourInfo? info = null
+    )
     {
         info ??= new();
         if (info.DetourType == 0)
         {
-            if (!MonoDetourUtils.TryGetCustomAttribute<MonoDetourAttribute>(manipulator, out var monoDetourAttribute))
+            if (
+                !MonoDetourUtils.TryGetCustomAttribute<MonoDetourAttribute>(
+                    manipulator,
+                    out var monoDetourAttribute
+                )
+            )
                 throw new ArgumentException($"Missing {nameof(MonoDetourAttribute)}");
 
             info.DetourType = monoDetourAttribute.Info.DetourType;
         }
 
-        if (!MonoDetourUtils.TryGetMonoDetourParameter(manipulator, out var parameterInfo, out var structType))
+        if (
+            !MonoDetourUtils.TryGetMonoDetourParameter(
+                manipulator,
+                out var parameterInfo,
+                out var structType
+            )
+        )
             throw new Exception("Manipulator method must have only one parameter.");
 
         Console.WriteLine("Hooking");
@@ -91,10 +110,12 @@ public class HookManager
         if (info.DetourType == DetourType.ILHook)
         {
             if (structType != typeof(ILContext))
-                throw new ArgumentException("Attempted to apply hook as an ILHook but the manipulator method doesn't accept an ILContext parameter.");
+                throw new ArgumentException(
+                    "Attempted to apply hook as an ILHook but the manipulator method doesn't accept an ILContext parameter."
+                );
 
-            var ilHookManipulator = (ILContext.Manipulator)Delegate
-                .CreateDelegate(typeof(ILContext.Manipulator), (MethodInfo)manipulator);
+            var ilHookManipulator = (ILContext.Manipulator)
+                Delegate.CreateDelegate(typeof(ILContext.Manipulator), (MethodInfo)manipulator);
 
             return Hook(target, ilHookManipulator);
         }
@@ -122,7 +143,9 @@ public class HookManager
                 if (info.Manipulator is null)
                     throw new Exception("info.Manipulator is null");
 
-                throw new NotSupportedException("Only static manipulator methods are supported for now.");
+                throw new NotSupportedException(
+                    "Only static manipulator methods are supported for now."
+                );
             }
             else
                 c.Emit(OpCodes.Call, manipulator);
@@ -140,7 +163,6 @@ public class HookManager
 
             // Console.WriteLine("Manipulated: " + il.ToString());
         }
-
 
         ILHook iLHook = info.DetourType switch
         {
@@ -176,8 +198,4 @@ public class MonoDetourInfo()
 {
     public DetourType DetourType { get; set; }
     public Delegate? Manipulator { get; set; }
-    public void Invoker(ref object obj)
-    {
-        Manipulator.DynamicInvoke(obj);
-    }
 }

@@ -9,9 +9,11 @@ namespace MonoDetour;
 /// </summary>
 static class MMHelpers
 {
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T ThrowIfNull<T>([NotNull] T? arg, [CallerArgumentExpression("arg")] string name = "")
+    public static T ThrowIfNull<T>(
+        [NotNull] T? arg,
+        [CallerArgumentExpression("arg")] string name = ""
+    )
     {
         if (arg is null)
             ThrowArgumentNull(name);

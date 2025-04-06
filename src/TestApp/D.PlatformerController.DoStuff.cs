@@ -25,5 +25,7 @@ public static class DoStuff
         manager.HookGenReflectedHook(args, new() { DetourType = DetourType.Postfix });
 
     public static MethodBase Target() =>
-        typeof(global::PlatformerController).GetMethod(nameof(global::PlatformerController.DoStuff))!;
+        typeof(global::PlatformerController).GetMethod(
+            nameof(global::PlatformerController.DoStuff)
+        )!;
 }

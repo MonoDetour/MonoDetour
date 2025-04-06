@@ -5,6 +5,7 @@ public class PlatformerController
 {
     int num = 0;
     bool bar = false;
+
     public void SpinBounce(float power)
     {
         Console.WriteLine("power is: " + power);
@@ -29,7 +30,6 @@ public class PlatformerController
         yield return null;
 
         Console.WriteLine("Stuff done.");
-
     }
 
     public void Foo()

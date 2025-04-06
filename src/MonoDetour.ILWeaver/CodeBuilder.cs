@@ -52,8 +52,7 @@ internal sealed class CodeBuilder
         didWriteIndent = true;
     }
 
-    public CodeBuilder Write(int i) =>
-        Write(i.ToString());
+    public CodeBuilder Write(int i) => Write(i.ToString());
 
     public CodeBuilder Write(string s)
     {
@@ -69,8 +68,7 @@ internal sealed class CodeBuilder
         return this;
     }
 
-    public CodeBuilder WriteLine(int i) =>
-        WriteLine(i.ToString());
+    public CodeBuilder WriteLine(int i) => WriteLine(i.ToString());
 
     public CodeBuilder WriteLine(string s)
     {
@@ -95,6 +93,5 @@ internal sealed class CodeBuilder
         return this;
     }
 
-    public override string ToString() =>
-        sb.ToString();
+    public override string ToString() => sb.ToString();
 }
