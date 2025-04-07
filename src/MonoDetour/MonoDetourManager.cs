@@ -59,14 +59,14 @@ public class MonoDetourManager
     /// <inheritdoc cref="HookGenReflectedHook(MethodBase, MethodBase, MonoDetourInfo?)"/>
     public ILHook HookGenReflectedHook(Delegate manipulator, MonoDetourInfo? info = null)
     {
-        MonoDetourUtils.ThrowIfNull(manipulator);
+        Helpers.ThrowIfNull(manipulator);
         return HookGenReflectedHook(manipulator.Method, info);
     }
 
     /// <inheritdoc cref="HookGenReflectedHook(MethodBase, MethodBase, MonoDetourInfo?)"/>
     public ILHook HookGenReflectedHook(MethodBase manipulator, MonoDetourInfo? info = null)
     {
-        MonoDetourUtils.ThrowIfNull(manipulator);
+        Helpers.ThrowIfNull(manipulator);
 
         if (!MonoDetourUtils.TryGetMonoDetourParameter(manipulator, out _, out var parameterType))
             throw new Exception("Manipulator method must have only one parameter.");
@@ -111,8 +111,8 @@ public class MonoDetourManager
         MonoDetourInfo? info = null
     )
     {
-        MonoDetourUtils.ThrowIfNull(target);
-        MonoDetourUtils.ThrowIfNull(manipulator);
+        Helpers.ThrowIfNull(target);
+        Helpers.ThrowIfNull(manipulator);
 
         if (info is null || info.DetourType is null)
         {
@@ -165,7 +165,7 @@ public class MonoDetourManager
     /// <inheritdoc cref="HookGenReflectedHook(MethodBase, MethodBase, MonoDetourInfo?)"/>
     public ILHook HookGenReflectedHook(MonoDetourInfo info)
     {
-        MonoDetourUtils.ThrowIfNull(info);
+        Helpers.ThrowIfNull(info);
 
         if (!info.Data.IsInitialized())
             throw new ArgumentException($"{nameof(MonoDetourInfo)} is not fully initialized.");

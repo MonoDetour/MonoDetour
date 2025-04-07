@@ -160,7 +160,7 @@ public class ILWeaver(ILContext il)
         params Predicate<Instruction>[] predicates
     )
     {
-        MMHelpers.ThrowIfNull(predicates);
+        Helpers.ThrowIfNull(predicates);
 
         List<int> matchedIndexes = [];
         List<(int count, int indexBeforeFailed)> bestAttempts = [(0, 0)];

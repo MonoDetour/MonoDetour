@@ -7,17 +7,17 @@ namespace MonoDetour;
 /// <summary>
 /// Helper methods from MonoMod.Utils, but these are not public in Legacy.
 /// </summary>
-static class MMHelpers
+static class Helpers
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T ThrowIfNull<T>(
-        [NotNull] T? arg,
-        [CallerArgumentExpression("arg")] string name = ""
+        [NotNull] T? argument,
+        [CallerArgumentExpression(nameof(argument))] string name = ""
     )
     {
-        if (arg is null)
+        if (argument is null)
             ThrowArgumentNull(name);
-        return arg;
+        return argument;
     }
 
     [DoesNotReturn]

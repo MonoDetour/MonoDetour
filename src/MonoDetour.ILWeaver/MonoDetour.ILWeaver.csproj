@@ -10,4 +10,8 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Include="../MonoDetour/Helpers.cs" />
+  </ItemGroup>
+
 </Project>
