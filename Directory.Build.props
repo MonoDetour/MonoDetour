@@ -1,7 +1,6 @@
 <Project>
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net7.0</TargetFrameworks>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
@@ -14,7 +13,6 @@
   <PropertyGroup>
     <RootNamespace>MonoDetour</RootNamespace>
     <UseArtifactsOutput>true</UseArtifactsOutput>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
 </Project>
