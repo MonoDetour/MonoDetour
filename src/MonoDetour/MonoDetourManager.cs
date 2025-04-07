@@ -1,24 +1,32 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
-using MonoMod.Utils;
 
 namespace MonoDetour;
 
+/// <summary>
+/// A manager for your MonoDetour hooks.
+/// </summary>
 public class MonoDetourManager
 {
+    /// <summary>
+    /// The hooks applied by this MonoDetourManager.
+    /// </summary>
     public List<ILHook> ILHooks { get; } = [];
 
+    /// <summary>
+    /// Hooks all MonoDetour methods in the assembly that calls this method.
+    /// </summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void HookAllInExecutingAssembly() => HookAllInAssembly(Assembly.GetCallingAssembly());
 
+    /// <summary>
+    /// Hooks all MonoDetour methods in the specified assembly.
+    /// </summary>
+    /// <param name="assembly">The assembly whose MonoDetour hooks to apply.</param>
     public void HookAllInAssembly(Assembly assembly)
     {
         foreach (Type type in MonoDetourUtils.GetTypesFromAssembly(assembly))
@@ -37,6 +45,10 @@ public class MonoDetourManager
         }
     }
 
+    /// <summary>
+    /// Applies a regular <see cref="ILHook"/>.
+    /// </summary>
+    /// <inheritdoc cref="HookGenReflectedHook(MethodBase, MethodBase, MonoDetourInfo?)"/>
     public ILHook Hook(MethodBase target, ILContext.Manipulator manipulator)
     {
         var ilHook = new ILHook(target, manipulator);
@@ -44,20 +56,23 @@ public class MonoDetourManager
         return ilHook;
     }
 
-    public ILHook HookGenReflectedHook(Delegate manipulator, MonoDetourInfo? info = null) =>
-        HookGenReflectedHook(manipulator.Method, info);
+    /// <inheritdoc cref="HookGenReflectedHook(MethodBase, MethodBase, MonoDetourInfo?)"/>
+    public ILHook HookGenReflectedHook(Delegate manipulator, MonoDetourInfo? info = null)
+    {
+        MonoDetourUtils.ThrowIfNull(manipulator);
+        return HookGenReflectedHook(manipulator.Method, info);
+    }
 
+    /// <inheritdoc cref="HookGenReflectedHook(MethodBase, MethodBase, MonoDetourInfo?)"/>
     public ILHook HookGenReflectedHook(MethodBase manipulator, MonoDetourInfo? info = null)
     {
+        MonoDetourUtils.ThrowIfNull(manipulator);
+
         if (!MonoDetourUtils.TryGetMonoDetourParameter(manipulator, out _, out var parameterType))
-        {
             throw new Exception("Manipulator method must have only one parameter.");
-        }
 
         if (parameterType.DeclaringType is null)
-        {
             throw new Exception("DeclaringType of Manipulator method's parameter Type is null.");
-        }
 
         var targetMethod =
             parameterType.DeclaringType.GetMethod("Target")
@@ -74,12 +89,31 @@ public class MonoDetourManager
         return HookGenReflectedHook(returnedTargetMethod, manipulator, info);
     }
 
+    /// <summary>
+    /// Uses reflection to gain all the required information to then
+    /// apply a MonoDetour hook with the assumption that the manipulator
+    ///  method has a valid signature and its parameter follows the expected
+    /// structure of MonoDetour's HookGen.
+    /// </summary>
+    /// <remarks>
+    /// This method is not intended to be used directly, but is instead
+    /// used by MonoDetour's HookGen.
+    /// </remarks>
+    /// <param name="target">The method to be hooked.</param>
+    /// <param name="manipulator">The hook or manipulator method.</param>
+    /// <param name="info">Metadata configuration for the MonoDetour Hook.</param>
+    /// <returns>The hook.</returns>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="Exception"></exception>
     public ILHook HookGenReflectedHook(
         MethodBase target,
         MethodBase manipulator,
         MonoDetourInfo? info = null
     )
     {
+        MonoDetourUtils.ThrowIfNull(target);
+        MonoDetourUtils.ThrowIfNull(manipulator);
+
         if (info is null || info.DetourType is null)
         {
             if (
@@ -125,8 +159,14 @@ public class MonoDetourManager
         return HookGenReflectedHook(info);
     }
 
+    /// <summary>
+    /// Applies a MonoDetour Hook using the information defined.
+    /// </summary>
+    /// <inheritdoc cref="HookGenReflectedHook(MethodBase, MethodBase, MonoDetourInfo?)"/>
     public ILHook HookGenReflectedHook(MonoDetourInfo info)
     {
+        MonoDetourUtils.ThrowIfNull(info);
+
         if (!info.Data.IsInitialized())
             throw new ArgumentException($"{nameof(MonoDetourInfo)} is not fully initialized.");
 

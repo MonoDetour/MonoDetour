@@ -4,8 +4,13 @@ using MonoMod.Cil;
 
 namespace MonoDetour;
 
+/// <summary>
+/// Implements MonoDetour support for a regular <see cref="MonoMod.RuntimeDetour.ILHook"/>
+/// which supports modifying the target method on the CIL level.
+/// </summary>
 public class ILHookDetour : IMonoDetourHookEmitter
 {
+    /// <inheritdoc/>
     public MonoDetourInfo Info
     {
         get;
@@ -22,5 +27,6 @@ public class ILHookDetour : IMonoDetourHookEmitter
 
     ILContext.Manipulator manipulator = null!;
 
+    /// <inheritdoc/>
     public void ILHookManipulator(ILContext il) => manipulator(il);
 }

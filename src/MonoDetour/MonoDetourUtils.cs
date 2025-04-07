@@ -149,6 +149,7 @@ internal static class MonoDetourUtils
         return true;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void ThrowIfInvalidDetourType(
         Type detourType,
         [CallerArgumentExpression(nameof(detourType))] string name = ""
@@ -159,5 +160,22 @@ internal static class MonoDetourUtils
                 $"{nameof(MonoDetourInfo)}.{nameof(MonoDetourInfo.DetourType)} must implement {nameof(IMonoDetourHookEmitter)}.",
                 name
             );
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static T ThrowIfNull<T>(
+        [NotNull] T? argument,
+        [CallerArgumentExpression(nameof(argument))] string name = ""
+    )
+    {
+        if (argument is null)
+            ThrowArgumentNull(name);
+        return argument;
+    }
+
+    [DoesNotReturn]
+    private static void ThrowArgumentNull(string argName)
+    {
+        throw new ArgumentNullException(argName);
     }
 }
