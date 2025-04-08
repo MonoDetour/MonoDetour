@@ -1,12 +1,13 @@
 ﻿using System;
 using Mono.Cecil.Cil;
-using MonoDetour;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 
+namespace TestApp;
+
 static class Program
 {
-    internal static MonoDetourManager m = new();
+    // internal static MonoDetourManager m = new();
 
     static void Main()
     {
@@ -15,7 +16,7 @@ static class Program
         // call System.Void PlatformerControllerPatches::PrintBar(On.PlatformerController.SpinBounce/Params&)
         // call System.Void Program/<>c::<Main>b__1_0(On.PlatformerController.SpinBounce/Params&)
         // DetourManager.Hook(PlatformerControllerPatches.PrintBar);
-        m.HookAllInExecutingAssembly();
+        // m.HookAllInExecutingAssembly();
 
         // int f = 10;
 
@@ -25,28 +26,28 @@ static class Program
         //     a.self.Foo();
         //     // Console.WriteLine("f: " + f.ToString());
         // });
-        On.PlatformerController.SpinBounce.ILHook(
-            m,
-            static il =>
-            {
-                try
-                {
-                    Console.WriteLine("hi");
-                    ILWeaver w = new(il);
-                    w.GotoMatch(
-                            GotoType.FirstPredicate,
-                            x => x.MatchLdarg(0),
-                            x => true,
-                            x => x.Match(OpCodes.Ldsfld)
-                        )
-                        .Accept();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex);
-                }
-            }
-        );
+        // On.PlatformerController.SpinBounce.ILHook(
+        //     m,
+        //     static il =>
+        //     {
+        //         try
+        //         {
+        //             Console.WriteLine("hi");
+        //             ILWeaver w = new(il);
+        //             w.GotoMatch(
+        //                     GotoType.FirstPredicate,
+        //                     x => x.MatchLdarg(0),
+        //                     x => true,
+        //                     x => x.Match(OpCodes.Ldsfld)
+        //                 )
+        //                 .Accept();
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             Console.WriteLine(ex);
+        //         }
+        //     }
+        // );
 
         // On.PlatformerController.SpinBounce.ILHook(m, static (ILContext il) =>
         // {
@@ -69,20 +70,20 @@ static class Program
     }
 }
 
-[MonoDetourTargets(typeof(PlatformerController))]
-class PlatformerControllerPatches
-{
-    [MonoDetourHook<PrefixDetour>()]
-    internal static void MyPatch1(ref On.PlatformerController.SpinBounce.Params a)
-    {
-        Console.WriteLine("hello: " + a.power.ToString());
-        a.self.Foo();
-        a.power += 1;
-    }
+// [MonoDetourTargets(typeof(PlatformerController))]
+// class PlatformerControllerPatches
+// {
+//     [MonoDetourHook<PrefixDetour>()]
+//     internal static void MyPatch1(ref On.PlatformerController.SpinBounce.Params a)
+//     {
+//         Console.WriteLine("hello: " + a.power.ToString());
+//         a.self.Foo();
+//         a.power += 1;
+//     }
 
-    [MonoDetourHook(DetourType.Postfix)]
-    internal static void MyPatchPrintBar(in On.PlatformerController.SpinBounce.Params a)
-    {
-        Console.WriteLine("bar");
-    }
-}
+//     [MonoDetourHook(DetourType.Postfix)]
+//     internal static void MyPatchPrintBar(in On.PlatformerController.SpinBounce.Params a)
+//     {
+//         Console.WriteLine("bar");
+//     }
+// }

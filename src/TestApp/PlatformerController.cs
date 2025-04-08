@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 
+namespace TestApp;
+
 public class PlatformerController
 {
     int num = 0;

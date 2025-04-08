@@ -12,12 +12,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../MonoDetour/MonoDetour.csproj"/>
-    <ProjectReference Include="../MonoDetour.ILWeaver/MonoDetour.ILWeaver.csproj"/>
+    <!-- <ProjectReference Include="../MonoDetour/MonoDetour.csproj"/>
+    <ProjectReference Include="../MonoDetour.ILWeaver/MonoDetour.ILWeaver.csproj"/> -->
   </ItemGroup>
 
-  <Target Name="ExecuteApp" AfterTargets="PostBuildEvent" Condition="'$(TargetFramework)' == 'net7.0'">
+  <!-- <Target Name="ExecuteApp" AfterTargets="PostBuildEvent" Condition="'$(TargetFramework)' == 'net7.0'">
     <Exec Command="$(TargetDir)$(TargetName)"/>
-  </Target>
+  </Target> -->
 
 </Project>

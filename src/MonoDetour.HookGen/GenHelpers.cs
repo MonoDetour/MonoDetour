@@ -5,7 +5,13 @@ using MonoMod.SourceGen.Internal.Helpers;
 
 namespace MonoMod.SourceGen.Internal
 {
-    internal sealed record TypeRef(string MdName, string FqName, string Name, string Refness)
+    internal sealed record TypeRef(
+        string MdName,
+        string FqName,
+        string Name,
+        string Refness,
+        string AssemblyIdentityName
+    )
     {
         public TypeRef WithRefness(string refness = "")
         {
@@ -64,7 +70,8 @@ namespace MonoMod.SourceGen.Internal
                 symbol.GetFullyQualifiedMetadataName(),
                 refness + symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                 symbol.Name,
-                refness
+                refness,
+                symbol.ContainingAssembly.Identity.Name
             );
         }
 
@@ -110,7 +117,7 @@ namespace MonoMod.SourceGen.Internal
                 var name = modifyName is not null
                     ? modifyName(innermostType.Name)
                     : innermostType.Name;
-                builder.Add($"partial {typeKind} {name}");
+                builder.Add($"{typeKind} {name}");
 
                 innermostType = innermostType.ContainingType;
             }
