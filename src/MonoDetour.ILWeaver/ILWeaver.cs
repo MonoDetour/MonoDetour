@@ -7,6 +7,7 @@ using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
+using MonoMod.SourceGen.Internal;
 using MonoMod.Utils;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
 
@@ -197,7 +198,7 @@ public class ILWeaver(ILContext il)
         if (matchedIndexes.Count == 1 || (allowMultipleMatches && matchedIndexes.Count > 0))
             return new ILWeaverAction(this, null);
 
-        CodeBuilder err = new(new StringBuilder());
+        CodeBuilder err = new(new StringBuilder(), 2);
         if (matchedIndexes.Count > 0)
         {
             string GetMatchedTooManyError()

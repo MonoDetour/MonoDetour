@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <Compile Include="../MonoDetour/Helpers.cs" />
+    <Compile Include="../MonoDetour.HookGen/CodeBuilder.cs" />
   </ItemGroup>
 
 </Project>
