@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using MonoMod.SourceGen.Internal;
 using MonoMod.SourceGen.Internal.Helpers;
 
-namespace MonoMod.HookGen.V2
+namespace MonoDetour.HookGen
 {
     // TODO: finish support for unnameable types
 
@@ -27,7 +27,7 @@ namespace MonoMod.HookGen.V2
         }
 
         public const string GenHelperForTypeAttributeFqn =
-            "MonoMod.HookGen.GenerateHookHelpersAttribute";
+            "MonoDetour.HookGen.GenerateHookHelpersAttribute";
         private const string ILHookParameterType = "global::MonoMod.Cil.ILContext.Manipulator";
         public const string GenHelperForTypeAttrFile = "GenerateHookHelpersAttribute.g.cs";
         public const string DelegateTypesFile = "DelegateTypes.g.cs";
@@ -38,12 +38,22 @@ namespace MonoMod.HookGen.V2
             using System;
             using System.Diagnostics;
 
-            namespace MonoMod.HookGen {
+            namespace MonoDetour.HookGen {
 
                 internal enum DetourKind {
                     Hook = 0,
                     ILHook = 1,
                     Both = 2,
+                }
+
+                internal static class HookGenManager
+                {
+            #if DEBUG
+                    /// <summary>
+                    /// The default MonoDetourManager instance used when none is specified.
+                    /// </summary>
+            #endif
+                    internal static global::MonoDetour.MonoDetourManager Instance { get; } = new();
                 }
 
             #if DEBUG
@@ -63,7 +73,7 @@ namespace MonoMod.HookGen.V2
                     /// </summary>
             #endif
                     public Type TargetType { get; }
-                    
+
                     public DetourKind Kind { get; set; } = DetourKind.Hook;
 
             #if DEBUG
@@ -72,7 +82,7 @@ namespace MonoMod.HookGen.V2
                     /// </summary>
             #endif
                     public bool IncludeNestedTypes { get; set; } = true;
-                    
+
             #if DEBUG
                     /// <summary>
                     /// Whether to differentiate between overloaded members by putting their (sanitized) signature in the generated name.
@@ -80,7 +90,7 @@ namespace MonoMod.HookGen.V2
                     /// </summary>
             #endif
                     public bool DistinguishOverloadsByName { get; set; }
-                    
+
             #if DEBUG
                     /// <summary>
                     /// A list of members to generate hook helpers for in the target type, by exact name.
@@ -88,7 +98,7 @@ namespace MonoMod.HookGen.V2
                     /// </summary>
             #endif
                     public string[]? Members { get; set; }
-                    
+
             #if DEBUG
                     /// <summary>
                     /// A list of member name prefixes to match members against. Members whose names have one of these
@@ -96,7 +106,7 @@ namespace MonoMod.HookGen.V2
                     /// </summary>
             #endif
                     public string[]? MemberNamePrefixes { get; set; }
-                    
+
             #if DEBUG
                     /// <summary>
                     /// A list of member name suffixes to match members against. Members whose names have one of these
@@ -104,7 +114,7 @@ namespace MonoMod.HookGen.V2
                     /// </summary>
             #endif
                     public string[]? MemberNameSuffixes { get; set; }
-                    
+
             #if DEBUG
                     /// <summary>
                     /// Constructs a <see cref="GenerateHookHelpersAttribute"/> indicating the specified target type.
@@ -795,32 +805,34 @@ namespace MonoMod.HookGen.V2
                 cb.Write("public static ")
                     .Write(hookType)
                     .WriteLine(
-                        " Prefix(global::MonoDetour.MonoDetourManager manager, MethodParams args) =>"
+                        " Prefix(MethodParams args, global::MonoDetour.MonoDetourManager? manager = null) =>"
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "manager.HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PrefixDetour));"
+                        "(manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PrefixDetour));"
                     )
                     .DecreaseIndent();
 
                 cb.Write("public static ")
                     .Write(hookType)
                     .WriteLine(
-                        " Postfix(global::MonoDetour.MonoDetourManager manager, MethodParams args) =>"
+                        " Postfix(MethodParams args, global::MonoDetour.MonoDetourManager? manager = null) =>"
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "manager.HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PostfixDetour));"
+                        "(manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PostfixDetour));"
                     )
                     .DecreaseIndent();
 
                 cb.Write("public static ")
                     .Write(hookType)
                     .WriteLine(
-                        " ILHook(global::MonoDetour.MonoDetourManager manager, global::MonoMod.Cil.ILContext.Manipulator manipulator) =>"
+                        " ILHook(global::MonoMod.Cil.ILContext.Manipulator manipulator, global::MonoDetour.MonoDetourManager? manager = null) =>"
                     )
                     .IncreaseIndent()
-                    .WriteLine("manager.Hook(Target(), manipulator);")
+                    .WriteLine(
+                        "(manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).Hook(Target(), manipulator);"
+                    )
                     .DecreaseIndent();
 
                 cb.Write("public static ")

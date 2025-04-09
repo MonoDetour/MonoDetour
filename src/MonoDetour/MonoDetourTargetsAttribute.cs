@@ -6,7 +6,7 @@ namespace MonoDetour;
 /// Specifies that:
 /// <list type="bullet">
 ///   <item>
-///   <see cref="MonoDetourManager.HookAllInAssembly(System.Reflection.Assembly)"/>
+///   <see cref="MonoDetourManager.HookAll(System.Reflection.Assembly)"/>
 ///   will hook methods marked with <see cref="MonoDetourHookAttribute"/> in types with this attribute
 ///   </item>
 ///   <item>

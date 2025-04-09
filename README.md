@@ -7,19 +7,17 @@ A highly experimental `MonoMod.RuntimeDetour.ILHook` wrapper, optimized for conv
 
 ## Usage
 
-> [!NOTE]
-> Not having to pass in the MonoDetourManager to Hooks will soon become a thing.
-
 In MonoDetour, target method's parameters are passed in as a struct, making it easy to discover what's possible.
 
 You can use generated hooks directly for hooking like with MonoMod's HookGen:
 
 ```cs
-internal static readonly MonoDetour.MonoDetourManager m = new();
-
 internal static void InitHooks()
 {
-    On.SomeNamespace.SomeType.SomeMethod.Prefix(m, Prefix_SomeType_SomeMethod);
+    // Note: this is using the default generated MonoDetourManager
+    // singleton MonoDetour.HookGen.HookGenManager.Instance by default.
+    // Use it for managing your hooks.
+    On.SomeNamespace.SomeType.SomeMethod.Prefix(Prefix_SomeType_SomeMethod);
 }
 
 static void Prefix_SomeType_SomeMethod(
@@ -32,16 +30,18 @@ static void Prefix_SomeType_SomeMethod(
 Or you can do things the Harmony way:
 
 ```cs
+using MonoDetour;
+using MonoDetour.HookGen;
+
 // Tell MonoDetourManager to look for MonoDetourHook methods in this type.
 // Also tells HookGen to generate hooks for the specified type.
 [MonoDetourTargets<SomeType>]
 class SomeTypeHooks
 {
-    internal static readonly MonoDetour.MonoDetourManager m = new();
-
     internal static void InitHooks()
     {
-        m.HookAllInExecutingAssembly();
+        // HookAll using the generated MonoDetourManager singleton for this assembly.
+        HookGenManager.Instance.HookAll();
     }
 
     // Via enum. Maps to MonoDetour.PrefixDetour as seen in next hook.
@@ -63,6 +63,13 @@ class SomeTypeHooks
 ```
 
 MonoDetour entirely relies on `ILHook`s for hooking similar to HarmonyX. But instead of having monolithic `ILHook` methods like in HarmonyX, MonoDetour maps every hook to a unique `ILHook`.
+
+## Core Concepts
+
+### MonoDetourManager
+
+Every hook made with MonoDetour is attached to a `MonoDetour.MonoDetourManager` object.
+When no `MonoDetourManager` object is specified, MonoDetour will use the default `MonoDetour.HookGen.HookGenManager.Instance` singleton it has generated for your assembly. You can use that manager for managing your hooks, or you can create your own managers.
 
 ## Why?
 

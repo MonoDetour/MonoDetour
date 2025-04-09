@@ -12,7 +12,7 @@ public class MonoDetourHookAttribute<T>() : MonoDetourHookAttribute(typeof(T))
 /// <summary>
 /// Specifies that MonoDetour will hook the method if the type it is in is
 /// marked with <see cref="MonoDetourTargetsAttribute"/> and
-/// <see cref="MonoDetourManager.HookAllInAssembly(System.Reflection.Assembly)"/>
+/// <see cref="MonoDetourManager.HookAll(System.Reflection.Assembly)"/>
 /// is called.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]

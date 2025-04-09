@@ -21,27 +21,36 @@ public class MonoDetourManager
     /// Hooks all MonoDetour methods in the assembly that calls this method.
     /// </summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public void HookAllInExecutingAssembly() => HookAllInAssembly(Assembly.GetCallingAssembly());
+    public void HookAll() => HookAll(Assembly.GetCallingAssembly());
 
     /// <summary>
     /// Hooks all MonoDetour methods in the specified assembly.
     /// </summary>
     /// <param name="assembly">The assembly whose MonoDetour hooks to apply.</param>
-    public void HookAllInAssembly(Assembly assembly)
+    public void HookAll(Assembly assembly)
     {
         foreach (Type type in MonoDetourUtils.GetTypesFromAssembly(assembly))
         {
             if (!MonoDetourUtils.TryGetCustomAttribute<MonoDetourTargetsAttribute>(type, out _))
                 continue;
 
-            MethodInfo[] methods = type.GetMethods((BindingFlags)~0);
-            foreach (var method in methods)
-            {
-                if (!MonoDetourUtils.TryGetCustomAttribute<MonoDetourHookAttribute>(method, out _))
-                    continue;
+            HookAll(type);
+        }
+    }
 
-                HookGenReflectedHook(method);
-            }
+    /// <summary>
+    /// Hooks all MonoDetour methods in the specified type.
+    /// </summary>
+    /// <param name="type">The type whose MonoDetour hooks to apply.</param>
+    public void HookAll(Type type)
+    {
+        MethodInfo[] methods = type.GetMethods((BindingFlags)~0);
+        foreach (var method in methods)
+        {
+            if (!MonoDetourUtils.TryGetCustomAttribute<MonoDetourHookAttribute>(method, out _))
+                continue;
+
+            HookGenReflectedHook(method);
         }
     }
 

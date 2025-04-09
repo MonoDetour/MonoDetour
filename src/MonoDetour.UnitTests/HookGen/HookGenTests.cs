@@ -1,4 +1,4 @@
-using MonoMod.HookGen;
+using MonoDetour.HookGen;
 using SomeNamespace;
 
 // [assembly: MonoMod.HookGen.GenerateHookHelpers(typeof(TestApp.GameNetcodeStuff.PlayerControllerB))]
@@ -11,8 +11,6 @@ namespace MonoDetour.UnitTests.HookGen;
 [MonoDetourTargets]
 public partial class HookGenTests
 {
-    private MonoDetourManager m = new();
-
     // private static readonly MonoDetourManager m = new();
 
     // private static readonly Type generatorType =
@@ -38,10 +36,12 @@ public partial class HookGenTests
     [Fact]
     public void Hook1()
     {
-        On.SomeNamespace.SomeType.SomeMethod.Prefix(m, Prefix_SomeType_SomeMethod);
+        On.SomeNamespace.SomeType.SomeMethod.Prefix(Prefix_SomeType_SomeMethod);
     }
 
-    private static void Prefix_SomeType_SomeMethod(ref On.SomeNamespace.SomeType.SomeMethod.Params args)
+    private static void Prefix_SomeType_SomeMethod(
+        ref On.SomeNamespace.SomeType.SomeMethod.Params args
+    )
     {
         Console.WriteLine("Hello from Prefix hook!");
     }
@@ -49,21 +49,23 @@ public partial class HookGenTests
     [Fact]
     public void Hook2()
     {
-        m.HookAllInExecutingAssembly();
+        HookGenManager.Instance.HookAll();
         var someType = new SomeType();
         someType.SomeMethod();
     }
 
     [MonoDetourHook(DetourType.PrefixDetour)]
     private static void Prefix2_SomeType_SomeMethod(
-        ref On.SomeNamespace.SomeType.SomeMethod.Params args)
+        ref On.SomeNamespace.SomeType.SomeMethod.Params args
+    )
     {
         Console.WriteLine("Hello from Prefix hook 2!");
     }
 
     [MonoDetourHook<PrefixDetour>]
     private static void Prefix3_SomeType_SomeMethod(
-        ref On.SomeNamespace.SomeType.SomeMethod.Params args)
+        ref On.SomeNamespace.SomeType.SomeMethod.Params args
+    )
     {
         Console.WriteLine("Hello from Prefix hook 3!");
     }
