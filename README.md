@@ -100,18 +100,14 @@ internal static class SomeMethod
         public global::SomeNamespace.SomeType self;
     }
 
-    public static global::MonoMod.RuntimeDetour.ILHook Prefix(
-        global::MonoDetour.MonoDetourManager manager, MethodParams args) =>
-        manager.HookGenReflectedHook(args, new(global::MonoDetour.DetourType.Prefix));
+    public static global::MonoMod.RuntimeDetour.ILHook Prefix(MethodParams args, global::MonoDetour.MonoDetourManager? manager = null) =>
+        (manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PrefixDetour));
 
-    public static global::MonoMod.RuntimeDetour.ILHook Postfix(
-        global::MonoDetour.MonoDetourManager manager, MethodParams args) =>
-        manager.HookGenReflectedHook(args, new(global::MonoDetour.DetourType.Postfix));
+    public static global::MonoMod.RuntimeDetour.ILHook Postfix(MethodParams args, global::MonoDetour.MonoDetourManager? manager = null) =>
+        (manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PostfixDetour));
 
-    public static global::MonoMod.RuntimeDetour.ILHook ILHook(
-        global::MonoDetour.MonoDetourManager manager,
-        global::MonoMod.Cil.ILContext.Manipulator manipulator) =>
-        manager.Hook(Target(), manipulator);
+    public static global::MonoMod.RuntimeDetour.ILHook ILHook(global::MonoMod.Cil.ILContext.Manipulator manipulator, global::MonoDetour.MonoDetourManager? manager = null) =>
+        (manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).Hook(Target(), manipulator);
 
     public static global::System.Reflection.MethodBase Target()
     {

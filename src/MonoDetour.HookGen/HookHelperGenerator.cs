@@ -771,7 +771,8 @@ namespace MonoDetour.HookGen
                 cb.WriteLine(
                         "[global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]"
                     )
-                    .WriteLine("public delegate void MethodParams(ref Params args);");
+                    .WriteLine("public delegate void MethodParams(ref Params args);")
+                    .WriteLine();
 
                 cb.WriteLine("public ref struct Params").OpenBlock();
 
@@ -800,7 +801,7 @@ namespace MonoDetour.HookGen
 
                     cb.Write(' ').Write("arg").Write(i).WriteLine(';');
                 }
-                cb.CloseBlock();
+                cb.CloseBlock().WriteLine();
 
                 cb.Write("public static ")
                     .Write(hookType)
@@ -811,7 +812,8 @@ namespace MonoDetour.HookGen
                     .WriteLine(
                         "(manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PrefixDetour));"
                     )
-                    .DecreaseIndent();
+                    .DecreaseIndent()
+                    .WriteLine();
 
                 cb.Write("public static ")
                     .Write(hookType)
@@ -822,7 +824,8 @@ namespace MonoDetour.HookGen
                     .WriteLine(
                         "(manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PostfixDetour));"
                     )
-                    .DecreaseIndent();
+                    .DecreaseIndent()
+                    .WriteLine();
 
                 cb.Write("public static ")
                     .Write(hookType)
@@ -833,7 +836,8 @@ namespace MonoDetour.HookGen
                     .WriteLine(
                         "(manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).Hook(Target(), manipulator);"
                     )
-                    .DecreaseIndent();
+                    .DecreaseIndent()
+                    .WriteLine();
 
                 cb.Write("public static ")
                     .Write("global::System.Reflection.MethodBase")
@@ -933,7 +937,10 @@ namespace MonoDetour.HookGen
                     }
                 }
 
-                cb.Write("internal static ").Write(nested.Type.ContainingTypeDecls[0]).OpenBlock();
+                cb.Write("internal static ")
+                    .Write(nested.Type.ContainingTypeDecls[0])
+                    .WriteLine()
+                    .OpenBlock();
 
                 EmitTypeMembers(nested, cb, il, ctx);
 
