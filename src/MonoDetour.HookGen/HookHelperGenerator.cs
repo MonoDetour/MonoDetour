@@ -830,6 +830,11 @@ namespace MonoMod.HookGen.V2
 
                 if (type.Type.InnermostType.FqName.Contains('<'))
                 {
+                    if (type.Type.InnermostType.AssemblyIdentityName is null)
+                        throw new Exception(
+                            "type.Type.InnermostType.AssemblyIdentityName is null but it was needed for unspeakable type"
+                        );
+
                     cb.Write("var type = global::System.Type.GetType(\"")
                         .Write(type.Type.InnermostType.MdName)
                         .Write(", ")
@@ -859,9 +864,7 @@ namespace MonoMod.HookGen.V2
                     cb.Write("GetMethod(\"").Write(member.Name).Write("\", ");
                 }
 
-                cb.Write("(global::System.Reflection.BindingFlags)")
-                    .Write(((int)bindingFlags).ToString(CultureInfo.InvariantCulture))
-                    .Write(", null, ");
+                cb.Write("(global::System.Reflection.BindingFlags)~0").Write(", null, ");
 
                 EmitOpenArray(cb, ctx, "global::System.Type");
 
@@ -869,6 +872,11 @@ namespace MonoMod.HookGen.V2
                 {
                     if (param.FqName.Contains('<'))
                     {
+                        if (param.AssemblyIdentityName is null)
+                            throw new Exception(
+                                "type.Type.InnermostType.AssemblyIdentityName is null but it was needed for unspeakable type"
+                            );
+
                         cb.Write("global::System.Type.GetType(\"")
                             .Write(param.MdName)
                             .Write(", ")

@@ -10,7 +10,7 @@ namespace MonoMod.SourceGen.Internal
         string FqName,
         string Name,
         string Refness,
-        string AssemblyIdentityName
+        string? AssemblyIdentityName
     )
     {
         public TypeRef WithRefness(string refness = "")
@@ -71,7 +71,7 @@ namespace MonoMod.SourceGen.Internal
                 refness + symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                 symbol.Name,
                 refness,
-                symbol.ContainingAssembly.Identity.Name
+                symbol.ContainingAssembly?.Identity.Name
             );
         }
 

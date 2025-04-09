@@ -1,34 +1,55 @@
+using System.Reflection;
 using System.Text;
+using Microsoft.CodeAnalysis;
 using MonoDetour.UnitTests.HookGen;
 using MonoMod.HookGen;
+using MonoMod.HookGen.V2;
 using MonoMod.RuntimeDetour;
-using On.TestApp.PlatformerController;
 using TestApp;
+using Xunit.Internal;
 
-[assembly: GenerateHookHelpers(typeof(TestApp.PlatformerController))]
+// [assembly: MonoMod.HookGen.GenerateHookHelpers(typeof(TestApp.GameNetcodeStuff.PlayerControllerB))]
+[assembly: MonoMod.HookGen.GenerateHookHelpers(typeof(TestApp.GameNetcodeStuff.PlayerControllerD))]
+
+// [assembly: GenerateHookHelpers(typeof(TestApp.PlatformerController))]
 
 namespace MonoDetour.UnitTests.HookGen;
 
 public partial class HookGenTests
 {
-    private static readonly MonoDetourManager m = new();
+    // private static readonly MonoDetourManager m = new();
+
+    // private static readonly Type generatorType =
+    //     typeof(MonoMod.Roslyn.UnitTests.Verifiers.Adapter<HookHelperGenerator>);
+    // private static readonly (Type, string, string) attributesSource = (
+    //     generatorType,
+    //     HookHelperGenerator.GenHelperForTypeAttrFile,
+    //     HookHelperGenerator.GenHelperForTypeAttributeSource
+    // );
+
+    // internal static readonly MetadataReference SelfMetadataReference =
+    //     MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location);
+    // internal static readonly MetadataReference RuntimeDetourMetadataReference =
+    //     MetadataReference.CreateFromFile(typeof(Hook).Assembly.Location);
+    // internal static readonly MetadataReference UtilsMetadataReference =
+    //     MetadataReference.CreateFromFile(typeof(MonoMod.Cil.ILContext).Assembly.Location);
+
+    // internal static readonly MetadataReference LethalCompanyMetadataReference =
+    //     MetadataReference.CreateFromFile(
+    //         typeof(TestApp.GameNetcodeStuff.PlayerControllerB).Assembly.Location
+    //     );
 
     [Fact]
-    public void Test1()
-    {
-        SpinBounce.Prefix(m, PlatformerController_SpinBounce);
-        _DoStuff_d__3._ctor.Prefix(m, MoveNext_ctor);
-        Assert.True(true);
-    }
+    public void Test1Async() { }
 
-    private static void MoveNext_ctor(ref _DoStuff_d__3._ctor.Params args)
-    {
-        Console.WriteLine("Hello from MoveNext ctor!");
-    }
+    // private static void MoveNext_ctor(ref _DoStuff_d__3._ctor.Params args)
+    // {
+    //     Console.WriteLine("Hello from MoveNext ctor!");
+    // }
 
-    private static void PlatformerController_SpinBounce(ref SpinBounce.Params args)
-    {
-        args.self.Foo();
-        args.self.DoStuff();
-    }
+    // private static void PlatformerController_SpinBounce(ref SpinBounce.Params args)
+    // {
+    //     args.self.Foo();
+    //     args.self.DoStuff();
+    // }
 }
