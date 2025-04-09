@@ -1,15 +1,7 @@
-using System.Reflection;
-using System.Text;
-using Microsoft.CodeAnalysis;
-using MonoDetour.UnitTests.HookGen;
 using MonoMod.HookGen;
-using MonoMod.HookGen.V2;
-using MonoMod.RuntimeDetour;
-using TestApp;
-using Xunit.Internal;
 
 // [assembly: MonoMod.HookGen.GenerateHookHelpers(typeof(TestApp.GameNetcodeStuff.PlayerControllerB))]
-[assembly: MonoMod.HookGen.GenerateHookHelpers(typeof(TestApp.GameNetcodeStuff.PlayerControllerD))]
+[assembly: GenerateHookHelpers(typeof(SomeNamespace.SomeType))]
 
 // [assembly: GenerateHookHelpers(typeof(TestApp.PlatformerController))]
 
@@ -17,6 +9,8 @@ namespace MonoDetour.UnitTests.HookGen;
 
 public partial class HookGenTests
 {
+    private MonoDetourManager m = new();
+
     // private static readonly MonoDetourManager m = new();
 
     // private static readonly Type generatorType =
@@ -40,7 +34,35 @@ public partial class HookGenTests
     //     );
 
     [Fact]
-    public void Test1Async() { }
+    public void Hook1()
+    {
+        On.SomeNamespace.SomeType.SomeMethod.Prefix(m, Prefix_SomeType_SomeMethod);
+    }
+
+    private static void Prefix_SomeType_SomeMethod(ref On.SomeNamespace.SomeType.SomeMethod.Params args)
+    {
+        Console.WriteLine("Hello from Prefix hook!");
+    }
+
+    [Fact]
+    public void Hook2()
+    {
+        m.HookAllInExecutingAssembly();
+    }
+
+    [MonoDetour.MonoDetourHook(DetourType.Prefix)]
+    private static void Prefix2_SomeType_SomeMethod(
+        ref On.SomeNamespace.SomeType.SomeMethod.Params args)
+    {
+        Console.WriteLine("Hello from Prefix hook 2!");
+    }
+
+    [MonoDetour.MonoDetourHook<MonoDetour.PrefixDetour>()]
+    private static void Prefix3_SomeType_SomeMethod(
+        ref On.SomeNamespace.SomeType.SomeMethod.Params args)
+    {
+        Console.WriteLine("Hello from Prefix hook 3!");
+    }
 
     // private static void MoveNext_ctor(ref _DoStuff_d__3._ctor.Params args)
     // {
