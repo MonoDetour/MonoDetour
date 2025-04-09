@@ -44,7 +44,7 @@ public partial class HookGenTests
         c.Emit(OpCodes.Ret);
     }
 
-    private void ILHook3_3rd_Returns(ILContext il)
+    private static void ILHook3_3rd_Returns(ILContext il)
     {
         ILCursor c = new(il);
         c.Index -= 1;
