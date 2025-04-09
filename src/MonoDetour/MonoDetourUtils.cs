@@ -24,11 +24,14 @@ internal static class MonoDetourUtils
             (structField, methodParam) =>
             {
                 c.Emit(OpCodes.Ldloca, structParamIdx);
-#if NET7_0_OR_GREATER
-                c.Emit(OpCodes.Ldarga, methodParam.Index);
-#else
+
+                // I'd want to add this preprocessor directive,
+                // but we'd need support for this in our HookGen.
+                // #if NET7_0_OR_GREATER
+                // c.Emit(OpCodes.Ldarga, methodParam.Index);
+                // #else
                 c.Emit(OpCodes.Ldarg, methodParam.Index);
-#endif
+                // #endif
                 c.Emit(OpCodes.Stfld, structField);
             }
         );
@@ -61,17 +64,26 @@ internal static class MonoDetourUtils
     {
         foreach (var field in fields)
         {
+            bool isSelfField = field.Name == "self";
+            // We add $"_{argNum}" at the end of every argument except self so we strip it out here.
+            string realFieldName = isSelfField ? "this" : field.Name[..field.Name.LastIndexOf('_')];
+
             // Console.WriteLine($"field: {field.Name}");
+            // Console.WriteLine($"realFieldName: {realFieldName}");
 
             foreach (var origParam in c.Method.Parameters)
             {
-                if (field.Name != origParam.Name)
-                {
-                    if (!(field.Name == "self" && origParam.Name == "this" && origParam.Index == 0))
-                        continue;
-                }
+                if (realFieldName != origParam.Name)
+                    continue;
+
+                if (isSelfField && origParam.Index != 0)
+                    continue;
+
+                if (!c.Method.IsStatic && !isSelfField && origParam.Index == 0)
+                    continue;
 
                 action(field, origParam);
+                break;
             }
         }
     }

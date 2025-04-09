@@ -36,10 +36,12 @@ static class GenericDetour
         else
             c.Emit(OpCodes.Call, data.Manipulator);
 
-#if !NET7_0_OR_GREATER // ref fields are supported since net7.0 so we don't need to apply this 'hack'
+        // I'd want to add this preprocessor directive,
+        // but we'd need support for this in our HookGen.
+        // #if !NET7_0_OR_GREATER // ref fields are supported since net7.0 so we don't need to apply this 'hack'
         if (!data.ManipulatorParameter.IsIn)
             c.ApplyStructValuesToMethod(data.ManipulatorParameterTypeFields, structArgumentIdx);
-#endif
+        // #endif
 
         if (info.DetourType == typeof(PostfixDetour))
         {

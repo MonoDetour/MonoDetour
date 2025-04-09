@@ -776,9 +776,13 @@ namespace MonoDetour.HookGen
 
                 cb.WriteLine("public ref struct Params").OpenBlock();
 
+                int paramCountOffset = 0;
                 if (member.Signature.ThisType is { } thisType)
                 {
+                    paramCountOffset = 1;
                     cb.Write("public ");
+
+                    // TODO: If possible, allow ref fields in structs if user targets .NET 7 or higher.
 
                     if (thisType.FqName.Contains('<'))
                         cb.Write("object");
@@ -799,7 +803,11 @@ namespace MonoDetour.HookGen
                     else
                         cb.Write(param.FqName);
 
-                    cb.Write(' ').Write("arg").Write(i).WriteLine(';');
+                    cb.Write(' ')
+                        .Write(param.ParamName!)
+                        .Write('_')
+                        .Write(i + paramCountOffset)
+                        .WriteLine(';');
                 }
                 cb.CloseBlock().WriteLine();
 

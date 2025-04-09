@@ -51,7 +51,7 @@ public partial class HookGenTests
     {
         HookGenManager.Instance.HookAll();
         var someType = new SomeType();
-        someType.SomeMethod();
+        someType.SomeMethod(1);
     }
 
     [MonoDetourHook(DetourType.PrefixDetour)]
@@ -60,6 +60,7 @@ public partial class HookGenTests
     )
     {
         Console.WriteLine("Hello from Prefix hook 2!");
+        Console.WriteLine("Number is " + args.number_1);
     }
 
     [MonoDetourHook<PrefixDetour>]
@@ -67,6 +68,7 @@ public partial class HookGenTests
         ref On.SomeNamespace.SomeType.SomeMethod.Params args
     )
     {
+        args.number_1 = 3;
         Console.WriteLine("Hello from Prefix hook 3!");
     }
 

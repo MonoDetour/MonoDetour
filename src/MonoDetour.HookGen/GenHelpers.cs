@@ -10,6 +10,7 @@ namespace MonoMod.SourceGen.Internal
         string FqName,
         string Name,
         string Refness,
+        string? ParamName,
         string? AssemblyIdentityName
     )
     {
@@ -64,20 +65,25 @@ namespace MonoMod.SourceGen.Internal
 
     internal static class GenHelpers
     {
-        public static TypeRef CreateRef(ITypeSymbol symbol, string refness = "")
+        public static TypeRef CreateRef(
+            ITypeSymbol symbol,
+            string refness = "",
+            string? paramName = null
+        )
         {
             return new(
                 symbol.GetFullyQualifiedMetadataName(),
                 refness + symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                 symbol.Name,
                 refness,
+                paramName,
                 symbol.ContainingAssembly?.Identity.Name
             );
         }
 
         public static TypeRef CreateRef(IParameterSymbol symbol)
         {
-            return CreateRef(symbol.Type, GetRefString(symbol));
+            return CreateRef(symbol.Type, GetRefString(symbol), symbol.Name);
         }
 
         public static string GetRefString(IParameterSymbol param, bool isReturn = false) =>

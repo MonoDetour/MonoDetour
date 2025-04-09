@@ -4,7 +4,7 @@ namespace SomeNamespace;
 
 public class SomeType
 {
-    public void SomeMethod()
+    public void SomeMethod(int number)
     {
         Console.WriteLine("Doing stuff.");
     }
