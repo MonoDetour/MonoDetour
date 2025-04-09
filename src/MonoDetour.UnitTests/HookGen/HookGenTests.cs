@@ -1,85 +1,61 @@
+using Mono.Cecil.Cil;
 using MonoDetour.HookGen;
+using MonoMod.Cil;
+using On.SomeNamespace.SomeType;
 using SomeNamespace;
 
-// [assembly: MonoMod.HookGen.GenerateHookHelpers(typeof(TestApp.GameNetcodeStuff.PlayerControllerB))]
-[assembly: GenerateHookHelpers(typeof(SomeNamespace.SomeType))]
-
-// [assembly: GenerateHookHelpers(typeof(TestApp.PlatformerController))]
+[assembly: GenerateHookHelpers(typeof(SomeType))]
 
 namespace MonoDetour.UnitTests.HookGen;
 
 [MonoDetourTargets]
 public partial class HookGenTests
 {
-    // private static readonly MonoDetourManager m = new();
-
-    // private static readonly Type generatorType =
-    //     typeof(MonoMod.Roslyn.UnitTests.Verifiers.Adapter<HookHelperGenerator>);
-    // private static readonly (Type, string, string) attributesSource = (
-    //     generatorType,
-    //     HookHelperGenerator.GenHelperForTypeAttrFile,
-    //     HookHelperGenerator.GenHelperForTypeAttributeSource
-    // );
-
-    // internal static readonly MetadataReference SelfMetadataReference =
-    //     MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location);
-    // internal static readonly MetadataReference RuntimeDetourMetadataReference =
-    //     MetadataReference.CreateFromFile(typeof(Hook).Assembly.Location);
-    // internal static readonly MetadataReference UtilsMetadataReference =
-    //     MetadataReference.CreateFromFile(typeof(MonoMod.Cil.ILContext).Assembly.Location);
-
-    // internal static readonly MetadataReference LethalCompanyMetadataReference =
-    //     MetadataReference.CreateFromFile(
-    //         typeof(TestApp.GameNetcodeStuff.PlayerControllerB).Assembly.Location
-    //     );
+    static readonly Queue<int> order = [];
 
     [Fact]
-    public void Hook1()
+    public void CanFixEarlyReturn()
     {
-        On.SomeNamespace.SomeType.SomeMethod.Prefix(Prefix_SomeType_SomeMethod);
-    }
+        order.Clear();
+        SomeMethod.Postfix(Postfix1_2nd);
+        SomeMethod.ILHook(ILHook2_1st_Returns);
+        SomeMethod.ILHook(ILHook3_3rd_Returns);
+        SomeMethod.Postfix(Postfix4_4th);
 
-    private static void Prefix_SomeType_SomeMethod(
-        ref On.SomeNamespace.SomeType.SomeMethod.Params args
-    )
-    {
-        Console.WriteLine("Hello from Prefix hook!");
-    }
-
-    [Fact]
-    public void Hook2()
-    {
-        HookGenManager.Instance.HookAll();
         var someType = new SomeType();
         someType.SomeMethod(1);
+
+        Assert.Equal([1, 2, 3, 4], order);
     }
 
-    [MonoDetourHook(DetourType.PrefixDetour)]
-    private static void Prefix2_SomeType_SomeMethod(
-        ref On.SomeNamespace.SomeType.SomeMethod.Params args
-    )
+    private static void Postfix1_2nd(ref SomeMethod.Params args)
     {
-        Console.WriteLine("Hello from Prefix hook 2!");
-        Console.WriteLine("Number is " + args.number_1);
+        order.Enqueue(2);
     }
 
-    [MonoDetourHook<PrefixDetour>]
-    private static void Prefix3_SomeType_SomeMethod(
-        ref On.SomeNamespace.SomeType.SomeMethod.Params args
-    )
+    private static void ILHook2_1st_Returns(ILContext il)
     {
-        args.number_1 = 3;
-        Console.WriteLine("Hello from Prefix hook 3!");
+        ILCursor c = new(il);
+        c.EmitDelegate(() =>
+        {
+            order.Enqueue(1);
+        });
+        c.Emit(OpCodes.Ret);
     }
 
-    // private static void MoveNext_ctor(ref _DoStuff_d__3._ctor.Params args)
-    // {
-    //     Console.WriteLine("Hello from MoveNext ctor!");
-    // }
+    private void ILHook3_3rd_Returns(ILContext il)
+    {
+        ILCursor c = new(il);
+        c.Index -= 1;
+        c.EmitDelegate(() =>
+        {
+            order.Enqueue(3);
+        });
+        c.Emit(OpCodes.Ret);
+    }
 
-    // private static void PlatformerController_SpinBounce(ref SpinBounce.Params args)
-    // {
-    //     args.self.Foo();
-    //     args.self.DoStuff();
-    // }
+    private static void Postfix4_4th(ref SomeMethod.Params args)
+    {
+        order.Enqueue(4);
+    }
 }
