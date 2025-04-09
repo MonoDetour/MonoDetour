@@ -11,22 +11,8 @@ namespace MonoDetour;
 public class ILHookDetour : IMonoDetourHookEmitter
 {
     /// <inheritdoc/>
-    public MonoDetourInfo Info
-    {
-        get;
-        set
-        {
-            field = value;
-            manipulator = (ILContext.Manipulator)
-                Delegate.CreateDelegate(
-                    typeof(ILContext.Manipulator),
-                    (MethodInfo)value.Data.Manipulator!
-                );
-        }
-    } = null!;
-
-    ILContext.Manipulator manipulator = null!;
+    public MonoDetourInfo Info { get; set; } = null!;
 
     /// <inheritdoc/>
-    public void ILHookManipulator(ILContext il) => manipulator(il);
+    public void ILHookManipulator(ILContext il) => Info.Data.Manipulator!.Invoke(null, [il]);
 }
