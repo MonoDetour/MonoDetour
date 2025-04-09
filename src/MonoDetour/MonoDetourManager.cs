@@ -55,6 +55,20 @@ public class MonoDetourManager
     }
 
     /// <summary>
+    /// Undoes all applied hooks.
+    /// </summary>
+    public void UndoHooks() => ILHooks.ForEach(x => x.Undo());
+
+    /// <summary>
+    /// Cleans up, undoes and gets rid of all hooks. Use this is you never want to see these hooks again.
+    /// </summary>
+    public void DisposeHooks()
+    {
+        ILHooks.ForEach(x => x.Dispose());
+        ILHooks.Clear();
+    }
+
+    /// <summary>
     /// Applies a regular <see cref="ILHook"/>.
     /// </summary>
     /// <inheritdoc cref="HookGenReflectedHook(MethodBase, MethodBase, MonoDetourInfo?)"/>

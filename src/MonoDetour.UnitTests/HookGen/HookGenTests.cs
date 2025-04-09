@@ -24,6 +24,7 @@ public partial class HookGenTests
 
         var someType = new SomeType();
         someType.SomeMethod(1);
+        HookGenManager.Instance.DisposeHooks();
 
         Assert.Equal([1, 2, 3, 4], order);
     }
