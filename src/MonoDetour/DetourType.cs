@@ -8,20 +8,20 @@ public enum DetourType
 {
     /// <summary>
     /// This hook will run at the start of the target method.<br/>
-    /// Implementation is <see cref="PrefixDetour"/>.
+    /// Implementation class is <see cref="MonoDetour.PrefixDetour"/>.
     /// </summary>
-    Prefix = 1,
+    PrefixDetour = 1,
 
     /// <summary>
     /// This hook will run at the end of the target method.<br/>
-    /// Implementation is <see cref="PostfixDetour"/>.
+    /// Implementation class is <see cref="MonoDetour.PostfixDetour"/>.
     /// </summary>
-    Postfix = 2,
+    PostfixDetour = 2,
 
     /// <summary>
     /// This is a regular <see cref="MonoMod.RuntimeDetour.ILHook"/>
     /// which supports modifying the target method on the CIL level.<br/>
-    /// Implementation is <see cref="ILHookDetour"/>.
+    /// Implementation class is <see cref="MonoDetour.ILHookDetour"/>.
     /// </summary>
-    ILHook = 3,
+    ILHookDetour = 3,
 }

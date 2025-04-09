@@ -1,4 +1,5 @@
 using MonoMod.HookGen;
+using SomeNamespace;
 
 // [assembly: MonoMod.HookGen.GenerateHookHelpers(typeof(TestApp.GameNetcodeStuff.PlayerControllerB))]
 [assembly: GenerateHookHelpers(typeof(SomeNamespace.SomeType))]
@@ -7,6 +8,7 @@ using MonoMod.HookGen;
 
 namespace MonoDetour.UnitTests.HookGen;
 
+[MonoDetourTargets]
 public partial class HookGenTests
 {
     private MonoDetourManager m = new();
@@ -48,16 +50,18 @@ public partial class HookGenTests
     public void Hook2()
     {
         m.HookAllInExecutingAssembly();
+        var someType = new SomeType();
+        someType.SomeMethod();
     }
 
-    [MonoDetour.MonoDetourHook(DetourType.Prefix)]
+    [MonoDetourHook(DetourType.PrefixDetour)]
     private static void Prefix2_SomeType_SomeMethod(
         ref On.SomeNamespace.SomeType.SomeMethod.Params args)
     {
         Console.WriteLine("Hello from Prefix hook 2!");
     }
 
-    [MonoDetour.MonoDetourHook<MonoDetour.PrefixDetour>()]
+    [MonoDetourHook<PrefixDetour>]
     private static void Prefix3_SomeType_SomeMethod(
         ref On.SomeNamespace.SomeType.SomeMethod.Params args)
     {

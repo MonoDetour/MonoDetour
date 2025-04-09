@@ -32,27 +32,33 @@ static void Prefix_SomeType_SomeMethod(
 Or you can do things the Harmony way:
 
 ```cs
-internal static readonly MonoDetour.MonoDetourManager m = new();
-
-public void InitHooks()
+// Tell MonoDetourManager to look for MonoDetourHook methods in this type.
+// Also tells HookGen to generate hooks for the specified type.
+[MonoDetourTargets<SomeType>]
+class SomeTypeHooks
 {
-    m.HookAllInExecutingAssembly();
-}
+    internal static readonly MonoDetour.MonoDetourManager m = new();
 
-// Via enum
-[MonoDetour.MonoDetourHook(DetourType.Prefix)]
-static void Prefix2_SomeType_SomeMethod(
-    ref On.SomeNamespace.SomeType.SomeMethod.Params args)
-{
-    Console.WriteLine("Hello from Prefix hook 2!");
-}
+    internal static void InitHooks()
+    {
+        m.HookAllInExecutingAssembly();
+    }
 
-// Via class that implements MonoDetour.IMonoDetourHookEmitter
-[MonoDetour.MonoDetourHook<MonoDetour.PrefixDetour>()]
-static void Prefix3_SomeType_SomeMethod(
-    ref On.SomeNamespace.SomeType.SomeMethod.Params args)
-{
-    Console.WriteLine("Hello from Prefix hook 3!");
+    // Via enum. Maps to MonoDetour.PrefixDetour as seen in next hook.
+    [MonoDetourHook(DetourType.PrefixDetour)]
+    static void Prefix2_SomeType_SomeMethod(
+        ref On.SomeNamespace.SomeType.SomeMethod.Params args)
+    {
+        Console.WriteLine("Hello from Prefix hook 2!");
+    }
+
+    // Via class that implements MonoDetour.IMonoDetourHookEmitter
+    [MonoDetourHook<PrefixDetour>]
+    static void Prefix3_SomeType_SomeMethod(
+        ref On.SomeNamespace.SomeType.SomeMethod.Params args)
+    {
+        Console.WriteLine("Hello from Prefix hook 3!");
+    }
 }
 ```
 

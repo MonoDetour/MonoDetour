@@ -45,9 +45,9 @@ public class MonoDetourInfo
     internal static Type GetTypeFromDetourType(DetourType detourType) =>
         detourType switch
         {
-            MonoDetour.DetourType.Prefix => typeof(PrefixDetour),
-            MonoDetour.DetourType.Postfix => typeof(PostfixDetour),
-            MonoDetour.DetourType.ILHook => typeof(ILHookDetour),
+            MonoDetour.DetourType.PrefixDetour => typeof(PrefixDetour),
+            MonoDetour.DetourType.PostfixDetour => typeof(PostfixDetour),
+            MonoDetour.DetourType.ILHookDetour => typeof(ILHookDetour),
             _ => throw new ArgumentOutOfRangeException(),
         };
 }

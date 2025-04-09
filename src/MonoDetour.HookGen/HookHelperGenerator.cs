@@ -799,7 +799,7 @@ namespace MonoMod.HookGen.V2
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "manager.HookGenReflectedHook(args, new(global::MonoDetour.DetourType.Prefix));"
+                        "manager.HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PrefixDetour));"
                     )
                     .DecreaseIndent();
 
@@ -810,7 +810,7 @@ namespace MonoMod.HookGen.V2
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "manager.HookGenReflectedHook(args, new(global::MonoDetour.DetourType.Postfix));"
+                        "manager.HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PostfixDetour));"
                     )
                     .DecreaseIndent();
 
