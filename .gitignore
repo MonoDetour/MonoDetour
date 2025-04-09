@@ -6,5 +6,6 @@
 !.gitignore
 !Directory.Build.props
 !Directory.Build.targets
+!LICENSE
 !MonoDetour.sln
 !README.md
