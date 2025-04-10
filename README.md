@@ -1,6 +1,6 @@
 # MonoDetour
 
-A highly experimental `MonoMod.RuntimeDetour.ILHook` wrapper, optimized for convenience, and based around HookGen with C# source generators.
+A highly experimental `MonoMod.RuntimeDetour.ILHook` wrapper optimized for convenience, based around HookGen with C# source generators.
 
 > [!NOTE]
 > Also see related project [MonoDetour.ILWeaver](./src/MonoDetour.ILWeaver/README.md), a redesigned ILCursor with a focus on hand-holding.
@@ -15,7 +15,7 @@ You can use generated hooks directly for hooking like with MonoMod's HookGen:
 internal static void InitHooks()
 {
     // Note: this is using the default generated MonoDetourManager
-    // MonoDetour.HookGen.HookGenManager.Instance by default.
+    // MonoDetour.HookGen.DefaultMonoDetourManager.Instance by default.
     // Use it for managing your hooks.
     On.SomeNamespace.SomeType.SomeMethod.Prefix(Prefix_SomeType_SomeMethod);
 }
@@ -75,7 +75,7 @@ When no `MonoDetourManager` object is specified, MonoDetour will use the default
 
 MonoMod.RuntimeDetour.HookGen isn't perfect, and HarmonyX doesn't have HookGen. And I simply had an idea, and a goal to make the perfect hooking API for myself.
 
-I do hope though that this will be useful to other people too, and such this project has (some) documentation.
+I do hope though that this will be useful to other people too, and as such this project has (some) documentation.
 
 ## How Do I Use It?
 
