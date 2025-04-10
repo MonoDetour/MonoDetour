@@ -11,6 +11,12 @@ namespace MonoDetour;
 public class MonoDetourData
 {
     /// <summary>
+    /// The owner <see cref="MonoDetourManager"/> of this <see cref="MonoDetourData"/>.
+    /// All applied MonoDetour hooks must have an owner.
+    /// </summary>
+    public MonoDetourManager? Owner { get; set; }
+
+    /// <summary>
     /// The method to hook.
     /// </summary>
     public MethodBase? Target { get; set; }
@@ -41,6 +47,7 @@ public class MonoDetourData
     /// <returns>Whether or not all the values are initialized.</returns>
     [MemberNotNullWhen(
         true,
+        nameof(Owner),
         nameof(Target),
         nameof(Manipulator),
         nameof(ManipulatorParameter),
@@ -48,7 +55,8 @@ public class MonoDetourData
         nameof(ManipulatorParameterTypeFields)
     )]
     public bool IsInitialized() =>
-        Target is not null
+        Owner is not null
+        && Target is not null
         && Manipulator is not null
         && ManipulatorParameter is not null
         && ManipulatorParameterType is not null

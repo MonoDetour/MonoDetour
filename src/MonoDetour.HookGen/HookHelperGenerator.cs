@@ -46,11 +46,17 @@ namespace MonoDetour.HookGen
                     Both = 2,
                 }
 
-                internal static class HookGenManager
+            #if DEBUG
+                /// <summary>
+                /// The default MonoDetourManager generated for this assembly.
+                /// </summary>
+            #endif
+                internal static class DefaultMonoDetourManager
                 {
             #if DEBUG
                     /// <summary>
-                    /// The default MonoDetourManager instance used when none is specified.
+                    /// The default MonoDetourManager instance generated for this assembly.<br/>
+                    /// This automatically used when none is specified.
                     /// </summary>
             #endif
                     internal static global::MonoDetour.MonoDetourManager Instance { get; } = new();
@@ -818,7 +824,7 @@ namespace MonoDetour.HookGen
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PrefixDetour));"
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PrefixDetour));"
                     )
                     .DecreaseIndent()
                     .WriteLine();
@@ -830,7 +836,7 @@ namespace MonoDetour.HookGen
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PostfixDetour));"
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PostfixDetour));"
                     )
                     .DecreaseIndent()
                     .WriteLine();
@@ -842,7 +848,7 @@ namespace MonoDetour.HookGen
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).Hook(Target(), manipulator);"
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), manipulator);"
                     )
                     .DecreaseIndent()
                     .WriteLine();

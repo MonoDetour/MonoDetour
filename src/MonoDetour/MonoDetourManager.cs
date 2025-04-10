@@ -13,6 +13,27 @@ namespace MonoDetour;
 public class MonoDetourManager
 {
     /// <summary>
+    /// The log level for a <see cref="MonoDetourManager"/>.
+    /// </summary>
+    public enum Logging
+    {
+        /// <summary>
+        /// Nothing will be logged.
+        /// </summary>
+        None,
+
+        /// <summary>
+        /// Logs a lot of information useful for debugging MonoDetour itself.
+        /// </summary>
+        Diagnostic,
+    }
+
+    /// <summary>
+    /// The log level for this <see cref="MonoDetourManager"/>.
+    /// </summary>
+    public Logging LogLevel { get; set; } = Logging.None;
+
+    /// <summary>
     /// The hooks applied by this MonoDetourManager.
     /// </summary>
     public List<ILHook> ILHooks { get; } = [];
@@ -190,15 +211,15 @@ public class MonoDetourManager
     {
         Helpers.ThrowIfNull(info);
 
+        info.Data.Owner = this;
+
         if (!info.Data.IsInitialized())
             throw new ArgumentException($"{nameof(MonoDetourInfo)} is not fully initialized.");
-
-        Console.WriteLine("Hooking");
 
         var emitter = (IMonoDetourHookEmitter)Activator.CreateInstance(info.DetourType)!;
         emitter.Info = info;
 
-        ILHook iLHook = new(info.Data.Target, emitter.ILHookManipulator);
+        ILHook iLHook = new(info.Data.Target, emitter.Manipulator);
         ILHooks.Add(iLHook);
         return iLHook;
     }

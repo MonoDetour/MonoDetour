@@ -66,7 +66,9 @@ internal static class MonoDetourUtils
         {
             bool isSelfField = field.Name == "self";
             // We add $"_{argNum}" at the end of every argument except self so we strip it out here.
-            string realFieldName = isSelfField ? "this" : field.Name[..field.Name.LastIndexOf('_')];
+            string realFieldName = isSelfField
+                ? "this"
+                : field.Name.Substring(0, field.Name.LastIndexOf('_'));
 
             // Console.WriteLine($"field: {field.Name}");
             // Console.WriteLine($"realFieldName: {realFieldName}");

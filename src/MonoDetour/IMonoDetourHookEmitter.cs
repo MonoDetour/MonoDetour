@@ -28,5 +28,5 @@ public interface IMonoDetourHookEmitter
     /// when the ILHook is applied.
     /// </summary>
     /// <param name="il">The <see cref="ILContext"/> passed for manipulating the target method.</param>
-    void ILHookManipulator(ILContext il);
+    void Manipulator(ILContext il);
 }

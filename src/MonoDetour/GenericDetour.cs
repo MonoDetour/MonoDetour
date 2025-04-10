@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
+using MonoMod.Utils;
 
 namespace MonoDetour;
 
@@ -27,7 +28,7 @@ static class GenericDetour
             c.Index -= 1;
             bool found = firstRedirectForMethod.TryGetValue(info.Data.Target, out var target);
 
-            ILLabel retLabel = RedirectReturnsToLabel(c, target);
+            ILLabel retLabel = RedirectEarlyReturnsToLabel(c, target);
 
             if (!found)
                 firstRedirectForMethod.Add(info.Data.Target, retLabel);
@@ -58,13 +59,15 @@ static class GenericDetour
             c.ApplyStructValuesToMethod(data.ManipulatorParameterTypeFields, structArgumentIdx);
         // #endif
 
-        // c.Method.RecalculateILOffsets();
-        // Console.WriteLine("Manipulated: " + il.ToString());
-        // Console.WriteLine($"Manipulated by {info.Data.Manipulator.Name}");
+        if (data.Owner.LogLevel == MonoDetourManager.Logging.Diagnostic)
+        {
+            c.Method.RecalculateILOffsets();
+            Console.WriteLine($"Manipulated by {data.Manipulator.Name}: " + il.ToString());
+        }
     }
 
     // Taken and adapted from HarmonyX
-    private static ILLabel RedirectReturnsToLabel(ILCursor c, ILLabel? target)
+    private static ILLabel RedirectEarlyReturnsToLabel(ILCursor c, ILLabel? target)
     {
         if (c.Body.Instructions.Count == 0)
             c.Emit(OpCodes.Nop);
@@ -75,28 +78,36 @@ static class GenericDetour
         foreach (var ins in c.Body.Instructions.Where(ins => ins.MatchRet()))
         {
             hasRet = true;
-            ins.OpCode = OpCodes.Br;
+
+            // To allow intentional early returns,
+            // we ignore cases where ret is called twice in a row.
+            // But double ret at end of method is not early, and probably not intentional.
+            if (ins.Next?.Next is not null)
+            {
+                if (ins.Next.OpCode == OpCodes.Ret || ins.Previous?.OpCode == OpCodes.Ret)
+                    continue;
+            }
+
+            // A previous label may exist before us, but
+            // someone has emitted a ret instruction afterwards.
+            // If that is the case, redirect their ret to the existing label.
             if (
-                target is not null /*  && c.Body.Instructions.IndexOf(target.Target) != -1 */
+                target is not null
+                && c.Body.Instructions.IndexOf(ins) < c.Body.Instructions.IndexOf(target.Target)
             )
             {
-                // A previous label may exist before us, but
-                // someone has emitted a ret instruction afterwards.
-                // If that is the case, redirect their ret to the existing label.
-                if (c.Body.Instructions.IndexOf(ins) < c.Body.Instructions.IndexOf(target.Target))
-                {
-                    // Console.WriteLine("Retargeted instruction!");
-                    ins.Operand = target.Target!.Next;
-                    continue;
-                }
-                // Console.WriteLine("Target was not null, but didn't retarget.");
+                // Console.WriteLine("Retargeted instruction!");
+                ins.OpCode = OpCodes.Br;
+                ins.Operand = target.Target!.Next;
+                continue;
             }
 
             // If the above isn't the case, we can still point them to us.
+            ins.OpCode = OpCodes.Br;
             ins.Operand = retLabel;
         }
 
-        Instruction lastInstruction = c.Body.Instructions[^1];
+        Instruction lastInstruction = c.Body.Instructions[c.Body.Instructions.Count - 1];
         lastInstruction.OpCode = hasRet ? OpCodes.Ret : OpCodes.Nop;
         lastInstruction.Operand = null;
         retLabel.Target = lastInstruction;

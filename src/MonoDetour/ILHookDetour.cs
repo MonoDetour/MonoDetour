@@ -14,5 +14,5 @@ public class ILHookDetour : IMonoDetourHookEmitter
     public MonoDetourInfo Info { get; set; } = null!;
 
     /// <inheritdoc/>
-    public void ILHookManipulator(ILContext il) => Info.Data.Manipulator!.Invoke(null, [il]);
+    public void Manipulator(ILContext il) => Info.Data.Manipulator!.Invoke(null, [il]);
 }

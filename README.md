@@ -41,7 +41,7 @@ class SomeTypeHooks
     internal static void InitHooks()
     {
         // HookAll using the generated MonoDetourManager instance for this assembly.
-        HookGenManager.Instance.HookAll();
+        DefaultMonoDetourManager.Instance.HookAll();
     }
 
     // Via enum. Maps to MonoDetour.PrefixDetour as seen in next hook.
@@ -69,7 +69,7 @@ MonoDetour entirely relies on `ILHook`s for hooking similar to HarmonyX. But ins
 ### MonoDetourManager
 
 Every hook made with MonoDetour is attached to a `MonoDetour.MonoDetourManager` object.
-When no `MonoDetourManager` object is specified, MonoDetour will use the default `MonoDetour.HookGen.HookGenManager.Instance` it has generated for your assembly. You can use that manager for managing your hooks, or you can create your own managers.
+When no `MonoDetourManager` object is specified, MonoDetour will use the default `MonoDetour.HookGen.DefaultMonoDetourManager.Instance` it has generated for your assembly. You can use that manager for managing your hooks, or you can create your own managers.
 
 ## Why?
 
