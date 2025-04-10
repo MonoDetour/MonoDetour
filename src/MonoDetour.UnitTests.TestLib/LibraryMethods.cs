@@ -1,8 +1,8 @@
 using System;
 
-namespace SomeNamespace;
+namespace MonoDetour.UnitTests.TestLib;
 
-public class SomeType
+public class LibraryMethods
 {
     public int TakeAndReturnInt(int number)
     {

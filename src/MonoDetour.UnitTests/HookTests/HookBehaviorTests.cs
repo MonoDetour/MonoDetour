@@ -1,14 +1,5 @@
-using Mono.Cecil.Cil;
-using MonoDetour.HookGen;
-using MonoMod.Cil;
-using On.SomeNamespace.SomeType;
-using SomeNamespace;
+namespace MonoDetour.UnitTests.HookTests;
 
-[assembly: GenerateHookHelpers(typeof(SomeType))]
-
-namespace MonoDetour.UnitTests.HookGen;
-
-[MonoDetourTargets]
 public static partial class HookBehaviorTests
 {
     private static readonly Queue<int> order = [];
@@ -42,7 +33,7 @@ public static partial class HookBehaviorTests
         TakeAndReturnInt.Postfix(Postfix4_4th_Add1ToNum);
         TakeAndReturnInt.ILHook(ILHook5_5th_ReturnWithLdarg1);
 
-        var someType = new SomeType();
+        var someType = new LibraryMethods();
         var retVal = someType.TakeAndReturnInt(0);
         DefaultMonoDetourManager.Instance.DisposeHooks();
 
@@ -73,11 +64,6 @@ public static partial class HookBehaviorTests
 
         if (iLHook2_emitRetTwiceToForceEarlyReturn)
             c.Emit(OpCodes.Ret);
-
-        // c.Method.RecalculateILOffsets();
-        // Console.WriteLine(
-        //     $"Manipulated by {nameof(ILHook2_1st_Add100ToNum_Returns)}: " + il.ToString()
-        // );
     }
 
     private static void ILHook3_3rd_Returns(ILContext il)
@@ -88,10 +74,12 @@ public static partial class HookBehaviorTests
         {
             order.Enqueue(3);
         });
-        c.Emit(OpCodes.Ret);
 
-        // c.Method.RecalculateILOffsets();
-        // Console.WriteLine($"Manipulated by {nameof(ILHook3_3rd_Returns)}: " + il.ToString());
+        // This ret will be at the end of the method for the next applied
+        // PostfixDetour so there will be 2 ret instructions for it,
+        // so this also tests that 2 ret instructions at the end of a method
+        // are turned into branches and won't force a return.
+        c.Emit(OpCodes.Ret);
     }
 
     private static void Postfix4_4th_Add1ToNum(ref TakeAndReturnInt.Params args)
@@ -107,8 +95,5 @@ public static partial class HookBehaviorTests
 
         c.Emit(OpCodes.Pop);
         c.Emit(OpCodes.Ldarg_1);
-
-        // c.Method.RecalculateILOffsets();
-        // Console.WriteLine($"Manipulated by {nameof(ILHook3_3rd_Returns)}: " + il.ToString());
     }
 }
