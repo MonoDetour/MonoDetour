@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using MonoDetour.DetourTypes;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 

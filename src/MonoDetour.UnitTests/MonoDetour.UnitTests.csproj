@@ -44,7 +44,9 @@
       ReferenceOutputAssembly="true"/>
 
     <ProjectReference Include="../MonoDetour/MonoDetour.csproj" />
-    <ProjectReference Include="../MonoDetour.UnitTests.TestLib/MonoDetour.UnitTests.TestLib.csproj" Publicize="false" />
+    <ProjectReference
+      Include="../MonoDetour.UnitTests.TestLib/MonoDetour.UnitTests.TestLib.csproj"
+      Publicize="true" />
   </ItemGroup>
 
 </Project>

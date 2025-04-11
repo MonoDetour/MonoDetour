@@ -1,6 +1,6 @@
 using MonoMod.Cil;
 
-namespace MonoDetour;
+namespace MonoDetour.DetourTypes;
 
 /// <summary>
 /// A type which implements this interface can be used as a

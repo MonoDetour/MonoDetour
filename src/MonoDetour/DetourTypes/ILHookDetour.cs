@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using MonoMod.Cil;
 
-namespace MonoDetour;
+namespace MonoDetour.DetourTypes;
 
 /// <summary>
 /// Implements MonoDetour support for a regular <see cref="MonoMod.RuntimeDetour.ILHook"/>

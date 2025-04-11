@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoDetour.DetourTypes;
 using MonoMod.Cil;
 
 namespace MonoDetour;

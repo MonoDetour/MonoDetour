@@ -1,11 +1,11 @@
 using MonoMod.Cil;
 
-namespace MonoDetour;
+namespace MonoDetour.DetourTypes;
 
 /// <summary>
-/// Implements MonoDetour support for a Hook that will run at the end of the target method.
+/// Implements MonoDetour support for a Hook that will run at the start of the target method.
 /// </summary>
-public class PostfixDetour : IMonoDetourHookEmitter
+public class PrefixDetour : IMonoDetourHookEmitter
 {
     /// <inheritdoc/>
     public MonoDetourInfo Info { get; set; } = null!;

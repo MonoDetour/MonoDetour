@@ -6,7 +6,7 @@ using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Utils;
 
-namespace MonoDetour;
+namespace MonoDetour.DetourTypes;
 
 static class GenericDetour
 {

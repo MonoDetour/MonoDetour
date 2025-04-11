@@ -810,7 +810,7 @@ namespace MonoDetour.HookGen
                         cb.Write(param.FqName);
 
                     cb.Write(' ')
-                        .Write(param.ParamName!)
+                        .Write(SanitizeMdName(param.ParamName!))
                         .Write('_')
                         .Write(i + paramCountOffset)
                         .WriteLine(';');
@@ -824,7 +824,7 @@ namespace MonoDetour.HookGen
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PrefixDetour));"
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourTypes.DetourType.PrefixDetour));"
                     )
                     .DecreaseIndent()
                     .WriteLine();
@@ -836,7 +836,7 @@ namespace MonoDetour.HookGen
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PostfixDetour));"
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourTypes.DetourType.PostfixDetour));"
                     )
                     .DecreaseIndent()
                     .WriteLine();
@@ -996,7 +996,11 @@ namespace MonoDetour.HookGen
         private static string SanitizeRefness(string v) => v.Replace(" ", "_");
 
         private static string SanitizeMdName(string v) =>
-            v.Replace(".", "_").Replace("`", "_").Replace("+", "_");
+            v.Replace(".", "_")
+                .Replace("`", "_")
+                .Replace("+", "_")
+                .Replace("<", "_")
+                .Replace(">", "_");
 
         private static string GetHookDelegateName(MethodSignature sig)
         {
