@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace MonoDetour.UnitTests.TestLib;
 
@@ -15,6 +16,15 @@ public class LibraryMethods
     }
 
     public IEnumerator EnumerateRange(int iterations)
+    {
+        for (int i = 1; i <= iterations; i++)
+        {
+            Number = i;
+            yield return i;
+        }
+    }
+
+    public IEnumerator<int> EnumerateIntRange(int iterations)
     {
         for (int i = 1; i <= iterations; i++)
         {

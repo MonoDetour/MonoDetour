@@ -818,14 +818,21 @@ namespace MonoDetour.HookGen
                 cb.CloseBlock().WriteLine();
 
                 bool returnTypeIsIEnumerator =
-                    member.Signature.ReturnType.FqName == "global::System.Collections.IEnumerator";
+                    member.Signature.ReturnType.FqName == "global::System.Collections.IEnumerator"
+                    || member.Signature.ReturnType.FqName.StartsWith(
+                        "global::System.Collections.Generic.IEnumerator<"
+                    );
 
                 if (returnTypeIsIEnumerator)
                 {
                     cb.Write("public static ")
                         .Write(hookType)
+                        .Write(" IEnumeratorDetour(global::System.Func<")
+                        .Write(member.Signature.ReturnType.FqName)
+                        .Write(", ")
+                        .Write(member.Signature.ReturnType.FqName)
                         .WriteLine(
-                            " IEnumeratorDetour(global::System.Func<global::System.Collections.IEnumerator, global::System.Collections.IEnumerator> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                            "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
                         )
                         .IncreaseIndent()
                         .WriteLine(
@@ -836,8 +843,10 @@ namespace MonoDetour.HookGen
 
                     cb.Write("public static ")
                         .Write(hookType)
+                        .Write(" IEnumeratorPrefix(global::System.Action<")
+                        .Write(member.Signature.ReturnType.FqName)
                         .WriteLine(
-                            " IEnumeratorPrefix(global::System.Action<global::System.Collections.IEnumerator> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                            "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
                         )
                         .IncreaseIndent()
                         .WriteLine(
@@ -848,8 +857,10 @@ namespace MonoDetour.HookGen
 
                     cb.Write("public static ")
                         .Write(hookType)
+                        .Write(" IEnumeratorPostfix(global::System.Action<")
+                        .Write(member.Signature.ReturnType.FqName)
                         .WriteLine(
-                            " IEnumeratorPostfix(global::System.Action<global::System.Collections.IEnumerator> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                            "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
                         )
                         .IncreaseIndent()
                         .WriteLine(
@@ -872,7 +883,7 @@ namespace MonoDetour.HookGen
                         .Write(correspondingIEnumeratorHook)
                         .WriteLine(".")
                         .WriteLine(
-                            "// See http://monodetour.github.io/hooking/ienumerators/ for more information.</remarks>"
+                            "/// See http://monodetour.github.io/hooking/ienumerators/ for more information.</remarks>"
                         )
                         .WriteLine("#endif");
                 }
@@ -909,7 +920,7 @@ namespace MonoDetour.HookGen
 
                 if (returnTypeIsIEnumerator)
                     PrintIEnumeratorWarning(
-                        "the ILHook on the corresponding state machine class' MoveNext() method."
+                        "the ILHook on the corresponding state machine class' MoveNext() method"
                     );
 
                 cb.Write("public static ")
@@ -982,7 +993,7 @@ namespace MonoDetour.HookGen
                             .Write(param.MdName)
                             .Write(", ")
                             .Write(param.AssemblyIdentityName)
-                            .Write("\")");
+                            .Write("\")!");
                     }
                     else
                     {

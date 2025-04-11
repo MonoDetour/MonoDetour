@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.Utils;
@@ -12,6 +14,11 @@ namespace MonoDetour.DetourTypes;
 /// </summary>
 internal class GenericIEnumeratorDetour
 {
+    static readonly MethodInfo genericEnumeratorDriver = typeof(GenericIEnumeratorDetour).GetMethod(
+        nameof(GenericEnumeratorDriver),
+        (BindingFlags)~0
+    )!;
+
     public static void Manipulator(ILContext il, MonoDetourInfo info)
     {
         // if (!info.Data.IsInitialized())
@@ -27,10 +34,19 @@ internal class GenericIEnumeratorDetour
         else
         {
             c.EmitReference(info);
-            c.Emit(
-                OpCodes.Call,
-                new Func<IEnumerator, MonoDetourInfo, IEnumerator>(EnumeratorDriver).Method
-            );
+            if (info.Data.Target is MethodInfo methodInfo && methodInfo.ReturnType.IsGenericType)
+            {
+                var genericType = methodInfo.ReturnType.GenericTypeArguments[0];
+                var method = genericEnumeratorDriver.MakeGenericMethod(genericType);
+                c.Emit(OpCodes.Call, method);
+            }
+            else
+            {
+                c.Emit(
+                    OpCodes.Call,
+                    new Func<IEnumerator, MonoDetourInfo, IEnumerator>(EnumeratorDriver).Method
+                );
+            }
         }
 
         if (info.Data.Owner!.LogLevel == MonoDetourManager.Logging.Diagnostic)
@@ -41,6 +57,21 @@ internal class GenericIEnumeratorDetour
     }
 
     private static IEnumerator EnumeratorDriver(IEnumerator enumerator, MonoDetourInfo info)
+    {
+        if (info.DetourType == typeof(IEnumeratorPrefixDetour))
+            info.Data.Manipulator!.Invoke(null, [enumerator]);
+
+        while (enumerator.MoveNext())
+            yield return enumerator.Current;
+
+        if (info.DetourType == typeof(IEnumeratorPostfixDetour))
+            info.Data.Manipulator!.Invoke(null, [enumerator]);
+    }
+
+    private static IEnumerator<T> GenericEnumeratorDriver<T>(
+        IEnumerator<T> enumerator,
+        MonoDetourInfo info
+    )
     {
         if (info.DetourType == typeof(IEnumeratorPrefixDetour))
             info.Data.Manipulator!.Invoke(null, [enumerator]);
