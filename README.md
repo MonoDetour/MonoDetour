@@ -5,6 +5,10 @@ A highly experimental `MonoMod.RuntimeDetour.ILHook` wrapper optimized for conve
 > [!NOTE]
 > Also see related project [MonoDetour.ILWeaver](./src/MonoDetour.ILWeaver/README.md), a redesigned ILCursor with a focus on hand-holding.
 
+## Documentation
+
+<https://monodetour.github.io/>
+
 ## Usage
 
 In MonoDetour, target method's parameters are passed in as a struct, making it easy to discover what's possible.
@@ -68,8 +72,7 @@ MonoDetour entirely relies on `ILHook`s for hooking similar to HarmonyX. But ins
 
 ### MonoDetourManager
 
-Every hook made with MonoDetour is attached to a `MonoDetour.MonoDetourManager` object.
-When no `MonoDetourManager` object is specified, MonoDetour will use the default `MonoDetour.HookGen.DefaultMonoDetourManager.Instance` it has generated for your assembly. You can use that manager for managing your hooks, or you can create your own managers.
+<https://monodetour.github.io/getting-started/monodetourmanager/>
 
 ## Why?
 
@@ -83,44 +86,7 @@ Right now, you don't. While it works, it's way early for use and the API will ch
 
 ## How Does the HookGen Work?
 
-Types which Hooks are generated for need to be marked with an attribute. // TODO: Implement custom attribute
-
-Also, all the generated hooks will be in your assembly.
-
-Every method in a target type gets its own static class. It will look something like this:
-
-```cs
-internal static class SomeMethod
-{
-    [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    public delegate void MethodParams(ref Params args);
-
-    public ref struct Params
-    {
-        public global::SomeNamespace.SomeType self;
-    }
-
-    public static global::MonoMod.RuntimeDetour.ILHook Prefix(MethodParams args, global::MonoDetour.MonoDetourManager? manager = null) =>
-        (manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PrefixDetour));
-
-    public static global::MonoMod.RuntimeDetour.ILHook Postfix(MethodParams args, global::MonoDetour.MonoDetourManager? manager = null) =>
-        (manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourType.PostfixDetour));
-
-    public static global::MonoMod.RuntimeDetour.ILHook ILHook(global::MonoMod.Cil.ILContext.Manipulator manipulator, global::MonoDetour.MonoDetourManager? manager = null) =>
-        (manager ?? global::MonoDetour.HookGen.HookGenManager.Instance).Hook(Target(), manipulator);
-
-    public static global::System.Reflection.MethodBase Target()
-    {
-        var type = typeof(global::SomeNamespace.SomeType);
-        var method = type.GetMethod("SomeMethod", (global::System.Reflection.BindingFlags)~0, null, [
-        ], null);
-        if (method is null) ThrowHelper.ThrowMissingMethod("SomeNamespace.SomeType", "SomeMethod");
-        return method;
-    }
-}
-```
-
-When a Hook method has a single parameter like the `Params` struct which exists in a type which also has a `public static global::System.Reflection.MethodBase Target()` method that returns the target method, `MonoDetourManager.HookGenReflectedHook` can gather all the information required for the hook and applies it.
+<https://monodetour.github.io/getting-started/hookgen/>
 
 ## Credits
 
