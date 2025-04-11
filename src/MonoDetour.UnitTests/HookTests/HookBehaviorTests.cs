@@ -27,15 +27,16 @@ public static partial class HookBehaviorTests
 
     private static int PerformHooks()
     {
-        TakeAndReturnInt.Postfix(Postfix1_2nd_Add1ToNum);
-        TakeAndReturnInt.ILHook(ILHook2_1st_Add100ToNum_Returns);
-        TakeAndReturnInt.ILHook(ILHook3_3rd_Returns);
-        TakeAndReturnInt.Postfix(Postfix4_4th_Add1ToNum);
-        TakeAndReturnInt.ILHook(ILHook5_5th_ReturnWithLdarg1);
+        var m = new MonoDetourManager();
+        TakeAndReturnInt.Postfix(Postfix1_2nd_Add1ToNum, m);
+        TakeAndReturnInt.ILHook(ILHook2_1st_Add100ToNum_Returns, m);
+        TakeAndReturnInt.ILHook(ILHook3_3rd_Returns, m);
+        TakeAndReturnInt.Postfix(Postfix4_4th_Add1ToNum, m);
+        TakeAndReturnInt.ILHook(ILHook5_5th_ReturnWithLdarg1, m);
 
         var someType = new LibraryMethods();
         var retVal = someType.TakeAndReturnInt(0);
-        DefaultMonoDetourManager.Instance.DisposeHooks();
+        m.DisposeHooks();
 
         return retVal;
     }

@@ -62,7 +62,7 @@ static class GenericDetour
         if (data.Owner.LogLevel == MonoDetourManager.Logging.Diagnostic)
         {
             c.Method.RecalculateILOffsets();
-            Console.WriteLine($"Manipulated by {data.Manipulator.Name}: " + il.ToString());
+            Console.WriteLine($"Manipulated by {data.Manipulator.Name}: " + il);
         }
     }
 

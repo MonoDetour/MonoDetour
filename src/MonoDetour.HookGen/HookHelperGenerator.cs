@@ -817,6 +817,69 @@ namespace MonoDetour.HookGen
                 }
                 cb.CloseBlock().WriteLine();
 
+                bool returnTypeIsIEnumerator =
+                    member.Signature.ReturnType.FqName == "global::System.Collections.IEnumerator";
+
+                if (returnTypeIsIEnumerator)
+                {
+                    cb.Write("public static ")
+                        .Write(hookType)
+                        .WriteLine(
+                            " IEnumeratorDetour(global::System.Func<global::System.Collections.IEnumerator, global::System.Collections.IEnumerator> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                        )
+                        .IncreaseIndent()
+                        .WriteLine(
+                            "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorDetour)));"
+                        )
+                        .DecreaseIndent()
+                        .WriteLine();
+
+                    cb.Write("public static ")
+                        .Write(hookType)
+                        .WriteLine(
+                            " IEnumeratorPrefix(global::System.Action<global::System.Collections.IEnumerator> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                        )
+                        .IncreaseIndent()
+                        .WriteLine(
+                            "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorPrefixDetour)));"
+                        )
+                        .DecreaseIndent()
+                        .WriteLine();
+
+                    cb.Write("public static ")
+                        .Write(hookType)
+                        .WriteLine(
+                            " IEnumeratorPostfix(global::System.Action<global::System.Collections.IEnumerator> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                        )
+                        .IncreaseIndent()
+                        .WriteLine(
+                            "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorPostfixDetour)));"
+                        )
+                        .DecreaseIndent()
+                        .WriteLine();
+                }
+
+                void PrintIEnumeratorWarning(string correspondingIEnumeratorHook)
+                {
+                    cb.WriteLine("#if DEBUG")
+                        .WriteLine(
+                            "/// <remarks>WARNING: The target method is an IEnumerator"
+                                + " which is a method that returns a state machine."
+                                + " This hook would run before the state machine is enumerated with MoveNext()."
+                        )
+                        .WriteLine("/// <br/><br/>")
+                        .Write("/// The hook you are probably looking for would be ")
+                        .Write(correspondingIEnumeratorHook)
+                        .WriteLine(".")
+                        .WriteLine(
+                            "// See http://monodetour.github.io/hooking/ienumerators/ for more information.</remarks>"
+                        )
+                        .WriteLine("#endif");
+                }
+
+                if (returnTypeIsIEnumerator)
+                    PrintIEnumeratorWarning("IEnumeratorPrefix");
+
                 cb.Write("public static ")
                     .Write(hookType)
                     .WriteLine(
@@ -829,6 +892,9 @@ namespace MonoDetour.HookGen
                     .DecreaseIndent()
                     .WriteLine();
 
+                if (returnTypeIsIEnumerator)
+                    PrintIEnumeratorWarning("IEnumeratorPostfix");
+
                 cb.Write("public static ")
                     .Write(hookType)
                     .WriteLine(
@@ -840,6 +906,11 @@ namespace MonoDetour.HookGen
                     )
                     .DecreaseIndent()
                     .WriteLine();
+
+                if (returnTypeIsIEnumerator)
+                    PrintIEnumeratorWarning(
+                        "the ILHook on the corresponding state machine class' MoveNext() method."
+                    );
 
                 cb.Write("public static ")
                     .Write(hookType)

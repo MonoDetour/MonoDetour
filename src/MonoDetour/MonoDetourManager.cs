@@ -224,4 +224,26 @@ public class MonoDetourManager
         ILHooks.Add(iLHook);
         return iLHook;
     }
+
+    /// <summary>
+    /// Applies a MonoDetour Hook using the information defined.
+    /// </summary>
+    /// <inheritdoc cref="HookGenReflectedHook(MethodBase, MethodBase, MonoDetourInfo?)"/>
+    public ILHook Hook(MethodBase target, MethodBase manipulator, MonoDetourInfo info)
+    {
+        Helpers.ThrowIfNull(target);
+        Helpers.ThrowIfNull(manipulator);
+        Helpers.ThrowIfNull(info);
+
+        info.Data.Owner = this;
+        info.Data.Target = target;
+        info.Data.Manipulator = manipulator;
+
+        var emitter = (IMonoDetourHookEmitter)Activator.CreateInstance(info.DetourType)!;
+        emitter.Info = info;
+
+        ILHook iLHook = new(info.Data.Target, emitter.Manipulator);
+        ILHooks.Add(iLHook);
+        return iLHook;
+    }
 }

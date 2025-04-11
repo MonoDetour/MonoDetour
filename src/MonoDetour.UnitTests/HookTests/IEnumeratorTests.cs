@@ -12,7 +12,8 @@ public static partial class IEnumeratorTests
     {
         order.Clear();
 
-        EnumerateRange.ILHook(ILHook_EnumerateRange);
+        var m = new MonoDetourManager();
+        EnumerateRange.IEnumeratorDetour(Hook_IEnumeratorDetour, m);
 
         var lib = new LibraryMethods();
 
@@ -20,28 +21,40 @@ public static partial class IEnumeratorTests
         while (enumerator.MoveNext())
             continue;
 
-        Assert.Equal([0, 1, 2, 3, 4], order);
+        Assert.Equal([1, 2, 3, 4], order);
+        order.Clear();
+
+        // Now do it with more hooks.
+
+        EnumerateRange.IEnumeratorPrefix(Hook_IEnumeratorPrefix, m);
+        EnumerateRange.IEnumeratorPostfix(Hook_IEnumeratorPostfix, m);
+
+        enumerator = lib.EnumerateRange(4);
+        while (enumerator.MoveNext())
+            continue;
+
+        m.DisposeHooks();
+        Assert.Equal([0, 1, 2, 3, 4, 4], order);
     }
 
-    private static void ILHook_EnumerateRange(ILContext il)
+    private static IEnumerator Hook_IEnumeratorDetour(IEnumerator enumerator)
     {
-        ILCursor c = new(il);
-        c.Index -= 1;
-
-        c.Emit(OpCodes.Call, new Func<IEnumerator, IEnumerator>(Hook_EnumerateRange).Method);
-
-        c.Method.RecalculateILOffsets();
-        Console.WriteLine(il);
-    }
-
-    private static IEnumerator Hook_EnumerateRange(IEnumerator enumerator)
-    {
-        int i = 0;
         while (enumerator.MoveNext())
         {
-            order.Enqueue(i);
-            i++;
+            order.Enqueue((int)enumerator.Current);
             yield return enumerator.Current;
         }
+    }
+
+    private static void Hook_IEnumeratorPrefix(IEnumerator enumerator)
+    {
+        // Remember, enumerator.Current will be null here since we are in a prefix!
+        order.Enqueue(0);
+    }
+
+    private static void Hook_IEnumeratorPostfix(IEnumerator enumerator)
+    {
+        var current = (int)enumerator.Current;
+        order.Enqueue(current);
     }
 }
