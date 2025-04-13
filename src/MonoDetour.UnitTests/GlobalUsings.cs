@@ -1,3 +1,4 @@
+global using System.Collections;
 global using Mono.Cecil.Cil;
 global using MonoDetour.HookGen;
 global using MonoDetour.UnitTests.TestLib;

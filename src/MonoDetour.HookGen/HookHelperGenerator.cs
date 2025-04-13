@@ -807,7 +807,7 @@ namespace MonoDetour.HookGen
                     if (param.FqName.Contains('<'))
                         cb.Write("object");
                     else
-                        cb.Write(param.FqName);
+                        cb.Write(RemoveRefness(param.FqName));
 
                     cb.Write(' ')
                         .Write(SanitizeMdName(param.ParamName!))
@@ -997,7 +997,7 @@ namespace MonoDetour.HookGen
                     }
                     else
                     {
-                        cb.Write("typeof(").Write(param.FqName).Write(")");
+                        cb.Write("typeof(").Write(RemoveRefness(param.FqName)).Write(")");
                     }
                     if (!string.IsNullOrWhiteSpace(param.Refness))
                     {
@@ -1076,6 +1076,8 @@ namespace MonoDetour.HookGen
         private static readonly ObjectPool<StringBuilder> stringBuilderPool = new(() => new());
 
         private static string SanitizeRefness(string v) => v.Replace(" ", "_");
+
+        private static string RemoveRefness(string v) => v.Split(' ')[^1];
 
         private static string SanitizeMdName(string v) =>
             v.Replace(".", "_")

@@ -1,5 +1,3 @@
-using System.Collections;
-
 namespace MonoDetour.UnitTests.HookTests;
 
 public static partial class IEnumeratorTests

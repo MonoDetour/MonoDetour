@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MonoDetour.UnitTests.TestLib;
 
@@ -31,6 +32,23 @@ public class LibraryMethods
             Number = i;
             yield return i;
         }
+    }
+
+    public bool TryGetThis(bool getThis, [NotNullWhen(true)] out LibraryMethods? result)
+    {
+        result = getThis ? this : null;
+
+        return getThis;
+    }
+
+    public void SetNullStringToHello(ref string? value)
+    {
+        value ??= "hello";
+    }
+
+    public string ReturnNullStringAsHello(string? value)
+    {
+        return value ?? "hello";
     }
 }
 #pragma warning restore CA1822 // Mark members as static

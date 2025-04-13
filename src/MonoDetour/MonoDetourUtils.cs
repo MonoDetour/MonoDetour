@@ -50,9 +50,23 @@ internal static class MonoDetourUtils
             structFields,
             (structField, methodParam) =>
             {
-                c.Emit(OpCodes.Ldloca, structParamIdx);
-                c.Emit(OpCodes.Ldfld, structField);
-                c.Emit(OpCodes.Starg, methodParam.Index);
+                if (methodParam.ParameterType.IsByReference)
+                {
+                    // Ref arguments seem to be set like so:
+                    // 1. Load ref argument address
+                    c.Emit(OpCodes.Ldarg, methodParam.Index);
+                    // 2. Load our object reference value
+                    c.Emit(OpCodes.Ldloca, structParamIdx);
+                    c.Emit(OpCodes.Ldfld, structField);
+                    // 3. Store object reference value at address
+                    c.Emit(OpCodes.Stind_Ref);
+                }
+                else
+                {
+                    c.Emit(OpCodes.Ldloca, structParamIdx);
+                    c.Emit(OpCodes.Ldfld, structField);
+                    c.Emit(OpCodes.Starg, methodParam.Index);
+                }
             }
         );
     }
