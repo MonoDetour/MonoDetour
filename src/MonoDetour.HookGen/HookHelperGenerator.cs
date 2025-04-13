@@ -782,6 +782,18 @@ namespace MonoDetour.HookGen
 
                 cb.WriteLine("public ref struct Params").OpenBlock();
 
+                if (member.Signature.ReturnType.FqName != "void")
+                {
+                    cb.Write("public ");
+
+                    if (member.Signature.ReturnType.FqName.Contains('<'))
+                        cb.Write("object");
+                    else
+                        cb.Write(member.Signature.ReturnType.FqName);
+
+                    cb.WriteLine(" returnValue;");
+                }
+
                 int paramCountOffset = 0;
                 if (member.Signature.ThisType is { } thisType)
                 {

@@ -16,6 +16,11 @@ public class LibraryMethods
         return number;
     }
 
+    public int TakeAndReturnInt2(int number)
+    {
+        return number;
+    }
+
     public IEnumerator EnumerateRange(int iterations)
     {
         for (int i = 1; i <= iterations; i++)

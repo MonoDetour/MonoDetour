@@ -12,10 +12,23 @@ namespace MonoDetour;
 
 internal static class MonoDetourUtils
 {
-    public static int EmitParamsStruct(this ILCursor c, Type structType, FieldInfo[] structFields)
+    public static int EmitParamsStruct(this ILCursor c, MonoDetourInfo info)
     {
+        var structType = info.Data.ManipulatorParameterType!;
+        var structFields = info.Data.ManipulatorParameterTypeFields!;
+
         c.Context.DeclareVariable(structType);
         int structParamIdx = c.Body.Variables.Count - 1;
+        int? retTypeIdx = null;
+
+        if (info.Data.Target is MethodInfo methodInfo)
+        {
+            if (methodInfo.ReturnType != typeof(void))
+            {
+                c.Context.DeclareVariable(methodInfo.ReturnType);
+                retTypeIdx = c.Body.Variables.Count - 1;
+            }
+        }
 
         c.Emit(OpCodes.Ldloca, structParamIdx);
         c.Emit(OpCodes.Initobj, structType);
@@ -37,15 +50,35 @@ internal static class MonoDetourUtils
             }
         );
 
+        if (info.DetourType == typeof(PostfixDetour))
+        {
+            FieldInfo? retField = structFields.FirstOrDefault(x => x.Name == "returnValue");
+            if (retField is not null && retTypeIdx is not null)
+            {
+                // We grab the return value here and store it,
+                // because it needs to be pushed to stack after
+                // the Ldloca instruction for the Stfld instruction.
+                c.Emit(OpCodes.Stloc, retTypeIdx);
+                // Then we load our params struct.
+                c.Emit(OpCodes.Ldloca, structParamIdx);
+                // We push the return value back on the stack.
+                c.Emit(OpCodes.Ldloc, retTypeIdx);
+                // And then we set the returnValue field in the params struct.
+                c.Emit(OpCodes.Stfld, retField);
+            }
+        }
+
         return structParamIdx;
     }
 
     public static void ApplyStructValuesToMethod(
         this ILCursor c,
-        FieldInfo[] structFields,
+        MonoDetourInfo info,
         int structParamIdx
     )
     {
+        FieldInfo[] structFields = info.Data.ManipulatorParameterTypeFields!;
+
         c.ForEachMatchingParam(
             structFields,
             (structField, methodParam) =>
@@ -69,6 +102,18 @@ internal static class MonoDetourUtils
                 }
             }
         );
+
+        if (info.DetourType == typeof(PostfixDetour))
+        {
+            FieldInfo? retField = structFields.FirstOrDefault(x => x.Name == "returnValue");
+            if (retField is not null)
+            {
+                // We consumed the original return value earlier.
+                // Push our returnValue to stack.
+                c.Emit(OpCodes.Ldloca, structParamIdx);
+                c.Emit(OpCodes.Ldfld, retField);
+            }
+        }
     }
 
     public static void ForEachMatchingParam(
@@ -80,10 +125,23 @@ internal static class MonoDetourUtils
         foreach (var field in fields)
         {
             bool isSelfField = field.Name == "self";
-            // We add $"_{argNum}" at the end of every argument except self so we strip it out here.
-            string realFieldName = isSelfField
-                ? "this"
-                : field.Name.Substring(0, field.Name.LastIndexOf('_'));
+            bool isReturnField = field.Name == "returnValue";
+            string realFieldName;
+
+            if (!isSelfField && !isReturnField)
+            {
+                // We add $"_{argNum}" at the end of every argument except self so we strip it out here.
+                realFieldName = field.Name.Substring(0, field.Name.LastIndexOf('_'));
+            }
+            else if (isSelfField)
+            {
+                realFieldName = "this";
+            }
+            else
+            {
+                // Not all fields we have are for parameters.
+                continue;
+            }
 
             // Console.WriteLine($"field: {field.Name}");
             // Console.WriteLine($"realFieldName: {realFieldName}");

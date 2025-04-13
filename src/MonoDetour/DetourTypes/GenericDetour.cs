@@ -36,10 +36,7 @@ static class GenericDetour
             c.MoveAfterLabels(); // Move ret label to next emitted instruction.
         }
 
-        int structArgumentIdx = c.EmitParamsStruct(
-            data.ManipulatorParameterType,
-            data.ManipulatorParameterTypeFields
-        );
+        int structArgumentIdx = c.EmitParamsStruct(info);
 
         c.Emit(OpCodes.Ldloca, structArgumentIdx);
 
@@ -56,7 +53,7 @@ static class GenericDetour
         // but we'd need support for this in our HookGen.
         // #if !NET7_0_OR_GREATER // ref fields are supported since net7.0 so we don't need to apply this 'hack'
         if (!data.ManipulatorParameter.IsIn)
-            c.ApplyStructValuesToMethod(data.ManipulatorParameterTypeFields, structArgumentIdx);
+            c.ApplyStructValuesToMethod(info, structArgumentIdx);
         // #endif
 
         if (data.Owner.LogLevel == MonoDetourManager.Logging.Diagnostic)
