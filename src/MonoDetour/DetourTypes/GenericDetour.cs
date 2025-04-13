@@ -14,8 +14,8 @@ static class GenericDetour
 
     public static void Manipulator(ILContext il, MonoDetourInfo info)
     {
-        // if (!info.Data.IsInitialized())
-        //     throw new InvalidProgramException();
+        if (!info.Data.IsInitialized())
+            throw new InvalidProgramException();
 
         MonoDetourData data = info.Data;
 
@@ -26,19 +26,19 @@ static class GenericDetour
         if (info.DetourType == typeof(PostfixDetour))
         {
             c.Index -= 1;
-            bool found = firstRedirectForMethod.TryGetValue(info.Data.Target!, out var target);
+            bool found = firstRedirectForMethod.TryGetValue(info.Data.Target, out var target);
 
             ILLabel retLabel = RedirectEarlyReturnsToLabel(c, target);
 
             if (!found)
-                firstRedirectForMethod.Add(info.Data.Target!, retLabel);
+                firstRedirectForMethod.Add(info.Data.Target, retLabel);
 
             c.MoveAfterLabels(); // Move ret label to next emitted instruction.
         }
 
         int? retLocIdx = c.EmitParams(info);
 
-        if (!data.Manipulator!.IsStatic)
+        if (!data.Manipulator.IsStatic)
         {
             throw new NotSupportedException(
                 "Only static manipulator methods are supported for now."
@@ -52,7 +52,7 @@ static class GenericDetour
             c.ApplyReturnValue(info, (int)retLocIdx);
         }
 
-        if (data.Owner!.LogLevel == MonoDetourManager.Logging.Diagnostic)
+        if (data.Owner.LogLevel == MonoDetourManager.Logging.Diagnostic)
         {
             c.Method.RecalculateILOffsets();
             Console.WriteLine($"Manipulated by {data.Manipulator.Name}: " + il);

@@ -21,8 +21,8 @@ internal class GenericIEnumeratorDetour
 
     public static void Manipulator(ILContext il, MonoDetourInfo info)
     {
-        // if (!info.Data.IsInitialized())
-        //     throw new InvalidProgramException();
+        if (!info.Data.IsInitialized())
+            throw new InvalidProgramException();
 
         ILCursor c = new(il);
         c.Index -= 1;
@@ -49,10 +49,10 @@ internal class GenericIEnumeratorDetour
             }
         }
 
-        if (info.Data.Owner!.LogLevel == MonoDetourManager.Logging.Diagnostic)
+        if (info.Data.Owner.LogLevel == MonoDetourManager.Logging.Diagnostic)
         {
             c.Method.RecalculateILOffsets();
-            Console.WriteLine($"Manipulated by {info.Data.Manipulator!.Name}: " + il);
+            Console.WriteLine($"Manipulated by {info.Data.Manipulator.Name}: " + il);
         }
     }
 

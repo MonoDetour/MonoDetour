@@ -6,8 +6,8 @@ namespace MonoDetour;
 /// Specifies that:
 /// <list type="bullet">
 ///   <item>
-///   <see cref="MonoDetourManager.HookAll(System.Reflection.Assembly)"/>
-///   will hook methods marked with <see cref="MonoDetourHookAttribute"/> in types with this attribute
+///   <see cref="MonoDetourManager.InvokeHookInitializers(System.Reflection.Assembly)"/>
+///   will hook methods marked with <see cref="MonoDetourHookInitAttribute"/> in types with this attribute
 ///   </item>
 ///   <item>
 ///   MonoDetour will generate hooks for the targetTypes specified

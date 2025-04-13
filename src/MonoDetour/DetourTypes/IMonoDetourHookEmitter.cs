@@ -5,8 +5,8 @@ namespace MonoDetour.DetourTypes;
 /// <summary>
 /// A type which implements this interface can be used as a
 /// detour type, meaning the type can be passed in as a parameter to
-/// <see cref="MonoDetourHookAttribute{T}"/> or <see cref="MonoDetourInfo"/>.<br/>
-///<br/>
+/// <see cref="MonoDetourInfo"/>.<br/>
+/// <br/>
 /// MonoDetour uses this to implement <see cref="PrefixDetour"/>,
 /// <see cref="PostfixDetour"/> and <see cref="ILHookDetour"/>.
 /// If none of the available detour types satisfy your needs,
