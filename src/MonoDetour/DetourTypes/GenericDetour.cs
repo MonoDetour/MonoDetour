@@ -14,8 +14,8 @@ static class GenericDetour
 
     public static void Manipulator(ILContext il, MonoDetourInfo info)
     {
-        if (!info.Data.IsInitialized())
-            throw new InvalidProgramException();
+        // if (!info.Data.IsInitialized())
+        //     throw new InvalidProgramException();
 
         MonoDetourData data = info.Data;
 
@@ -26,21 +26,19 @@ static class GenericDetour
         if (info.DetourType == typeof(PostfixDetour))
         {
             c.Index -= 1;
-            bool found = firstRedirectForMethod.TryGetValue(info.Data.Target, out var target);
+            bool found = firstRedirectForMethod.TryGetValue(info.Data.Target!, out var target);
 
             ILLabel retLabel = RedirectEarlyReturnsToLabel(c, target);
 
             if (!found)
-                firstRedirectForMethod.Add(info.Data.Target, retLabel);
+                firstRedirectForMethod.Add(info.Data.Target!, retLabel);
 
             c.MoveAfterLabels(); // Move ret label to next emitted instruction.
         }
 
-        int structArgumentIdx = c.EmitParamsStruct(info);
+        int? retLocIdx = c.EmitParams(info);
 
-        c.Emit(OpCodes.Ldloca, structArgumentIdx);
-
-        if (!data.Manipulator.IsStatic)
+        if (!data.Manipulator!.IsStatic)
         {
             throw new NotSupportedException(
                 "Only static manipulator methods are supported for now."
@@ -49,14 +47,12 @@ static class GenericDetour
         else
             c.Emit(OpCodes.Call, data.Manipulator);
 
-        // I'd want to add this preprocessor directive,
-        // but we'd need support for this in our HookGen.
-        // #if !NET7_0_OR_GREATER // ref fields are supported since net7.0 so we don't need to apply this 'hack'
-        if (!data.ManipulatorParameter.IsIn)
-            c.ApplyStructValuesToMethod(info, structArgumentIdx);
-        // #endif
+        if (info.DetourType == typeof(PostfixDetour) && retLocIdx is not null)
+        {
+            c.ApplyReturnValue(info, (int)retLocIdx);
+        }
 
-        if (data.Owner.LogLevel == MonoDetourManager.Logging.Diagnostic)
+        if (data.Owner!.LogLevel == MonoDetourManager.Logging.Diagnostic)
         {
             c.Method.RecalculateILOffsets();
             Console.WriteLine($"Manipulated by {data.Manipulator.Name}: " + il);

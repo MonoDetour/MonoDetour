@@ -1,6 +1,6 @@
 # MonoDetour
 
-A highly experimental `MonoMod.RuntimeDetour.ILHook` wrapper optimized for convenience, based around HookGen with C# source generators.
+A `MonoMod.RuntimeDetour.ILHook` wrapper optimized for convenience, based around HookGen with C# source generators.
 
 > [!NOTE]
 > Also see related project [MonoDetour.ILWeaver](./src/MonoDetour.ILWeaver/README.md), a redesigned ILCursor with a focus on hand-holding.
@@ -11,9 +11,9 @@ A highly experimental `MonoMod.RuntimeDetour.ILHook` wrapper optimized for conve
 
 ## Usage
 
-In MonoDetour, target method's parameters are passed in as a struct, making it easy to discover what's possible.
+MonoDetour is mainly designed to be used with HookGen. That is, MonoDetour generates helpers hooks to make hooking easy.
 
-You can use generated hooks directly for hooking like with MonoMod's HookGen:
+You can use the generated hooks like so:
 
 ```cs
 internal static void InitHooks()
@@ -24,45 +24,9 @@ internal static void InitHooks()
     On.SomeNamespace.SomeType.SomeMethod.Prefix(Prefix_SomeType_SomeMethod);
 }
 
-static void Prefix_SomeType_SomeMethod(
-    ref On.SomeNamespace.SomeType.SomeMethod.Params args)
+static void Prefix_SomeType_SomeMethod(SomeType self)
 {
     Console.WriteLine("Hello from Prefix hook 1!");
-}
-```
-
-Or you can do things the Harmony way:
-
-```cs
-using MonoDetour;
-using MonoDetour.HookGen;
-
-// Tell MonoDetourManager to look for MonoDetourHook methods in this type.
-// Also tells HookGen to generate hooks for the specified type.
-[MonoDetourTargets<SomeType>]
-class SomeTypeHooks
-{
-    internal static void InitHooks()
-    {
-        // HookAll using the generated MonoDetourManager instance for this assembly.
-        DefaultMonoDetourManager.Instance.HookAll();
-    }
-
-    // Via enum. Maps to MonoDetour.PrefixDetour as seen in next hook.
-    [MonoDetourHook(DetourType.PrefixDetour)]
-    static void Prefix2_SomeType_SomeMethod(
-        ref On.SomeNamespace.SomeType.SomeMethod.Params args)
-    {
-        Console.WriteLine("Hello from Prefix hook 2!");
-    }
-
-    // Via class that implements MonoDetour.IMonoDetourHookEmitter
-    [MonoDetourHook<PrefixDetour>]
-    static void Prefix3_SomeType_SomeMethod(
-        ref On.SomeNamespace.SomeType.SomeMethod.Params args)
-    {
-        Console.WriteLine("Hello from Prefix hook 3!");
-    }
 }
 ```
 
@@ -76,9 +40,7 @@ MonoDetour entirely relies on `ILHook`s for hooking similar to HarmonyX. But ins
 
 ## Why?
 
-MonoMod.RuntimeDetour.HookGen isn't perfect, and HarmonyX doesn't have HookGen. And I simply had an idea, and a goal to make the perfect hooking API for myself.
-
-I do hope though that this will be useful to other people too, and as such this project has (some) documentation.
+<https://monodetour.github.io/getting-started/why-monodetour/>
 
 ## How Do I Use It?
 

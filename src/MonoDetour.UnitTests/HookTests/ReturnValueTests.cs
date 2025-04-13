@@ -10,7 +10,6 @@ public static partial class ReturnValueTests
     public static void CanChangeReturnValue()
     {
         var m = new MonoDetourManager();
-        m.LogLevel = MonoDetourManager.Logging.Diagnostic;
         var lib = new LibraryMethods();
 
         Assert.Equal(100, lib.TakeAndReturnInt2(100));
@@ -22,8 +21,12 @@ public static partial class ReturnValueTests
         m.DisposeHooks();
     }
 
-    private static void Postfix_TakeAndReturnInt2(ref TakeAndReturnInt2.Params args)
+    private static void Postfix_TakeAndReturnInt2(
+        LibraryMethods self,
+        ref int number,
+        ref int returnValue
+    )
     {
-        args.returnValue += 50;
+        returnValue += 50;
     }
 }

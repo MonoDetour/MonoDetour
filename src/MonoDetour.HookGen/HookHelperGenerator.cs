@@ -774,60 +774,56 @@ namespace MonoDetour.HookGen
                 }
                 cb.WriteLine().OpenBlock();
 
-                cb.WriteLine(
-                        "[global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]"
-                    )
-                    .WriteLine("public delegate void MethodParams(ref Params args);")
-                    .WriteLine();
+                var sig = member.Signature;
+                var parameters = sig.ParameterTypes.AsImmutableArray();
 
-                cb.WriteLine("public ref struct Params").OpenBlock();
+                CodeBuilder WriteDelegateTypes()
+                {
+                    if (sig.ThisType is { } thisType2)
+                    {
+                        _ = cb.Write(SanitizeUnspeakableFqName(RemoveRefness(thisType2.FqName)))
+                            .Write(" self");
+                    }
 
+                    for (var i = 0; i < parameters.Length; i++)
+                    {
+                        var param = parameters[i];
+
+                        if (i != 0 || sig.ThisType is not null)
+                        {
+                            _ = cb.WriteLine(",");
+                        }
+
+                        cb.Write("ref ")
+                            .Write(SanitizeUnspeakableFqName(RemoveRefness(param.FqName)))
+                            .Write(' ')
+                            .Write(SanitizeMdName(param.ParamName!));
+                    }
+
+                    return cb;
+                }
+
+                cb.Write("public delegate void PrefixSignature(").IncreaseIndent();
+                WriteDelegateTypes();
+                cb.WriteLine(");").DecreaseIndent();
+
+                cb.Write("public delegate void PostfixSignature(").IncreaseIndent();
+                WriteDelegateTypes();
                 if (member.Signature.ReturnType.FqName != "void")
                 {
-                    cb.Write("public ");
-
-                    if (member.Signature.ReturnType.FqName.Contains('<'))
-                        cb.Write("object");
-                    else
-                        cb.Write(member.Signature.ReturnType.FqName);
-
-                    cb.WriteLine(" returnValue;");
+                    if (parameters.Length != 0 || sig.ThisType is not null)
+                    {
+                        _ = cb.WriteLine(",");
+                    }
+                    cb.Write("ref ")
+                        .Write(
+                            SanitizeUnspeakableFqName(
+                                RemoveRefness(member.Signature.ReturnType.FqName)
+                            )
+                        )
+                        .Write(" returnValue");
                 }
-
-                int paramCountOffset = 0;
-                if (member.Signature.ThisType is { } thisType)
-                {
-                    paramCountOffset = 1;
-                    cb.Write("public ");
-
-                    // TODO: If possible, allow ref fields in structs if user targets .NET 7 or higher.
-
-                    if (thisType.FqName.Contains('<'))
-                        cb.Write("object");
-                    else
-                        cb.Write(thisType.FqName);
-
-                    cb.WriteLine(" self;");
-                }
-                var parameters = member.Signature.ParameterTypes.AsImmutableArray();
-
-                for (var i = 0; i < parameters.Length; i++)
-                {
-                    var param = parameters[i];
-                    cb.Write("public ");
-
-                    if (param.FqName.Contains('<'))
-                        cb.Write("object");
-                    else
-                        cb.Write(RemoveRefness(param.FqName));
-
-                    cb.Write(' ')
-                        .Write(SanitizeMdName(param.ParamName!))
-                        .Write('_')
-                        .Write(i + paramCountOffset)
-                        .WriteLine(';');
-                }
-                cb.CloseBlock().WriteLine();
+                cb.WriteLine(");").DecreaseIndent().WriteLine();
 
                 bool returnTypeIsIEnumerator =
                     member.Signature.ReturnType.FqName == "global::System.Collections.IEnumerator"
@@ -906,11 +902,11 @@ namespace MonoDetour.HookGen
                 cb.Write("public static ")
                     .Write(hookType)
                     .WriteLine(
-                        " Prefix(MethodParams args, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                        " Prefix(PrefixSignature hook, global::MonoDetour.MonoDetourManager? manager = null) =>"
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourTypes.DetourType.PrefixDetour));"
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), hook.Method, new(global::MonoDetour.DetourTypes.DetourType.PrefixDetour));"
                     )
                     .DecreaseIndent()
                     .WriteLine();
@@ -921,11 +917,11 @@ namespace MonoDetour.HookGen
                 cb.Write("public static ")
                     .Write(hookType)
                     .WriteLine(
-                        " Postfix(MethodParams args, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                        " Postfix(PostfixSignature hook, global::MonoDetour.MonoDetourManager? manager = null) =>"
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).HookGenReflectedHook(args, new(global::MonoDetour.DetourTypes.DetourType.PostfixDetour));"
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), hook.Method, new(global::MonoDetour.DetourTypes.DetourType.PostfixDetour));"
                     )
                     .DecreaseIndent()
                     .WriteLine();
@@ -1097,6 +1093,14 @@ namespace MonoDetour.HookGen
                 .Replace("+", "_")
                 .Replace("<", "_")
                 .Replace(">", "_");
+
+        private static string SanitizeUnspeakableFqName(string v)
+        {
+            if (v.Contains('<') || v.Contains('>'))
+                return "object";
+
+            return v;
+        }
 
         private static string GetHookDelegateName(MethodSignature sig)
         {

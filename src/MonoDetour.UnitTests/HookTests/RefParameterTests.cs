@@ -23,9 +23,9 @@ public static partial class RefParametersTests
         m.DisposeHooks();
     }
 
-    private static void Prefix_ReturnStringToHooked(ref ReturnNullStringAsHello.Params args)
+    private static void Prefix_ReturnStringToHooked(LibraryMethods self, ref string value)
     {
-        args.value_1 = "hooked";
+        value = "hooked";
     }
 
     [Fact]
@@ -47,9 +47,9 @@ public static partial class RefParametersTests
         m.DisposeHooks();
     }
 
-    private static void Prefix_SetStringToHooked(ref SetNullStringToHello.Params args)
+    private static void Prefix_SetStringToHooked(LibraryMethods self, ref string value)
     {
-        args.value_1 = "hooked";
+        value = "hooked";
     }
 
     [Fact]
@@ -77,8 +77,12 @@ public static partial class RefParametersTests
         m.DisposeHooks();
     }
 
-    private static void Prefix_TryGetThis(ref TryGetThis.Params args)
+    private static void Prefix_TryGetThis(
+        LibraryMethods self,
+        ref bool getThis,
+        ref LibraryMethods result
+    )
     {
-        args.getThis_1 = !args.getThis_1;
+        getThis = !getThis;
     }
 }

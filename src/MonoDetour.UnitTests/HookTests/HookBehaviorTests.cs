@@ -41,9 +41,13 @@ public static partial class HookBehaviorTests
         return retVal;
     }
 
-    private static void Postfix1_2nd_Add1ToNum(ref TakeAndReturnInt.Params args)
+    private static void Postfix1_2nd_Add1ToNum(
+        LibraryMethods self,
+        ref int number,
+        ref int returnValue
+    )
     {
-        args.number_1 += 1;
+        number += 1;
         order.Enqueue(2);
     }
 
@@ -83,9 +87,13 @@ public static partial class HookBehaviorTests
         c.Emit(OpCodes.Ret);
     }
 
-    private static void Postfix4_4th_Add1ToNum(ref TakeAndReturnInt.Params args)
+    private static void Postfix4_4th_Add1ToNum(
+        LibraryMethods self,
+        ref int number,
+        ref int returnValue
+    )
     {
-        args.number_1 += 1;
+        number += 1;
         order.Enqueue(4);
     }
 
