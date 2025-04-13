@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace MonoDetour.UnitTests.HookTests;
 
 public static partial class ReturnValueTests
