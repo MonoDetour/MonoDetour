@@ -77,12 +77,23 @@ public class MonoDetourManager
     }
 
     /// <summary>
-    /// Undoes all applied hooks.
+    /// Applies all hooks belonging to this manager.
+    /// </summary>
+    /// <remarks>
+    /// By default, a <see cref="MonoDetourManager"/> won't have any hooks.
+    /// You need to initialize the hooks first, either calling them manually or using
+    /// <see cref="InvokeHookInitializers()"/> or any of its overloads.
+    /// </remarks>
+    public void ApplyHooks() => ILHooks.ForEach(x => x.Apply());
+
+    /// <summary>
+    /// Undoes all applied hooks belonging to this manager.
     /// </summary>
     public void UndoHooks() => ILHooks.ForEach(x => x.Undo());
 
     /// <summary>
-    /// Cleans up, undoes and gets rid of all hooks. Use this is you never want to see these hooks again.
+    /// Cleans up, undoes and gets rid of all hooks belonging to this manager.
+    /// Use this is you never want to see those hooks again.
     /// </summary>
     public void DisposeHooks()
     {

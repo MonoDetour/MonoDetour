@@ -16,17 +16,22 @@ MonoDetour is mainly designed to be used with HookGen. That is, MonoDetour gener
 You can use the generated hooks like so:
 
 ```cs
-internal static void InitHooks()
+[MonoDetourTargets(typeof(SomeType))]
+class SomeTypeHooks
 {
-    // Note: this is using the default generated MonoDetourManager
-    // MonoDetour.HookGen.DefaultMonoDetourManager.Instance by default.
-    // Use it for managing your hooks.
-    On.SomeNamespace.SomeType.SomeMethod.Prefix(Prefix_SomeType_SomeMethod);
-}
+    [MonoDetourHookInit]
+    internal static void InitHooks()
+    {
+        // Note: this is using the default generated MonoDetourManager
+        // MonoDetour.HookGen.DefaultMonoDetourManager.Instance by default.
+        // Use it for managing your hooks.
+        On.SomeNamespace.SomeType.SomeMethod.Prefix(Prefix_SomeType_SomeMethod);
+    }
 
-static void Prefix_SomeType_SomeMethod(SomeType self)
-{
-    Console.WriteLine("Hello from Prefix hook 1!");
+    static void Prefix_SomeType_SomeMethod(SomeType self)
+    {
+        Console.WriteLine("Hello from Prefix hook 1!");
+    }
 }
 ```
 

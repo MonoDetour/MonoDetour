@@ -19,7 +19,11 @@ namespace MonoDetour;
 /// Non-public members of the type may or may not be included.
 /// It is recommended to use a publicizer with MonoDetour's hook generator.
 /// </remarks>
-[AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Class, Inherited = false)]
+[AttributeUsage(
+    AttributeTargets.Assembly | AttributeTargets.Class,
+    AllowMultiple = true,
+    Inherited = false
+)]
 public class MonoDetourTargetsAttribute(Type? targetType = null) : Attribute
 {
     /// <summary>
