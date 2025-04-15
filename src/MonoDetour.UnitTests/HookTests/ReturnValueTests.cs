@@ -5,6 +5,7 @@ public static partial class ReturnValueTests
     private static readonly Queue<int> order = [];
 
     [Fact]
+    [MonoDetourHookAnalyze]
     public static void CanChangeReturnValue()
     {
         var m = new MonoDetourManager();

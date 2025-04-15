@@ -5,6 +5,7 @@ public static partial class IEnumeratorTests
     private static readonly Queue<int> order = [];
 
     [Fact]
+    [MonoDetourHookAnalyze]
     public static void CanHookIEnumerator()
     {
         order.Clear();
@@ -35,6 +36,7 @@ public static partial class IEnumeratorTests
     }
 
     [Fact]
+    [MonoDetourHookAnalyze]
     public static void CanHookIEnumeratorTWhereTisInt()
     {
         order.Clear();

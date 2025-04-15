@@ -8,7 +8,10 @@ using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
 using MonoMod.SourceGen.Internal;
+using MonoMod.SourceGen.Internal.Extensions;
 using MonoMod.SourceGen.Internal.Helpers;
 
 namespace MonoDetour.HookGen
@@ -27,6 +30,8 @@ namespace MonoDetour.HookGen
         }
 
         public const string GenHelperForTypeAttributeFqn = "MonoDetour.MonoDetourTargetsAttribute";
+        public const string GenerateWhenUsedAttributeFqn =
+            "MonoDetour.HookGen.GenerateWhenUsedAttribute";
         private const string ILHookParameterType = "global::MonoMod.Cil.ILContext.Manipulator";
         public const string GenHelperForTypeAttrFile = "GenerateHookHelpersAttribute.g.cs";
         public const string DelegateTypesFile = "DelegateTypes.g.cs";
@@ -53,6 +58,11 @@ namespace MonoDetour.HookGen
                     /// </summary>
             #endif
                     internal static global::MonoDetour.MonoDetourManager Instance { get; } = new();
+                }
+
+                [System.AttributeUsage(System.AttributeTargets.Class)]
+                internal sealed class GenerateWhenUsedAttribute : System.Attribute
+                {
                 }
             }
             """;
@@ -423,7 +433,37 @@ namespace MonoDetour.HookGen
                 .SelectMany((ass, ct) => ass.Types)
                 .Combine(support);
 
-            context.RegisterSourceOutput(generatableTypes, EmitHelperTypes);
+            // We only try to generate hook contents for hooks which are used.
+            var methodsWithMonoDetourHookAnalyze =
+                context.SyntaxProvider.ForAttributeWithMetadataName(
+                    "MonoDetour.MonoDetourHookAnalyzeAttribute",
+                    predicate: static (node, _) => node is MethodDeclarationSyntax,
+                    transform: static (ctx, _) =>
+                    {
+                        var methodSyntax = (MethodDeclarationSyntax)ctx.TargetNode;
+                        var semanticModel = ctx.SemanticModel;
+                        return (MethodSyntax: methodSyntax, SemanticModel: semanticModel);
+                    }
+                );
+
+            var methodsWithMonoDetourHookInit = context.SyntaxProvider.ForAttributeWithMetadataName(
+                "MonoDetour.MonoDetourHookInitAttribute",
+                predicate: static (node, _) => node is MethodDeclarationSyntax,
+                transform: static (ctx, _) =>
+                {
+                    var methodSyntax = (MethodDeclarationSyntax)ctx.TargetNode;
+                    var semanticModel = ctx.SemanticModel;
+                    return (MethodSyntax: methodSyntax, SemanticModel: semanticModel);
+                }
+            );
+
+            var genClassesAndMethodsReferencing = methodsWithMonoDetourHookAnalyze
+                .Collect()
+                .Combine(methodsWithMonoDetourHookInit.Collect());
+
+            var combined = generatableTypes.Combine(genClassesAndMethodsReferencing);
+
+            context.RegisterSourceOutput(combined, EmitHelperTypes);
         }
 
         private void EmitDelegateTypes(
@@ -521,79 +561,231 @@ namespace MonoDetour.HookGen
 
         private void EmitHelperTypes(
             SourceProductionContext context,
-            (GeneratableTypeModel, ContextSupportOptions) input
+            (
+                (GeneratableTypeModel, ContextSupportOptions),
+                (
+                    ImmutableArray<(
+                        MethodDeclarationSyntax MethodSyntax,
+                        SemanticModel semanticModel
+                    )>,
+                    ImmutableArray<(
+                        MethodDeclarationSyntax MethodSyntax,
+                        SemanticModel semanticModel
+                    )>
+                )
+            ) input
         )
         {
-            var (type, ctx) = input;
-
-            var sb = new StringBuilder();
-            var cb = new CodeBuilder(sb);
-
-            cb.WriteHeader();
-
-            if (ctx.Lang.FileLocalTypes)
+            try
             {
-                cb.WriteLine("file static class ThrowHelper").OpenBlock();
+                var (type, ctx) = input.Item1;
+                var (methodsWithMonoDetourHookAnalyze, methodsWithMonoDetourHookInit) = input.Item2;
 
-                if (ctx.Bcl.DoesNotReturnAttribute)
+                var usedClassNames = new HashSet<List<GeneratableMemberModel>>();
+
+                Dictionary<string, List<GeneratableMemberModel>> memberNameToModel = [];
+
+                foreach (var member in type.Members)
                 {
-                    cb.WriteLine(
-                        "[global::System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute]"
-                    );
+                    if (memberNameToModel.TryGetValue(member.Name, out var members))
+                    {
+                        members.Add(member);
+                    }
+                    else
+                    {
+                        memberNameToModel.Add(member.Name, [member]);
+                    }
                 }
 
-                cb.WriteLine("public static void ThrowMissingMethod(string type, string method)")
-                    .OpenBlock()
-                    .WriteLine("throw new global::System.MissingMethodException(type, method);")
-                    .CloseBlock();
+                AnalyzeMethodsForHookUsage(methodsWithMonoDetourHookAnalyze);
+                AnalyzeMethodsForHookUsage(methodsWithMonoDetourHookInit);
 
-                if (ctx.Bcl.DoesNotReturnAttribute)
+                void AnalyzeMethodsForHookUsage(
+                    ImmutableArray<(
+                        MethodDeclarationSyntax MethodSyntax,
+                        SemanticModel semanticModel
+                    )> methodsToAnalyze
+                )
                 {
-                    cb.WriteLine(
-                        "[global::System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute]"
-                    );
+                    foreach (var (methodSyntax, semanticModel) in methodsToAnalyze)
+                    {
+                        foreach (
+                            var access in methodSyntax
+                                .DescendantNodes()
+                                .OfType<MemberAccessExpressionSyntax>()
+                        )
+                        {
+                            // Matches: Type.Method()
+                            // Doesn't match: Type.Method
+                            // Doesn't match: Type
+                            if (TryAddType(GetFullName(access.Expression)))
+                                continue;
+                        }
+
+                        foreach (
+                            var identifier in methodSyntax
+                                .DescendantNodes()
+                                .OfType<IdentifierNameSyntax>()
+                        )
+                        {
+                            TryAddType(identifier.Identifier.Text);
+                        }
+
+                        bool TryAddType(string? typeName)
+                        {
+                            if (typeName is null)
+                                return false;
+
+                            if (memberNameToModel.TryGetValue(typeName, out var model))
+                            {
+                                usedClassNames.Add(model);
+                                return true;
+                            }
+
+                            return false;
+                        }
+                    }
                 }
 
-                cb.WriteLine("public static void ThrowMissingType(string type)")
-                    .OpenBlock()
-                    .WriteLine(
-                        "throw new global::System.Exception($\"Missing Type: '{type}'. This exception should go away by recompiling against latest assembly references.\");"
-                    )
-                    .CloseBlock();
+                string? GetFullName(ExpressionSyntax? expr)
+                {
+                    if (expr is null)
+                        return null;
 
-                cb.CloseBlock();
+                    var parts = new Stack<string>();
+
+                    while (expr is MemberAccessExpressionSyntax member)
+                    {
+                        parts.Push(member.Name.Identifier.Text);
+                        expr = member.Expression;
+                    }
+
+                    if (expr is IdentifierNameSyntax id)
+                    {
+                        parts.Push(id.Identifier.Text);
+                    }
+                    else
+                    {
+                        return null;
+                    }
+
+                    return string.Join(".", parts);
+                }
+
+                foreach (var usedClassMemberModels in usedClassNames)
+                {
+                    var sbc = new StringBuilder();
+                    var cbc = new CodeBuilder(sbc);
+
+                    cbc.WriteHeader();
+
+                    WriteTrowHelperClassIfCan(cbc);
+
+                    foreach (var model in usedClassMemberModels)
+                    {
+                        cbc.WriteLine("namespace On").OpenBlock();
+
+                        type.Type.AppendEnterContext(cbc);
+
+                        EmitTypeMember(type, model, cbc, il: false, ctx, generateContent: true);
+
+                        type.Type.AppendExitContext(cbc);
+
+                        cbc.CloseBlock().WriteLine();
+
+                        StringBuilder nameB = new();
+                        CodeBuilder nameC = new(nameB);
+                        nameC
+                            .Write(type.AssemblyIdentity.Name)
+                            .Write('_')
+                            .Write(SanitizeMdName(type.Type.FullContextName).Replace(' ', '_'))
+                            .Write('.');
+
+                        if (model.HasOverloads)
+                        {
+                            AppendSignatureIdentifier(nameC, model.Signature);
+                        }
+                        else
+                        {
+                            nameC.Write(SanitizeMdName(model.Name).Replace(' ', '_'));
+                        }
+
+                        nameC.Write(".g.cs");
+
+                        context.AddSource(
+                            nameC.ToString(),
+                            SourceText.From(cbc.ToString(), Encoding.UTF8)
+                        );
+                    }
+                }
+
+                var sb = new StringBuilder();
+                var cb = new CodeBuilder(sb);
+
+                cb.WriteHeader();
+
+                void WriteTrowHelperClassIfCan(CodeBuilder cb)
+                {
+                    if (ctx.Lang.FileLocalTypes)
+                    {
+                        cb.WriteLine("file static class ThrowHelper").OpenBlock();
+
+                        if (ctx.Bcl.DoesNotReturnAttribute)
+                        {
+                            cb.WriteLine(
+                                "[global::System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute]"
+                            );
+                        }
+
+                        cb.WriteLine(
+                                "public static void ThrowMissingMethod(string type, string method)"
+                            )
+                            .OpenBlock()
+                            .WriteLine(
+                                "throw new global::System.MissingMethodException(type, method);"
+                            )
+                            .CloseBlock();
+
+                        if (ctx.Bcl.DoesNotReturnAttribute)
+                        {
+                            cb.WriteLine(
+                                "[global::System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute]"
+                            );
+                        }
+
+                        cb.WriteLine("public static void ThrowMissingType(string type)")
+                            .OpenBlock()
+                            .WriteLine(
+                                "throw new global::System.Exception($\"Missing Type: '{type}'. This exception should go away by recompiling against latest assembly references.\");"
+                            )
+                            .CloseBlock();
+
+                        cb.CloseBlock();
+                    }
+                }
+
+                if (type.HasHook)
+                {
+                    cb.WriteLine("namespace On").OpenBlock();
+
+                    type.Type.AppendEnterContext(cb);
+
+                    EmitTypeMembers(type, cb, il: false, ctx, generateContent: false);
+
+                    type.Type.AppendExitContext(cb);
+
+                    cb.CloseBlock().WriteLine();
+                }
+
+                string fileName =
+                    $"{type.AssemblyIdentity.Name}_{SanitizeMdName(type.Type.FullContextName).Replace(' ', '_')}.g.cs";
+
+                context.AddSource(fileName, sb.ToString());
             }
-
-            if (type.HasHook)
+            catch (Exception ex)
             {
-                cb.WriteLine("namespace On").OpenBlock();
-
-                type.Type.AppendEnterContext(cb);
-
-                EmitTypeMembers(type, cb, il: false, ctx);
-
-                type.Type.AppendExitContext(cb);
-
-                cb.CloseBlock().WriteLine();
+                throw new Exception($"{ex.Message}: {ex.StackTrace}".Replace('\n', '/'));
             }
-
-            // if (type.HasIl)
-            // {
-            //     cb.WriteLine("namespace IL").OpenBlock();
-
-            //     type.Type.AppendEnterContext(cb, "internal static");
-
-            //     EmitTypeMembers(type, cb, il: true, ctx);
-
-            //     type.Type.AppendExitContext(cb);
-
-            //     cb.CloseBlock().WriteLine();
-            // }
-
-            string fileName =
-                $"{type.AssemblyIdentity.Name}_{SanitizeMdName(type.Type.FullContextName).Replace(' ', '_')}.g.cs";
-
-            context.AddSource(fileName, sb.ToString());
         }
 
         private static void EmitThrowMissing(
@@ -648,303 +840,13 @@ namespace MonoDetour.HookGen
             GeneratableTypeModel type,
             CodeBuilder cb,
             bool il,
-            ContextSupportOptions ctx
+            ContextSupportOptions ctx,
+            bool generateContent
         )
         {
             foreach (var member in type.Members)
             {
-                if (il)
-                {
-                    if (member.Kind == DetourKind.Hook)
-                    {
-                        continue;
-                    }
-                }
-                else
-                {
-                    if (member.Kind == DetourKind.ILHook)
-                    {
-                        continue;
-                    }
-                }
-
-                var bindingFlags = member.Accessibility switch
-                {
-                    Accessibility.NotApplicable => BindingFlags.NonPublic,
-                    Accessibility.Private => BindingFlags.NonPublic,
-                    Accessibility.ProtectedAndInternal => BindingFlags.NonPublic,
-                    Accessibility.Protected => BindingFlags.NonPublic,
-                    Accessibility.Internal => BindingFlags.NonPublic,
-                    Accessibility.ProtectedOrInternal => BindingFlags.NonPublic,
-                    Accessibility.Public => BindingFlags.Public,
-                    _ => BindingFlags.NonPublic,
-                };
-
-                bindingFlags |= member.Signature.ThisType is null
-                    ? BindingFlags.Static
-                    : BindingFlags.Instance;
-
-                var hookType = "global::MonoMod.RuntimeDetour.ILHook";
-                var parameterType = il
-                    ? ILHookParameterType
-                    : "global::MonoMod.HookGen." + GetHookDelegateName(member.Signature);
-
-                cb.Write("internal static class ").Write(SanitizeName(member.Name));
-
-                if (member.HasOverloads || member.DistinguishByName)
-                {
-                    AppendSignatureIdentifier(cb, member.Signature);
-                }
-                cb.WriteLine().OpenBlock();
-
-                var sig = member.Signature;
-                var parameters = sig.ParameterTypes.AsImmutableArray();
-
-                CodeBuilder WriteDelegateTypes()
-                {
-                    if (sig.ThisType is { } thisType2)
-                    {
-                        _ = cb.Write(SanitizeUnspeakableFqName(RemoveRefness(thisType2.FqName)))
-                            .Write(" self");
-                    }
-
-                    for (var i = 0; i < parameters.Length; i++)
-                    {
-                        var param = parameters[i];
-
-                        if (i != 0 || sig.ThisType is not null)
-                        {
-                            _ = cb.WriteLine(",");
-                        }
-
-                        cb.Write("ref ")
-                            .Write(SanitizeUnspeakableFqName(RemoveRefness(param.FqName)))
-                            .Write(' ')
-                            .Write(SanitizeMdName(param.ParamName!));
-                    }
-
-                    return cb;
-                }
-
-                cb.Write("public delegate void PrefixSignature(").IncreaseIndent();
-                WriteDelegateTypes();
-                cb.WriteLine(");").DecreaseIndent();
-
-                cb.Write("public delegate void PostfixSignature(").IncreaseIndent();
-                WriteDelegateTypes();
-                if (member.Signature.ReturnType.FqName != "void")
-                {
-                    if (parameters.Length != 0 || sig.ThisType is not null)
-                    {
-                        _ = cb.WriteLine(",");
-                    }
-                    cb.Write("ref ")
-                        .Write(
-                            SanitizeUnspeakableFqName(
-                                RemoveRefness(member.Signature.ReturnType.FqName)
-                            )
-                        )
-                        .Write(" returnValue");
-                }
-                cb.WriteLine(");").DecreaseIndent().WriteLine();
-
-                bool returnTypeIsIEnumerator =
-                    member.Signature.ReturnType.FqName == "global::System.Collections.IEnumerator"
-                    || member.Signature.ReturnType.FqName.StartsWith(
-                        "global::System.Collections.Generic.IEnumerator<"
-                    );
-
-                if (returnTypeIsIEnumerator)
-                {
-                    cb.Write("public static ")
-                        .Write(hookType)
-                        .Write(" IEnumeratorDetour(global::System.Func<")
-                        .Write(member.Signature.ReturnType.FqName)
-                        .Write(", ")
-                        .Write(member.Signature.ReturnType.FqName)
-                        .WriteLine(
-                            "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                        )
-                        .IncreaseIndent()
-                        .WriteLine(
-                            "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorDetour)));"
-                        )
-                        .DecreaseIndent()
-                        .WriteLine();
-
-                    cb.Write("public static ")
-                        .Write(hookType)
-                        .Write(" IEnumeratorPrefix(global::System.Action<")
-                        .Write(member.Signature.ReturnType.FqName)
-                        .WriteLine(
-                            "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                        )
-                        .IncreaseIndent()
-                        .WriteLine(
-                            "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorPrefixDetour)));"
-                        )
-                        .DecreaseIndent()
-                        .WriteLine();
-
-                    cb.Write("public static ")
-                        .Write(hookType)
-                        .Write(" IEnumeratorPostfix(global::System.Action<")
-                        .Write(member.Signature.ReturnType.FqName)
-                        .WriteLine(
-                            "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                        )
-                        .IncreaseIndent()
-                        .WriteLine(
-                            "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorPostfixDetour)));"
-                        )
-                        .DecreaseIndent()
-                        .WriteLine();
-                }
-
-                void PrintIEnumeratorWarning(string correspondingIEnumeratorHook)
-                {
-                    cb.WriteLine("#if DEBUG")
-                        .WriteLine(
-                            "/// <remarks>WARNING: The target method is an IEnumerator"
-                                + " which is a method that returns a state machine."
-                                + " This hook would run before the state machine is enumerated with MoveNext()."
-                        )
-                        .WriteLine("/// <br/><br/>")
-                        .Write("/// The hook you are probably looking for would be ")
-                        .Write(correspondingIEnumeratorHook)
-                        .WriteLine(".")
-                        .WriteLine(
-                            "/// See http://monodetour.github.io/hooking/ienumerators/ for more information.</remarks>"
-                        )
-                        .WriteLine("#endif");
-                }
-
-                if (returnTypeIsIEnumerator)
-                    PrintIEnumeratorWarning("IEnumeratorPrefix");
-
-                cb.Write("public static ")
-                    .Write(hookType)
-                    .WriteLine(
-                        " Prefix(PrefixSignature hook, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                    )
-                    .IncreaseIndent()
-                    .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), hook.Method, new(global::MonoDetour.DetourTypes.DetourType.PrefixDetour));"
-                    )
-                    .DecreaseIndent()
-                    .WriteLine();
-
-                if (returnTypeIsIEnumerator)
-                    PrintIEnumeratorWarning("IEnumeratorPostfix");
-
-                cb.Write("public static ")
-                    .Write(hookType)
-                    .WriteLine(
-                        " Postfix(PostfixSignature hook, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                    )
-                    .IncreaseIndent()
-                    .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), hook.Method, new(global::MonoDetour.DetourTypes.DetourType.PostfixDetour));"
-                    )
-                    .DecreaseIndent()
-                    .WriteLine();
-
-                if (returnTypeIsIEnumerator)
-                    PrintIEnumeratorWarning(
-                        "the ILHook on the corresponding state machine class' MoveNext() method"
-                    );
-
-                cb.Write("public static ")
-                    .Write(hookType)
-                    .WriteLine(
-                        " ILHook(global::MonoMod.Cil.ILContext.Manipulator manipulator, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                    )
-                    .IncreaseIndent()
-                    .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), manipulator);"
-                    )
-                    .DecreaseIndent()
-                    .WriteLine();
-
-                cb.Write("public static ")
-                    .Write("global::System.Reflection.MethodBase")
-                    .WriteLine(" Target()")
-                    .OpenBlock();
-
-                if (type.Type.InnermostType.FqName.Contains('<'))
-                {
-                    if (type.Type.InnermostType.AssemblyIdentityName is null)
-                        throw new Exception(
-                            "type.Type.InnermostType.AssemblyIdentityName is null but it was needed for unspeakable type"
-                        );
-
-                    cb.Write("var type = global::System.Type.GetType(\"")
-                        .Write(type.Type.InnermostType.MdName)
-                        .Write(", ")
-                        .Write(type.Type.InnermostType.AssemblyIdentityName)
-                        .WriteLine("\");")
-                        .Write("if (type is null) ");
-
-                    EmitThrowMissing(type, null, cb, ctx);
-                }
-                else
-                {
-                    cb.Write("var type = typeof(")
-                        .Write(type.Type.InnermostType.FqName)
-                        .WriteLine(");");
-                }
-
-                // cb.Write(type.Type.InnermostType.FqName)
-                //     .WriteLine(");")
-                cb.Write("var method = type.");
-
-                if (member.IsCtor)
-                {
-                    cb.Write("GetConstructor(");
-                }
-                else
-                {
-                    cb.Write("GetMethod(\"").Write(member.Name).Write("\", ");
-                }
-
-                cb.Write("(global::System.Reflection.BindingFlags)~0").Write(", null, ");
-
-                EmitOpenArray(cb, ctx, "global::System.Type");
-
-                foreach (var param in member.Signature.ParameterTypes.AsImmutableArray())
-                {
-                    if (param.FqName.Contains('<'))
-                    {
-                        if (param.AssemblyIdentityName is null)
-                            throw new Exception(
-                                "type.Type.InnermostType.AssemblyIdentityName is null but it was needed for unspeakable type"
-                            );
-
-                        cb.Write("global::System.Type.GetType(\"")
-                            .Write(param.MdName)
-                            .Write(", ")
-                            .Write(param.AssemblyIdentityName)
-                            .Write("\")!");
-                    }
-                    else
-                    {
-                        cb.Write("typeof(").Write(RemoveRefness(param.FqName)).Write(")");
-                    }
-                    if (!string.IsNullOrWhiteSpace(param.Refness))
-                    {
-                        cb.Write(".MakeByRefType()");
-                    }
-                    cb.WriteLine(",");
-                }
-
-                EmitCloseArray(cb, ctx);
-
-                cb.WriteLine(", null);").Write("if (method is null) ");
-                EmitThrowMissing(type, member, cb, ctx);
-                cb.WriteLine($"return method{(ctx.Bcl.DoesNotReturnAttribute ? "" : "!")};")
-                    .CloseBlock();
-
-                cb.CloseBlock();
+                EmitTypeMember(type, member, cb, il, ctx, generateContent);
             }
 
             foreach (var nested in type.NestedTypes)
@@ -969,10 +871,316 @@ namespace MonoDetour.HookGen
                     .WriteLine()
                     .OpenBlock();
 
-                EmitTypeMembers(nested, cb, il, ctx);
+                EmitTypeMembers(nested, cb, il, ctx, generateContent);
 
                 cb.CloseBlock();
             }
+        }
+
+        private static void EmitTypeMember(
+            GeneratableTypeModel type,
+            GeneratableMemberModel member,
+            CodeBuilder cb,
+            bool il,
+            ContextSupportOptions ctx,
+            bool generateContent
+        )
+        {
+            if (il)
+            {
+                if (member.Kind == DetourKind.Hook)
+                {
+                    return;
+                }
+            }
+            else
+            {
+                if (member.Kind == DetourKind.ILHook)
+                {
+                    return;
+                }
+            }
+
+            var bindingFlags = member.Accessibility switch
+            {
+                Accessibility.NotApplicable => BindingFlags.NonPublic,
+                Accessibility.Private => BindingFlags.NonPublic,
+                Accessibility.ProtectedAndInternal => BindingFlags.NonPublic,
+                Accessibility.Protected => BindingFlags.NonPublic,
+                Accessibility.Internal => BindingFlags.NonPublic,
+                Accessibility.ProtectedOrInternal => BindingFlags.NonPublic,
+                Accessibility.Public => BindingFlags.Public,
+                _ => BindingFlags.NonPublic,
+            };
+
+            bindingFlags |= member.Signature.ThisType is null
+                ? BindingFlags.Static
+                : BindingFlags.Instance;
+
+            var hookType = "global::MonoMod.RuntimeDetour.ILHook";
+            var parameterType = il
+                ? ILHookParameterType
+                : "global::MonoMod.HookGen." + GetHookDelegateName(member.Signature);
+
+            // cb.Write("[global::").Write(GenerateWhenUsedAttributeFqn).WriteLine(']');
+            cb.Write("internal static partial class ").Write(SanitizeName(member.Name));
+
+            if (member.HasOverloads || member.DistinguishByName)
+            {
+                AppendSignatureIdentifier(cb, member.Signature);
+            }
+            cb.WriteLine().OpenBlock();
+
+            if (!generateContent)
+            {
+                cb.CloseBlock();
+                return;
+            }
+
+            var sig = member.Signature;
+            var parameters = sig.ParameterTypes.AsImmutableArray();
+
+            CodeBuilder WriteDelegateTypes()
+            {
+                if (sig.ThisType is { } thisType2)
+                {
+                    _ = cb.Write(SanitizeUnspeakableFqName(RemoveRefness(thisType2.FqName)))
+                        .Write(" self");
+                }
+
+                for (var i = 0; i < parameters.Length; i++)
+                {
+                    var param = parameters[i];
+
+                    if (i != 0 || sig.ThisType is not null)
+                    {
+                        _ = cb.WriteLine(",");
+                    }
+
+                    cb.Write("ref ")
+                        .Write(SanitizeUnspeakableFqName(RemoveRefness(param.FqName)))
+                        .Write(' ')
+                        .Write(SanitizeMdName(param.ParamName!));
+                }
+
+                return cb;
+            }
+
+            cb.Write("public delegate void PrefixSignature(").IncreaseIndent();
+            WriteDelegateTypes();
+            cb.WriteLine(");").DecreaseIndent();
+
+            cb.Write("public delegate void PostfixSignature(").IncreaseIndent();
+            WriteDelegateTypes();
+            if (member.Signature.ReturnType.FqName != "void")
+            {
+                if (parameters.Length != 0 || sig.ThisType is not null)
+                {
+                    _ = cb.WriteLine(",");
+                }
+                cb.Write("ref ")
+                    .Write(
+                        SanitizeUnspeakableFqName(RemoveRefness(member.Signature.ReturnType.FqName))
+                    )
+                    .Write(" returnValue");
+            }
+            cb.WriteLine(");").DecreaseIndent().WriteLine();
+
+            bool returnTypeIsIEnumerator =
+                member.Signature.ReturnType.FqName == "global::System.Collections.IEnumerator"
+                || member.Signature.ReturnType.FqName.StartsWith(
+                    "global::System.Collections.Generic.IEnumerator<"
+                );
+
+            if (returnTypeIsIEnumerator)
+            {
+                cb.Write("public static ")
+                    .Write(hookType)
+                    .Write(" IEnumeratorDetour(global::System.Func<")
+                    .Write(member.Signature.ReturnType.FqName)
+                    .Write(", ")
+                    .Write(member.Signature.ReturnType.FqName)
+                    .WriteLine(
+                        "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                    )
+                    .IncreaseIndent()
+                    .WriteLine(
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorDetour)));"
+                    )
+                    .DecreaseIndent()
+                    .WriteLine();
+
+                cb.Write("public static ")
+                    .Write(hookType)
+                    .Write(" IEnumeratorPrefix(global::System.Action<")
+                    .Write(member.Signature.ReturnType.FqName)
+                    .WriteLine(
+                        "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                    )
+                    .IncreaseIndent()
+                    .WriteLine(
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorPrefixDetour)));"
+                    )
+                    .DecreaseIndent()
+                    .WriteLine();
+
+                cb.Write("public static ")
+                    .Write(hookType)
+                    .Write(" IEnumeratorPostfix(global::System.Action<")
+                    .Write(member.Signature.ReturnType.FqName)
+                    .WriteLine(
+                        "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                    )
+                    .IncreaseIndent()
+                    .WriteLine(
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorPostfixDetour)));"
+                    )
+                    .DecreaseIndent()
+                    .WriteLine();
+            }
+
+            void PrintIEnumeratorWarning(string correspondingIEnumeratorHook)
+            {
+                cb.WriteLine("#if DEBUG")
+                    .WriteLine(
+                        "/// <remarks>WARNING: The target method is an IEnumerator"
+                            + " which is a method that returns a state machine."
+                            + " This hook would run before the state machine is enumerated with MoveNext()."
+                    )
+                    .WriteLine("/// <br/><br/>")
+                    .Write("/// The hook you are probably looking for would be ")
+                    .Write(correspondingIEnumeratorHook)
+                    .WriteLine(".")
+                    .WriteLine(
+                        "/// See http://monodetour.github.io/hooking/ienumerators/ for more information.</remarks>"
+                    )
+                    .WriteLine("#endif");
+            }
+
+            if (returnTypeIsIEnumerator)
+                PrintIEnumeratorWarning("IEnumeratorPrefix");
+
+            cb.Write("public static ")
+                .Write(hookType)
+                .WriteLine(
+                    " Prefix(PrefixSignature hook, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                )
+                .IncreaseIndent()
+                .WriteLine(
+                    "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), hook.Method, new(global::MonoDetour.DetourTypes.DetourType.PrefixDetour));"
+                )
+                .DecreaseIndent()
+                .WriteLine();
+
+            if (returnTypeIsIEnumerator)
+                PrintIEnumeratorWarning("IEnumeratorPostfix");
+
+            cb.Write("public static ")
+                .Write(hookType)
+                .WriteLine(
+                    " Postfix(PostfixSignature hook, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                )
+                .IncreaseIndent()
+                .WriteLine(
+                    "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), hook.Method, new(global::MonoDetour.DetourTypes.DetourType.PostfixDetour));"
+                )
+                .DecreaseIndent()
+                .WriteLine();
+
+            if (returnTypeIsIEnumerator)
+                PrintIEnumeratorWarning(
+                    "the ILHook on the corresponding state machine class' MoveNext() method"
+                );
+
+            cb.Write("public static ")
+                .Write(hookType)
+                .WriteLine(
+                    " ILHook(global::MonoMod.Cil.ILContext.Manipulator manipulator, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                )
+                .IncreaseIndent()
+                .WriteLine(
+                    "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), manipulator);"
+                )
+                .DecreaseIndent()
+                .WriteLine();
+
+            cb.Write("public static ")
+                .Write("global::System.Reflection.MethodBase")
+                .WriteLine(" Target()")
+                .OpenBlock();
+
+            if (type.Type.InnermostType.FqName.Contains('<'))
+            {
+                if (type.Type.InnermostType.AssemblyIdentityName is null)
+                    throw new Exception(
+                        "type.Type.InnermostType.AssemblyIdentityName is null but it was needed for unspeakable type"
+                    );
+
+                cb.Write("var type = global::System.Type.GetType(\"")
+                    .Write(type.Type.InnermostType.MdName)
+                    .Write(", ")
+                    .Write(type.Type.InnermostType.AssemblyIdentityName)
+                    .WriteLine("\");")
+                    .Write("if (type is null) ");
+
+                EmitThrowMissing(type, null, cb, ctx);
+            }
+            else
+            {
+                cb.Write("var type = typeof(")
+                    .Write(type.Type.InnermostType.FqName)
+                    .WriteLine(");");
+            }
+
+            cb.Write("var method = type.");
+
+            if (member.IsCtor)
+            {
+                cb.Write("GetConstructor(");
+            }
+            else
+            {
+                cb.Write("GetMethod(\"").Write(member.Name).Write("\", ");
+            }
+
+            cb.Write("(global::System.Reflection.BindingFlags)~0").Write(", null, ");
+
+            EmitOpenArray(cb, ctx, "global::System.Type");
+
+            foreach (var param in member.Signature.ParameterTypes.AsImmutableArray())
+            {
+                if (param.FqName.Contains('<'))
+                {
+                    if (param.AssemblyIdentityName is null)
+                        throw new Exception(
+                            "type.Type.InnermostType.AssemblyIdentityName is null but it was needed for unspeakable type"
+                        );
+
+                    cb.Write("global::System.Type.GetType(\"")
+                        .Write(param.MdName)
+                        .Write(", ")
+                        .Write(param.AssemblyIdentityName)
+                        .Write("\")!");
+                }
+                else
+                {
+                    cb.Write("typeof(").Write(RemoveRefness(param.FqName)).Write(")");
+                }
+                if (!string.IsNullOrWhiteSpace(param.Refness))
+                {
+                    cb.Write(".MakeByRefType()");
+                }
+                cb.WriteLine(",");
+            }
+
+            EmitCloseArray(cb, ctx);
+
+            cb.WriteLine(", null);").Write("if (method is null) ");
+            EmitThrowMissing(type, member, cb, ctx);
+            cb.WriteLine($"return method{(ctx.Bcl.DoesNotReturnAttribute ? "" : "!")};")
+                .CloseBlock();
+
+            cb.CloseBlock();
         }
 
         private static void EmitOpenArray(CodeBuilder cb, ContextSupportOptions ctx, string type)
