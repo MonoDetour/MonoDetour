@@ -36,7 +36,7 @@ namespace MonoMod.SourceGen.Internal
     {
         public void AppendEnterContext(CodeBuilder builder, string additionalModifiers = "")
         {
-            if (Namespace is not null)
+            if (Namespace is not null && !Namespace.Equals("<global namespace>"))
             {
                 builder.Write("namespace ").WriteLine(Namespace).OpenBlock();
             }
@@ -56,7 +56,7 @@ namespace MonoMod.SourceGen.Internal
             {
                 _ = builder.CloseBlock();
             }
-            if (Namespace is not null)
+            if (Namespace is not null && !Namespace.Equals("<global namespace>"))
             {
                 _ = builder.CloseBlock();
             }

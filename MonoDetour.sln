@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoDetour.HookGen", "src\M
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoDetour.UnitTests.TestLib", "src\MonoDetour.UnitTests.TestLib\MonoDetour.UnitTests.TestLib.csproj", "{705CCC00-F46C-4586-B22B-07E51256626D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoDetour.Analyzers", "src\MonoDetour.Analyzers\MonoDetour.Analyzers.csproj", "{1DD11C36-4762-409C-8723-0A9AA0BC27F1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,10 @@ Global
 		{705CCC00-F46C-4586-B22B-07E51256626D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{705CCC00-F46C-4586-B22B-07E51256626D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{705CCC00-F46C-4586-B22B-07E51256626D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1DD11C36-4762-409C-8723-0A9AA0BC27F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1DD11C36-4762-409C-8723-0A9AA0BC27F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1DD11C36-4762-409C-8723-0A9AA0BC27F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1DD11C36-4762-409C-8723-0A9AA0BC27F1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -51,5 +57,6 @@ Global
 		{BC81F3F2-838B-4B6D-9D27-445EC3B23582} = {4653E22C-E122-4B3F-BDF9-AFBAE05088D4}
 		{EA1B4537-5A30-420C-9659-FC970F832350} = {4653E22C-E122-4B3F-BDF9-AFBAE05088D4}
 		{705CCC00-F46C-4586-B22B-07E51256626D} = {4653E22C-E122-4B3F-BDF9-AFBAE05088D4}
+		{1DD11C36-4762-409C-8723-0A9AA0BC27F1} = {4653E22C-E122-4B3F-BDF9-AFBAE05088D4}
 	EndGlobalSection
 EndGlobal

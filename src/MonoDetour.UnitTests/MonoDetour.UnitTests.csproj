@@ -44,6 +44,10 @@
       OutputItemType="Analyzer"
       ReferenceOutputAssembly="true"/>
 
+    <ProjectReference Include="../MonoDetour.Analyzers/MonoDetour.Analyzers.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false"/>
+
     <ProjectReference Include="../MonoDetour/MonoDetour.csproj" />
     <ProjectReference
       Include="../MonoDetour.UnitTests.TestLib/MonoDetour.UnitTests.TestLib.csproj"

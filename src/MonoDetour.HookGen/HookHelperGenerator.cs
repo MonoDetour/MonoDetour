@@ -590,10 +590,10 @@ namespace MonoDetour.HookGen
             //     cb.CloseBlock().WriteLine();
             // }
 
-            context.AddSource(
-                $"{type.AssemblyIdentity.Name}_{type.Type.FullContextName}.g.cs",
-                sb.ToString()
-            );
+            string fileName =
+                $"{type.AssemblyIdentity.Name}_{SanitizeMdName(type.Type.FullContextName).Replace(' ', '_')}.g.cs";
+
+            context.AddSource(fileName, sb.ToString());
         }
 
         private static void EmitThrowMissing(
