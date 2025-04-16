@@ -9,3 +9,4 @@ global using MonoMod.Utils;
 global using On.MonoDetour.UnitTests.TestLib.LibraryMethods;
 
 [assembly: MonoDetour.MonoDetourTargets(typeof(LibraryMethods))]
+[assembly: MonoDetour.MonoDetourTargets(typeof(SomeType))]

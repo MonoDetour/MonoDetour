@@ -5,7 +5,6 @@ public static partial class RefParametersTests
     private static readonly Queue<int> order = [];
 
     [Fact]
-    [MonoDetourHookAnalyze]
     public static void CanHookMethodWithReferenceTypeParams()
     {
         var m = new MonoDetourManager();
@@ -28,7 +27,6 @@ public static partial class RefParametersTests
     }
 
     [Fact]
-    [MonoDetourHookAnalyze]
     public static void CanHookMethodWithRefParams()
     {
         var m = new MonoDetourManager();
@@ -53,7 +51,6 @@ public static partial class RefParametersTests
     }
 
     [Fact]
-    [MonoDetourHookAnalyze]
     public static void CanHookMethodWithOutParams()
     {
         var m = new MonoDetourManager();

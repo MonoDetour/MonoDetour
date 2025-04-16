@@ -25,7 +25,6 @@ public static partial class HookBehaviorTests
         Assert.Equal([1], order);
     }
 
-    [MonoDetourHookAnalyze]
     private static int PerformHooks()
     {
         var m = new MonoDetourManager();
