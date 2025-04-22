@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Mono.Cecil.Cil;
+using MonoDetour.Logging;
 using MonoMod.Cil;
 using MonoMod.Utils;
 
@@ -49,11 +50,14 @@ internal class GeneralIEnumeratorDetour
             }
         }
 
-        if (info.Data.Owner.LogLevel == MonoDetourManager.Logging.Diagnostic)
-        {
-            c.Method.RecalculateILOffsets();
-            Console.WriteLine($"Manipulated by {info.Data.Manipulator.Name}: " + il);
-        }
+        MonoDetourLogger.Log(
+            MonoDetourLogger.LogChannel.IL,
+            () =>
+            {
+                c.Method.RecalculateILOffsets();
+                return $"Manipulated by {info.Data.Manipulator.Name}: {il}";
+            }
+        );
     }
 
     private static IEnumerator EnumeratorDriver(IEnumerator enumerator, MonoDetourInfo info)

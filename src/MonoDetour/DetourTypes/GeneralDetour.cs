@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil.Cil;
+using MonoDetour.Logging;
 using MonoMod.Cil;
 using MonoMod.Utils;
 
@@ -11,6 +12,7 @@ namespace MonoDetour.DetourTypes;
 static class GeneralDetour
 {
     static readonly Dictionary<MethodBase, ILLabel> firstRedirectForMethod = [];
+    static readonly object _lock = new();
 
     public static void Manipulator(ILContext il, MonoDetourInfo info)
     {
@@ -31,12 +33,17 @@ static class GeneralDetour
         if (info.DetourType == typeof(PostfixDetour))
         {
             c.Index -= 1;
-            bool found = firstRedirectForMethod.TryGetValue(info.Data.Target, out var target);
+            lock (_lock)
+            {
+                bool found = firstRedirectForMethod.TryGetValue(info.Data.Target, out var target);
 
-            ILLabel redirectedRet = RedirectEarlyReturnsToLabel(c, target);
+                ILLabel redirectedRet = RedirectEarlyReturnsToLabel(c, target);
 
-            if (!found)
-                firstRedirectForMethod.Add(info.Data.Target, redirectedRet);
+                if (!found)
+                {
+                    firstRedirectForMethod.Add(info.Data.Target, redirectedRet);
+                }
+            }
 
             // Move redirectedRet label to next emitted instruction
             // as we want it to point to our postfix hook.
@@ -85,18 +92,23 @@ static class GeneralDetour
             }
         );
 
-        if (data.Owner.LogLevel == MonoDetourManager.Logging.Diagnostic)
-        {
-            c.Method.RecalculateILOffsets();
-            Console.WriteLine($"Manipulated by {data.Manipulator.Name}: " + il);
-        }
+        MonoDetourLogger.Log(
+            MonoDetourLogger.LogChannel.IL,
+            () =>
+            {
+                c.Method.RecalculateILOffsets();
+                return $"Manipulated by {info.Data.Manipulator.Name}: {il}";
+            }
+        );
     }
 
     static void DisposeBadHooks(Exception ex, MonoDetourInfo info)
     {
         var manipulator = info.Data.Manipulator!;
-        Console.WriteLine(
-            $"[MonoDetour] Hook '{manipulator}' threw an exception,"
+        MonoDetourLogger.Log(
+            MonoDetourLogger.LogChannel.Error,
+            () =>
+                $"Hook '{manipulator}' threw an exception,"
                 + $" and its {nameof(MonoDetourManager)}'s hooks will be disposed.\n"
                 + $"The Exception that was thrown: {ex}"
         );

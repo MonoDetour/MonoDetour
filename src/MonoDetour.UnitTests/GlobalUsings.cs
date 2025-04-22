@@ -2,6 +2,7 @@ global using System.Collections;
 global using System.Diagnostics.CodeAnalysis;
 global using Mono.Cecil.Cil;
 global using MonoDetour.HookGen;
+global using MonoDetour.Logging;
 global using MonoDetour.UnitTests.TestLib;
 global using MonoMod.Cil;
 global using MonoMod.RuntimeDetour;
