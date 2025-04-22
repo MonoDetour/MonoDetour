@@ -178,6 +178,175 @@ public class ILWeaver(ILContext il)
     }
 
     /// <summary>
+    /// Create a new <see cref="ExceptionHandler"/> to be assigned the following:<br/>
+    /// <see cref="HandlerSetTryStart(Instruction, ExceptionHandler)"/><br/>
+    /// <see cref="HandlerSetTryEnd(Instruction, ExceptionHandler)"/><br/>
+    /// <see cref="HandlerSetCatchStart(Instruction, ExceptionHandler)"/><br/>
+    /// <see cref="HandlerSetCatchEnd(Instruction, ExceptionHandler)"/><br/>
+    /// <br/>
+    /// And if the <see cref="ExceptionHandlerType"/> is <see cref="ExceptionHandlerType.Filter"/>, also:<br/>
+    /// <see cref="HandlerSetFilterStart(Instruction, ExceptionHandler)"/><br/>
+    /// <br/>
+    /// The <see cref="ExceptionHandler"/> needs to then finally be applied to the method body with:<br/>
+    /// <see cref="ApplyExceptionHandler(ExceptionHandler)"/><br/>
+    /// </summary>
+    /// <param name="exceptionHandlerType">The type of the <see cref="ExceptionHandler"/>.</param>
+    /// <param name="catchType">The types of Exceptions that should be catched.</param>
+    /// <param name="handler">The created <see cref="ExceptionHandler"/> to be configured and then applied.</param>
+    /// <returns></returns>
+    public ILWeaver CreateExceptionHandler(
+        ExceptionHandlerType exceptionHandlerType,
+        Type? catchType,
+        out ExceptionHandler handler
+    )
+    {
+        handler = new ExceptionHandler(exceptionHandlerType)
+        {
+            CatchType = catchType != null ? IL.Import(catchType) : null,
+        };
+
+        return this;
+    }
+
+    /// <summary>
+    /// Set the TryStart property of the <see cref="ExceptionHandler"/>.
+    /// </summary>
+    /// <param name="tryStart">The first instruction in the try block.</param>
+    /// <param name="handler">The <see cref="ExceptionHandler"/> to configure.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver HandlerSetTryStart(Instruction tryStart, ExceptionHandler handler)
+    {
+        handler.TryStart = tryStart;
+        return this;
+    }
+
+    /// <inheritdoc cref="HandlerSetTryStart(Instruction, ExceptionHandler)"/>
+    public ILWeaver HandlerSetTryStartOnCurrent(ExceptionHandler handler) =>
+        HandlerSetTryStart(Current, handler);
+
+    /// <summary>
+    /// Set the TryEnd property of the <see cref="ExceptionHandler"/>.
+    /// </summary>
+    /// <param name="tryEnd">The last instruction in the try block.</param>
+    /// <inheritdoc cref="HandlerSetTryStart(Instruction, ExceptionHandler)"/>
+    public ILWeaver HandlerSetTryEnd(Instruction tryEnd, ExceptionHandler handler)
+    {
+        handler.TryEnd = tryEnd;
+        return this;
+    }
+
+    /// <inheritdoc cref="HandlerSetTryEnd(Instruction, ExceptionHandler)"/>
+    public ILWeaver HandlerSetTryEndOnCurrent(ExceptionHandler handler) =>
+        HandlerSetTryEnd(Current, handler);
+
+    /// <summary>
+    /// Set the FilterStart property of the <see cref="ExceptionHandler"/>.
+    /// </summary>
+    /// <param name="filterStart">The first instruction in the filter block.</param>
+    /// <inheritdoc cref="HandlerSetTryStart(Instruction, ExceptionHandler)"/>
+    public ILWeaver HandlerSetFilterStart(Instruction filterStart, ExceptionHandler handler)
+    {
+        handler.FilterStart = filterStart;
+        return this;
+    }
+
+    /// <inheritdoc cref="HandlerSetFilterStart(Instruction, ExceptionHandler)"/>
+    public ILWeaver HandlerSetFilterStartOnCurrent(ExceptionHandler handler) =>
+        HandlerSetFilterStart(Current, handler);
+
+    /// <summary>
+    /// Set the CatchStart property of the <see cref="ExceptionHandler"/>.
+    /// </summary>
+    /// <param name="catchStart">The first instruction in the catch block.</param>
+    /// <inheritdoc cref="HandlerSetTryStart(Instruction, ExceptionHandler)"/>
+    public ILWeaver HandlerSetCatchStart(Instruction catchStart, ExceptionHandler handler)
+    {
+        handler.HandlerStart = catchStart;
+        return this;
+    }
+
+    /// <inheritdoc cref="HandlerSetCatchStart(Instruction, ExceptionHandler)"/>
+    public ILWeaver HandlerSetCatchStartOnCurrent(ExceptionHandler handler) =>
+        HandlerSetCatchStart(Current, handler);
+
+    /// <summary>
+    /// Set the CatchEnd property of the <see cref="ExceptionHandler"/>.
+    /// </summary>
+    /// <param name="catchEnd">The last instruction in the catch block.</param>
+    /// <inheritdoc cref="HandlerSetTryStart(Instruction, ExceptionHandler)"/>
+    public ILWeaver HandlerSetCatchEnd(Instruction catchEnd, ExceptionHandler handler)
+    {
+        handler.HandlerEnd = catchEnd;
+        return this;
+    }
+
+    /// <inheritdoc cref="HandlerSetCatchEnd(Instruction, ExceptionHandler)"/>
+    public ILWeaver HandlerSetCatchEndOnCurrent(ExceptionHandler handler) =>
+        HandlerSetCatchEnd(Current, handler);
+
+    /// <summary>
+    /// Writes the leave instructions for try, catch or finally blocks and applies the
+    /// provided <see cref="ExceptionHandler"/> to the method body.
+    /// </summary>
+    /// <remarks>
+    /// Once applied, the leave label of the handler leave instructions will point to the
+    /// instruction that comes after what was set as HandlerEnd. Make sure that once you have
+    /// applied the <see cref="ExceptionHandler"/>, you are not inserting instructions before
+    /// the HandlerEnd or you'll need to retarget the leave label to your first inserted instruction
+    /// before the EndHandler.
+    /// </remarks>
+    /// <param name="handler">The handler to apply.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    /// <exception cref="NullReferenceException"></exception>
+    public ILWeaver ApplyExceptionHandler(ExceptionHandler handler)
+    {
+        if (handler.TryStart is null)
+            throw new NullReferenceException("TryStart was not set!");
+        if (handler.TryEnd is null)
+            throw new NullReferenceException("TryEnd was not set!");
+        if (handler.HandlerStart is null)
+            throw new NullReferenceException("HandlerStart was not set!");
+        if (handler.HandlerEnd is null)
+            throw new NullReferenceException("HandlerEnd was not set!");
+
+        // Turn inclusive ranges exclusive
+        handler.TryEnd = handler.TryEnd.Next;
+        handler.HandlerEnd = handler.HandlerEnd.Next;
+
+        ILLabel leaveDestination = Context.DefineLabel(handler.HandlerEnd);
+        Instruction leave = Create(OpCodes.Leave, leaveDestination);
+
+        // And emit the actual leave instructions.
+        // Try should have a normal leave instruction.
+        InsertBefore(handler.TryEnd, leave);
+
+        // If we have a filter, aka: catch (Exception ex) when (/* statement */)
+        // then we need the endfilter instruction.
+        if (handler.HandlerType == ExceptionHandlerType.Filter)
+        {
+            if (handler.FilterStart is null)
+                throw new NullReferenceException("FilterStart was not set!");
+
+            // FilterEnd doesn't exist, it's implicitly before HandlerStart.
+            InsertBefore(handler.HandlerStart, Create(OpCodes.Endfilter));
+        }
+
+        // Finally also has a special instruction.
+        if (handler.HandlerType == ExceptionHandlerType.Finally)
+        {
+            InsertBefore(handler.HandlerEnd, Create(OpCodes.Endfinally));
+        }
+        else
+        {
+            // For anything other than finally, use a normal leave instruction.
+            InsertBefore(handler.HandlerEnd, leave);
+        }
+
+        Context.Body.ExceptionHandlers.Add(handler);
+        return this;
+    }
+
+    /// <summary>
     /// Set <see cref="Current"/> to a target index. See also <see cref="CurrentTo(Instruction)"/>
     /// </summary>
     /// <remarks>
