@@ -112,6 +112,14 @@ public class MonoDetourManager
         return ilHook;
     }
 
+    /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourInfo)"/>
+    public ILHook Hook(Delegate target, Delegate manipulator, MonoDetourInfo info) =>
+        Hook(target.Method, manipulator.Method, info);
+
+    /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourInfo)"/>
+    public ILHook Hook(MethodBase target, Delegate manipulator, MonoDetourInfo info) =>
+        Hook(target, manipulator.Method, info);
+
     /// <summary>
     /// Applies a MonoDetour Hook using the information defined.
     /// </summary>

@@ -11,5 +11,5 @@ public class PrefixDetour : IMonoDetourHookEmitter
     public MonoDetourInfo Info { get; set; } = null!;
 
     /// <inheritdoc/>
-    public void Manipulator(ILContext il) => GenericDetour.Manipulator(il, Info);
+    public void Manipulator(ILContext il) => GeneralDetour.Manipulator(il, Info);
 }

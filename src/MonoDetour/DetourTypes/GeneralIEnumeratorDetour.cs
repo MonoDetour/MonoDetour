@@ -12,9 +12,9 @@ namespace MonoDetour.DetourTypes;
 /// Implements MonoDetour support for a Hook that replaces the target method's returned
 /// IEnumerator class with its own IEnumerator.
 /// </summary>
-internal class GenericIEnumeratorDetour
+internal class GeneralIEnumeratorDetour
 {
-    static readonly MethodInfo genericEnumeratorDriver = typeof(GenericIEnumeratorDetour).GetMethod(
+    static readonly MethodInfo genericEnumeratorDriver = typeof(GeneralIEnumeratorDetour).GetMethod(
         nameof(GenericEnumeratorDriver),
         (BindingFlags)~0
     )!;

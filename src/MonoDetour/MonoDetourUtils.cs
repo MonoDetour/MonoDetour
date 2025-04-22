@@ -12,7 +12,11 @@ namespace MonoDetour;
 
 internal static class MonoDetourUtils
 {
-    public static int? EmitParams(this ILCursor c, MonoDetourInfo info)
+    public static int? EmitParams(
+        this ILCursor c,
+        MonoDetourInfo info,
+        out Instruction? storedReturnValue
+    )
     {
         var manipParams = info.Data.Manipulator!.GetParameters();
 
@@ -33,11 +37,13 @@ internal static class MonoDetourUtils
             retField = manipParams.FirstOrDefault(x => x.Name == "returnValue");
         }
 
+        storedReturnValue = null;
         if (retField is not null && retTypeIdx is not null)
         {
             // Store the original return value
             // for use after emitting params.
             c.Emit(OpCodes.Stloc, retTypeIdx);
+            storedReturnValue = c.Previous;
         }
 
         bool isStatic = info.Data.Target!.IsStatic;

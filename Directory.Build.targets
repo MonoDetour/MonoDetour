@@ -6,7 +6,8 @@
 
     <!-- <PackageReference Include="MonoMod.RuntimeDetour" Version="21.12.13.1" /> -->
 
-    <PackageReference Include="PolySharp" Version="1.14.1">
+    <PackageReference Include="PolySharp" Version="1.14.1"
+      Condition="$(ImplicitPolySharpReference) != 'false'">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

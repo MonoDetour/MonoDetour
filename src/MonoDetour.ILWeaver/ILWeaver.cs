@@ -13,19 +13,13 @@ using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction
 
 namespace MonoDetour;
 
-public enum GotoType
-{
-    FirstPredicate,
-    LastPredicate,
-}
-
 public class ILWeaver(ILContext il)
 {
     /// <inheritdoc cref="ILContext"/>
     public ILContext Context { get; } = il;
 
     /// <inheritdoc cref="ILContext.IL"/>
-    public ILProcessor ILProcessor => Context.IL;
+    public ILProcessor IL => Context.IL;
 
     /// <inheritdoc cref="ILContext.Instrs"/>
     public InstrList Instructions => Context.Instrs;
@@ -34,14 +28,14 @@ public class ILWeaver(ILContext il)
     /// The instruction this weaver currently points to.
     /// </summary>
     /// <remarks>
-    /// Setter is <see cref="NewCurrent(Instruction)"/>.<br/>
+    /// Setter is <see cref="CurrentTo(Instruction)"/>.<br/>
     /// For replacing the current instruction,
     /// see <see cref="ReplaceCurrent(Instruction)"/>
     /// </remarks>
     public Instruction Current
     {
         get => current;
-        set => NewCurrent(value);
+        set => CurrentTo(value);
     }
 
     /// <summary>
@@ -49,29 +43,48 @@ public class ILWeaver(ILContext il)
     /// </summary>
     /// <remarks>
     /// A negative index will loop back.
-    /// Setter uses <see cref="NewCurrent(int)"/> which can throw.
+    /// Setter uses <see cref="CurrentTo(int)"/> which can throw.
     /// </remarks>
     /// <exception cref="IndexOutOfRangeException"></exception>
     public int Index
     {
         get => Context.IndexOf(Current);
-        set => NewCurrent(value);
+        set => CurrentTo(value);
     }
 
     Instruction current = il.Instrs[0];
 
     const string gotoMatchingDocsLink = "<insert documentation link here>";
 
-    public ILWeaver(ILWeaver weaver)
-        : this(weaver.Context) { }
+    /// <summary>
+    /// Create a new <see cref="ILWeaver"/> for the current <see cref="ILContext"/>
+    /// or a copy with state included.
+    /// </summary>
+    /// <returns>A new <see cref="ILWeaver"/> or a copy with state.</returns>
+    public ILWeaver(ILWeaver weaver, bool copyState = true)
+        : this(weaver.Context)
+    {
+        if (copyState == false)
+            return;
+
+        Current = weaver.Current;
+    }
 
     /// <summary>
-    /// Creates a new <see cref="ILWeaver"/> for the current <see cref="ILContext"/>
-    /// using the <see cref="ILWeaver(ILWeaver)"/> constructor.<br/>
+    /// Create a new <see cref="ILWeaver"/> for the current <see cref="ILContext"/>
+    /// using the <see cref="ILWeaver(ILWeaver, bool)"/> constructor.<br/>
     /// Does not copy state.
     /// </summary>
     /// <returns>A new <see cref="ILWeaver"/> for the current <see cref="ILContext"/>.</returns>
-    public ILWeaver New() => new(this);
+    public ILWeaver New() => new(this, copyState: false);
+
+    /// <summary>
+    /// Create a clone of the <see cref="ILWeaver"/>
+    /// using the <see cref="ILWeaver(ILWeaver, bool)"/> constructor.<br/>
+    /// State is copied.
+    /// </summary>
+    /// <returns>A clone of the <see cref="ILWeaver"/>.</returns>
+    public ILWeaver Clone() => new(this, copyState: true);
 
     /// <summary>
     /// Enumerates all labels which point to the current instruction (<c>label.Target == Current</c>)
@@ -97,13 +110,17 @@ public class ILWeaver(ILContext il)
     /// <inheritdoc cref="RetargetLabels(IEnumerable{ILLabel}, Instruction)"/>
     public ILWeaver RetargetLabels(ILLabel? label, Instruction target)
     {
-        label?.Target = target;
+        if (label is not null)
+        {
+            label.Target = target;
+        }
+
         return this;
     }
 
     public ILWeaver Replace(Instruction target, Instruction replacement)
     {
-        EmitAfter(target, replacement);
+        InsertAfter(target, replacement);
         Remove(target, out var label);
         RetargetLabels(label, replacement);
         return this;
@@ -161,14 +178,14 @@ public class ILWeaver(ILContext il)
     }
 
     /// <summary>
-    /// Move the cursor to a target index. See also <see cref="NewCurrent(Instruction)"/>
+    /// Set <see cref="Current"/> to a target index. See also <see cref="CurrentTo(Instruction)"/>
     /// </summary>
     /// <remarks>
     /// A negative index will loop back.
     /// </remarks>
     /// <returns>this <see cref="ILWeaver"/></returns>
     /// <exception cref="IndexOutOfRangeException"></exception>
-    public ILWeaver NewCurrent(int index)
+    public ILWeaver CurrentTo(int index)
     {
         int idx = index;
         if (idx < 0)
@@ -182,48 +199,61 @@ public class ILWeaver(ILContext il)
                     + (index == idx ? "" : $" (actual index without loop back: {index})")
             );
 
-        NewCurrent(instruction);
+        CurrentTo(instruction);
         return this;
     }
 
     /// <summary>
-    /// Move the weaver to a target instruction. See also <see cref="NewCurrent(int)"/>
+    /// Set <see cref="Current"/> to a target instruction.
+    /// See also <see cref="CurrentTo(int)"/><br/>
+    /// <br/>
+    /// For use in <see cref="Match(Predicate{Instruction}[])"/> and other variations,
+    /// use <see cref="PointCurrentTo"/> as that method returns true.
     /// </summary>
     /// <returns>this <see cref="ILWeaver"/></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public ILWeaver NewCurrent(Instruction instruction)
+    public ILWeaver CurrentTo(Instruction instruction)
     {
         if (instruction is null)
             throw new ArgumentNullException(
                 nameof(instruction),
-                "Attempted to go to a null instruction."
+                "Attempted to set Current to a null instruction."
             );
 
         current = instruction;
         return this;
     }
 
-    public ILWeaver GotoNext() => NewCurrent(Current.Next);
-
-    public ILWeaver GotoPrevious() => NewCurrent(Current.Previous);
-
-    void ILHookTest(ILContext il)
+    /// <summary>
+    /// Set <see cref="Current"/> to a target instruction just like
+    /// <see cref="CurrentTo(Instruction)"/>, except this returns true
+    /// for use in <see cref="Match(Predicate{Instruction}[])"/> and other variations.
+    /// </summary>
+    /// <param name="instruction">The instruction to set as current.</param>
+    /// <returns>true</returns>
+    public bool PointCurrentTo(Instruction instruction)
     {
-        ILWeaver w = new(il);
-
-        w.Match(
-                out Instruction target,
-                x => x.MatchLdloc(1),
-                x => x.MatchBrtrue(out _) && x.Set(out target)
-            )
-            .ThrowIfFailure()
-            .EmitBeforeCurrent(w.Create(OpCodes.Call, GetCustomNumber));
+        CurrentTo(instruction);
+        return true;
     }
 
-    public static int GetCustomNumber()
+    /// <summary>
+    /// Set instruction to a target instruction and returns true
+    /// for use in <see cref="Match(Predicate{Instruction}[])"/> and other variations.
+    /// </summary>
+    /// <param name="toBeSet">The instruction to be set.</param>
+    /// <param name="target">The instruction toBeSet will be set to.</param>
+    /// <returns>true</returns>
+    public bool PointInstructionTo([NotNull] Instruction? toBeSet, Instruction target)
     {
-        return 10;
+        Helpers.ThrowIfNull(target);
+        toBeSet = target;
+        return true;
     }
+
+    public ILWeaver CurrentToNext() => CurrentTo(Current.Next);
+
+    public ILWeaver CurrentToPrevious() => CurrentTo(Current.Previous);
 
     /// <summary>
     /// Attempts to match a set of predicates to find one specific
@@ -231,19 +261,18 @@ public class ILWeaver(ILContext il)
     /// to ensure the match predicates are matching exactly what was attempted to match.<br/>
     /// <br/>
     /// If you want to match multiple locations, use
-    /// <see cref="MatchMultiple(out Instruction, out List{ILWeaver}, Predicate{Instruction}[])"/><br/>
+    /// <see cref="MatchMultiple(Action{ILWeaver}, Predicate{Instruction}[])"/><br/>
     /// <br/>
     /// <example>
     /// In the following example we match two instructions, setting
-    /// the target for the match to the brtrue instruction
-    /// which is then set as <see cref="Current"/> if the match is successful.
+    /// <see cref="Current"/> to the brtrue instruction which remains as the
+    /// <see cref="Current"/> if the match is successful.
     /// <code>
     /// <![CDATA[
     /// weaver
     ///     .Match(
-    ///         out Instruction target,
     ///         x => x.MatchLdloc(1),
-    ///         x => x.MatchBrtrue(out _) && x.Set(out target)
+    ///         x => x.MatchBrtrue(out _) && weaver.PointCurrentTo(x)
     ///     )
     ///     .ThrowIfFailure()
     ///     .EmitBeforeCurrent(weaver.Create(OpCodes.Call, GetCustomNumber));
@@ -256,10 +285,8 @@ public class ILWeaver(ILContext il)
     /// <param name="predicates">The predicates to match against.</param>
     /// <returns>An <see cref="ILWeaverResult"/> which can be used
     /// for checking if the match was a success or a failure.</returns>
-    public ILWeaverResult Match(
-        out Instruction target,
-        params Predicate<Instruction>[] predicates
-    ) => MatchInternal(out target, allowMultipleMatches: false, out _, predicates);
+    public ILWeaverResult Match(params Predicate<Instruction>[] predicates) =>
+        MatchInternal(allowMultipleMatches: false, null, predicates);
 
     /// <summary>
     /// Attempts to match a set of predicates multiple times to find specific
@@ -267,48 +294,49 @@ public class ILWeaver(ILContext il)
     /// <br/>
     /// <example>
     /// In the following example we match two instructions, setting
-    /// the target for the match to the brtrue instruction
-    /// which is then set as <see cref="Current"/> if the match is successful.
+    /// <see cref="Current"/> to the brtrue instruction which only applies to
+    /// the <see cref="ILWeaver"/> clones which are passed to the `onMatch` delegate's argument.
+    /// This means that the <see cref="ILWeaver"/> you run this method on will keep its original
+    /// <see cref="Current"/> even if it's set in the predicates.
     /// <code>
     /// <![CDATA[
     /// weaver
     ///     .MatchMultiple(
-    ///         out Instruction target,
-    ///         out List<ILWeaver> weavers,
+    ///         onMatch: matchWeaver =>
+    ///         {
+    ///             matchWeaver.EmitBeforeCurrent(
+    ///                 matchWeaver.Create(OpCodes.Call, GetCustomNumber)
+    ///             );
+    ///         },
     ///         x => x.MatchLdloc(1),
-    ///         x => x.MatchBrtrue(out _) && x.Set(out target)
+    ///         x => x.MatchBrtrue(out _) && weaver.PointCurrentTo(x)
     ///     )
     ///     .ThrowIfFailure();
-    ///
-    /// foreach (ILWeaver w in weavers)
-    ///     w.EmitBeforeCurrent(w.Create(OpCodes.Call, GetCustomNumber));
     /// ]]>
     /// </code>
     /// </example>
     /// </summary>
-    /// <param name="weavers"></param>
+    /// <param name="onMatch">A delegate which runs for each match, passing a copy of the
+    /// original <see cref="ILWeaver"/> with the <see cref="Current"/> pointing to the one
+    /// at the time of the match.</param>
     /// <inheritdoc cref="Match"/>
     public ILWeaverResult MatchMultiple(
-        out Instruction target,
-        out List<ILWeaver> weavers,
+        Action<ILWeaver> onMatch,
         params Predicate<Instruction>[] predicates
-    ) => MatchInternal(out target, allowMultipleMatches: true, out weavers!, predicates);
+    ) => MatchInternal(allowMultipleMatches: true, onMatch, predicates);
 
     ILWeaverResult MatchInternal(
-        out Instruction target,
         bool allowMultipleMatches,
-        out List<ILWeaver>? weavers,
+        Action<ILWeaver>? onMatched,
         params Predicate<Instruction>[] predicates
     )
     {
         Helpers.ThrowIfNull(predicates);
 
         if (allowMultipleMatches)
-            weavers = [];
-        else
-            weavers = null!;
+            Helpers.ThrowIfNull(onMatched);
 
-        target = null!;
+        Instruction originalCurrent = Current;
 
         List<int> matchedIndexes = [];
         List<(int count, int indexBeforeFailed)> bestAttempts = [(0, 0)];
@@ -341,38 +369,41 @@ public class ILWeaver(ILContext il)
             predicatesMatched = 0;
             matchedIndexes.Add(i);
 
+            // It's possible that the User didn't set Current in the matching predicates.
+            // We don't want that to happen, but I don't like the idea of keeping state about
+            // if Current was set, and it would only be caught at runtime anyways.
+            //
+            // I also don't like implicitly setting Current to the first matched predicate if
+            // it wasn't set, as the user might not read the xml docs and never learns they can
+            // set Current to any matched predicate.
+            //
+            // So I think the best solution is an analyzer that enforces setting Current.
+
             if (allowMultipleMatches)
             {
-                ThrowIfTargetNull(target);
-                weavers.Add(New().NewCurrent(target));
+                onMatched!(Clone());
             }
         }
 
         if (allowMultipleMatches)
         {
+            // When matching multiple, keep original for this weaver in any case.
+            CurrentTo(originalCurrent);
+
             if (matchedIndexes.Count > 0)
+            {
                 return new ILWeaverResult(this, null);
+            }
         }
         else
         {
             if (matchedIndexes.Count == 1)
             {
-                ThrowIfTargetNull(target);
-                NewCurrent(target);
                 return new ILWeaverResult(this, null);
             }
-        }
 
-        static void ThrowIfTargetNull(Instruction target)
-        {
-            if (target is not null)
-                return;
-
-            throw new NullReferenceException(
-                $"The parameter 'out Instruction target' was not set in the predicates "
-                    + "meaning the Current instruction couldn't be set after the match. "
-                    + "Set it like so: `x => x.Take(out Instruction target)`"
-            );
+            // When failing a single match, reset to original.
+            CurrentTo(originalCurrent);
         }
 
         CodeBuilder err = new(new StringBuilder(), 2);
@@ -480,20 +511,21 @@ public class ILWeaver(ILContext il)
         return new ILWeaverResult(this, GetNotMatchedAllError);
     }
 
-    ILWeaver EmitAt(int index, Instruction instruction)
+    ILWeaver InsertAtInternal(int index, Instruction instruction)
     {
+        Helpers.ThrowIfNull(instruction);
         Instructions.Insert(index, instruction);
         return this;
     }
 
     /// <summary>
-    /// Emit instructions before the provided index.
+    /// Insert instructions before the provided index.
     /// </summary>
-    public ILWeaver EmitBefore(int index, params IEnumerable<Instruction> instructions)
+    public ILWeaver InsertBefore(int index, params IEnumerable<Instruction> instructions)
     {
         foreach (var instruction in instructions)
         {
-            EmitAt(index, instruction);
+            InsertAtInternal(index, instruction);
             index++;
         }
 
@@ -501,33 +533,23 @@ public class ILWeaver(ILContext il)
     }
 
     /// <summary>
-    /// Emit instructions after the provided index.
+    /// Insert instructions before the provided instruction.
     /// </summary>
-    public ILWeaver EmitAfter(int index, params IEnumerable<Instruction> instructions) =>
-        EmitBefore(index + 1, instructions);
+    public ILWeaver InsertBefore(
+        Instruction anchor,
+        params IEnumerable<Instruction> instructions
+    ) => InsertBefore(Context.IndexOf(anchor), instructions);
 
     /// <summary>
-    /// Emit instructions before the provided instruction.
-    /// </summary>
-    public ILWeaver EmitBefore(Instruction anchor, params IEnumerable<Instruction> instructions) =>
-        EmitBefore(Context.IndexOf(anchor), instructions);
-
-    /// <summary>
-    /// Emit instructions after the provided instruction.
-    /// </summary>
-    public ILWeaver EmitAfter(Instruction anchor, params IEnumerable<Instruction> instructions) =>
-        EmitAfter(Context.IndexOf(anchor) + 1, instructions);
-
-    /// <summary>
-    /// Emit instructions before this weaver's current position.
+    /// Insert instructions before this weaver's current position.
     /// Current target doesn't change.
     /// </summary>
-    public ILWeaver EmitBeforeCurrent(params IEnumerable<Instruction> instructions)
+    public ILWeaver InsertBeforeCurrent(params IEnumerable<Instruction> instructions)
     {
         int index = Index;
         foreach (var instruction in instructions)
         {
-            EmitAt(index, instruction);
+            InsertAtInternal(index, instruction);
             index++;
         }
 
@@ -535,16 +557,28 @@ public class ILWeaver(ILContext il)
     }
 
     /// <summary>
-    /// Emit instructions after this weaver's current position.
-    /// Retargets Current to the last emitted instruction.
+    /// Insert instructions after the provided index.
     /// </summary>
-    public ILWeaver EmitAfterCurrent(params IEnumerable<Instruction> instructions)
+    public ILWeaver InsertAfter(int index, params IEnumerable<Instruction> instructions) =>
+        InsertBefore(index + 1, instructions);
+
+    /// <summary>
+    /// Insert instructions after the provided instruction.
+    /// </summary>
+    public ILWeaver InsertAfter(Instruction anchor, params IEnumerable<Instruction> instructions) =>
+        InsertAfter(Context.IndexOf(anchor), instructions);
+
+    /// <summary>
+    /// Insert instructions after this weaver's current position.
+    /// Retargets Current to the last inserted instruction.
+    /// </summary>
+    public ILWeaver InsertAfterCurrent(params IEnumerable<Instruction> instructions)
     {
         int index = Index + 1;
         foreach (var instruction in instructions)
         {
-            EmitAt(index, instruction);
-            NewCurrent(instruction.Next);
+            InsertAtInternal(index, instruction);
+            CurrentTo(instruction.Next);
             index++;
         }
 
@@ -553,7 +587,7 @@ public class ILWeaver(ILContext il)
 
     /// <summary>
     /// Create a new instruction to be emitted by
-    /// <see cref="EmitBeforeCurrent(IEnumerable{Instruction})"/> or any of the variations.
+    /// <see cref="InsertBeforeCurrent(IEnumerable{Instruction})"/> or any of the variations.
     /// </summary>
     /// <param name="opcode">The instruction opcode.</param>
     /// <param name="parameter">The instruction operand.</param>
@@ -570,71 +604,65 @@ public class ILWeaver(ILContext il)
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="ArgumentException"></exception>
     public Instruction Create(OpCode opcode, ParameterDefinition parameter) =>
-        ILProcessor.Create(opcode, parameter);
+        IL.Create(opcode, parameter);
 
     /// <inheritdoc cref="Create"/>
     public Instruction Create(OpCode opcode, VariableDefinition variable) =>
-        ILProcessor.Create(opcode, variable);
+        IL.Create(opcode, variable);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, Instruction[] targets) =>
-        ILProcessor.Create(opcode, targets);
+    public Instruction Create(OpCode opcode, Instruction[] targets) => IL.Create(opcode, targets);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, Instruction target) =>
-        ILProcessor.Create(opcode, target);
+    public Instruction Create(OpCode opcode, Instruction target) => IL.Create(opcode, target);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, double value) => ILProcessor.Create(opcode, value);
+    public Instruction Create(OpCode opcode, double value) => IL.Create(opcode, value);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, float value) => ILProcessor.Create(opcode, value);
+    public Instruction Create(OpCode opcode, float value) => IL.Create(opcode, value);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, long value) => ILProcessor.Create(opcode, value);
+    public Instruction Create(OpCode opcode, long value) => IL.Create(opcode, value);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, sbyte value) => ILProcessor.Create(opcode, value);
+    public Instruction Create(OpCode opcode, sbyte value) => IL.Create(opcode, value);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, byte value) => ILProcessor.Create(opcode, value);
+    public Instruction Create(OpCode opcode, byte value) => IL.Create(opcode, value);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, string value) => ILProcessor.Create(opcode, value);
+    public Instruction Create(OpCode opcode, string value) => IL.Create(opcode, value);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, FieldReference field) =>
-        ILProcessor.Create(opcode, field);
+    public Instruction Create(OpCode opcode, FieldReference field) => IL.Create(opcode, field);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, CallSite site) => ILProcessor.Create(opcode, site);
+    public Instruction Create(OpCode opcode, CallSite site) => IL.Create(opcode, site);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, TypeReference type) =>
-        ILProcessor.Create(opcode, type);
+    public Instruction Create(OpCode opcode, TypeReference type) => IL.Create(opcode, type);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode) => ILProcessor.Create(opcode);
+    public Instruction Create(OpCode opcode) => IL.Create(opcode);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, int value) => ILProcessor.Create(opcode, value);
+    public Instruction Create(OpCode opcode, int value) => IL.Create(opcode, value);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, MethodReference method) =>
-        ILProcessor.Create(opcode, method);
+    public Instruction Create(OpCode opcode, MethodReference method) => IL.Create(opcode, method);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, FieldInfo field) => ILProcessor.Create(opcode, field);
+    public Instruction Create(OpCode opcode, FieldInfo field) => IL.Create(opcode, field);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, MethodBase method) =>
-        ILProcessor.Create(opcode, method);
+    public Instruction Create(OpCode opcode, MethodBase method) => IL.Create(opcode, method);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, Type type) => ILProcessor.Create(opcode, type);
+    public Instruction Create(OpCode opcode, Type type) => IL.Create(opcode, type);
 
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, object operand) => ILProcessor.Create(opcode, operand);
+    public Instruction Create(OpCode opcode, object operand) => IL.Create(opcode, operand);
 
     /// <remarks>
     /// If the delegate method isn't static, its instance must be pushed to the stack first.<br/>
@@ -642,19 +670,18 @@ public class ILWeaver(ILContext il)
     /// instance to be loaded. If it is a lambda expression, use <see cref="CreateDelegate"/>.
     /// </remarks>
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, Delegate method) =>
-        ILProcessor.Create(opcode, method.Method);
+    public Instruction Create(OpCode opcode, Delegate method) => IL.Create(opcode, method.Method);
 
     /// <summary>
     /// Create a new instruction accessing a given member, to be emitted by
-    /// <see cref="EmitBeforeCurrent(IEnumerable{Instruction})"/> or any of the variations.
+    /// <see cref="InsertBeforeCurrent(IEnumerable{Instruction})"/> or any of the variations.
     /// </summary>
     /// <typeparam name="T">The type in which the member is defined.</typeparam>
     /// <param name="memberName">The accessed member name.</param>
     /// <inheritdoc cref="Create"/>
     /// <exception cref="NotSupportedException"></exception>
     public Instruction Create<T>(OpCode opcode, string memberName) =>
-        ILProcessor.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags)(-1)).First());
+        IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags)(-1)).First());
 }
 
 public class ILWeaverResult
@@ -722,13 +749,4 @@ public class ILWeaverResultException : Exception
         System.Runtime.Serialization.StreamingContext context
     )
         : base(info, context) { }
-}
-
-static class InstructionExtensions
-{
-    public static bool Set(this Instruction source, out Instruction target)
-    {
-        target = source;
-        return true;
-    }
 }

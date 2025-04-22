@@ -8,7 +8,7 @@ using MonoMod.Utils;
 
 namespace MonoDetour.DetourTypes;
 
-static class GenericDetour
+static class GeneralDetour
 {
     static readonly Dictionary<MethodBase, ILLabel> firstRedirectForMethod = [];
 
@@ -19,7 +19,12 @@ static class GenericDetour
 
         MonoDetourData data = info.Data;
 
-        // Console.WriteLine("Original: " + il.ToString());
+        if (!data.Manipulator.IsStatic)
+        {
+            throw new NotSupportedException(
+                "Only static manipulator methods are supported for now."
+            );
+        }
 
         ILCursor c = new(il);
 
@@ -28,35 +33,74 @@ static class GenericDetour
             c.Index -= 1;
             bool found = firstRedirectForMethod.TryGetValue(info.Data.Target, out var target);
 
-            ILLabel retLabel = RedirectEarlyReturnsToLabel(c, target);
+            ILLabel redirectedRet = RedirectEarlyReturnsToLabel(c, target);
 
             if (!found)
-                firstRedirectForMethod.Add(info.Data.Target, retLabel);
+                firstRedirectForMethod.Add(info.Data.Target, redirectedRet);
 
-            c.MoveAfterLabels(); // Move ret label to next emitted instruction.
+            // Move redirectedRet label to next emitted instruction
+            // as we want it to point to our postfix hook.
+            c.MoveAfterLabels();
         }
 
-        int? retLocIdx = c.EmitParams(info);
+        ILLabel firstParamForHook = c.MarkLabel();
 
-        if (!data.Manipulator.IsStatic)
+        int? retLocIdx = c.EmitParams(info, out var storedReturnValue);
+
+        c.Emit(OpCodes.Call, data.Manipulator);
+
+        if (storedReturnValue is not null)
         {
-            throw new NotSupportedException(
-                "Only static manipulator methods are supported for now."
-            );
+            firstParamForHook.Target = storedReturnValue.Next;
         }
-        else
-            c.Emit(OpCodes.Call, data.Manipulator);
+
+        var outsideThisHook = il.DefineLabel(c.Next!);
+        c.Emit(OpCodes.Leave, outsideThisHook);
+        Instruction leaveCallInTry = c.Previous;
+
+        // This is the start of an exception handler block,
+        // and the exception should be on the stack if we are here.
+        c.EmitReference(info);
+        c.EmitDelegate(DisposeBadHooks);
+        c.Emit(OpCodes.Leave, outsideThisHook);
+        Instruction leaveCallInCatch = c.Previous;
 
         if (info.DetourType == typeof(PostfixDetour) && retLocIdx is not null)
         {
+            // This must be outside of the catch and we must branch to it.
             c.ApplyReturnValue(info, (int)retLocIdx);
+            outsideThisHook.Target = c.Previous;
         }
+
+        il.Body.ExceptionHandlers.Add(
+            new ExceptionHandler(ExceptionHandlerType.Catch)
+            {
+                CatchType = il.Import(typeof(Exception)),
+
+                TryStart = firstParamForHook.Target,
+                TryEnd = leaveCallInTry.Next,
+
+                HandlerStart = leaveCallInTry.Next,
+                HandlerEnd = leaveCallInCatch.Next,
+            }
+        );
 
         if (data.Owner.LogLevel == MonoDetourManager.Logging.Diagnostic)
         {
             c.Method.RecalculateILOffsets();
             Console.WriteLine($"Manipulated by {data.Manipulator.Name}: " + il);
         }
+    }
+
+    static void DisposeBadHooks(Exception ex, MonoDetourInfo info)
+    {
+        var manipulator = info.Data.Manipulator!;
+        Console.WriteLine(
+            $"[MonoDetour] Hook '{manipulator}' threw an exception,"
+                + $" and its {nameof(MonoDetourManager)}'s hooks will be disposed.\n"
+                + $"The Exception that was thrown: {ex}"
+        );
+        info.Data.Owner!.DisposeHooks();
     }
 
     // Taken and adapted from HarmonyX

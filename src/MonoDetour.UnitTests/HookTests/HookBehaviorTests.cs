@@ -4,25 +4,32 @@ public static partial class HookBehaviorTests
 {
     private static readonly Queue<int> order = [];
     private static bool iLHook2_emitRetTwiceToForceEarlyReturn;
+    static readonly Lock _lock = new();
 
     [Fact]
     public static void CanRedirectEarlyReturn()
     {
-        iLHook2_emitRetTwiceToForceEarlyReturn = false;
-        order.Clear();
+        lock (_lock)
+        {
+            iLHook2_emitRetTwiceToForceEarlyReturn = false;
+            order.Clear();
 
-        Assert.Equal(102, PerformHooks());
-        Assert.Equal([1, 2, 3, 4], order);
+            Assert.Equal(102, PerformHooks());
+            Assert.Equal([1, 2, 3, 4], order);
+        }
     }
 
     [Fact]
     public static void CanReturnEarlyWithDoubleReturn()
     {
-        iLHook2_emitRetTwiceToForceEarlyReturn = true;
-        order.Clear();
+        lock (_lock)
+        {
+            iLHook2_emitRetTwiceToForceEarlyReturn = true;
+            order.Clear();
 
-        Assert.Equal(100, PerformHooks());
-        Assert.Equal([1], order);
+            Assert.Equal(100, PerformHooks());
+            Assert.Equal([1], order);
+        }
     }
 
     private static int PerformHooks()

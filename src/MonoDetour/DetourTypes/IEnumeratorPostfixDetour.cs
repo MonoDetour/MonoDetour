@@ -15,5 +15,5 @@ public class IEnumeratorPostfixDetour : IMonoDetourHookEmitter
     public MonoDetourInfo Info { get; set; } = null!;
 
     /// <inheritdoc/>
-    public void Manipulator(ILContext il) => GenericIEnumeratorDetour.Manipulator(il, Info);
+    public void Manipulator(ILContext il) => GeneralIEnumeratorDetour.Manipulator(il, Info);
 }
