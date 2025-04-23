@@ -68,12 +68,12 @@ public static class MonoDetourLogger
     static string LogChannelToString(LogChannel channel) =>
         channel switch
         {
-            LogChannel.None => "None ",
-            LogChannel.Info => "Info ",
-            LogChannel.IL => "IL   ",
-            LogChannel.Warn => "Warn ",
-            LogChannel.Error => "Error",
-            LogChannel.Debug => "Debug",
+            LogChannel.None => "None   ",
+            LogChannel.Info => "Info   ",
+            LogChannel.IL => "IL     ",
+            LogChannel.Warn => "Warning",
+            LogChannel.Error => "Error  ",
+            LogChannel.Debug => "Debug  ",
             _ => throw new NotSupportedException(),
         };
 
@@ -124,6 +124,6 @@ public static class MonoDetourLogger
 
     static void DefaultLog(LogChannel channel, string message)
     {
-        Console.WriteLine($"[{LogChannelToString(channel)} : MonoDetour] {message}");
+        Console.WriteLine($"[{LogChannelToString(channel)}: MonoDetour] {message}");
     }
 }

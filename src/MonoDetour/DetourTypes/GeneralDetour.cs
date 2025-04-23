@@ -104,15 +104,41 @@ static class GeneralDetour
 
     static void DisposeBadHooks(Exception ex, MonoDetourInfo info)
     {
-        var manipulator = info.Data.Manipulator!;
+        MethodBase manipulator = info.Data.Manipulator!;
+        MethodBase target = info.Data.Target!;
+        string? targetTypeName = target.DeclaringType?.FullName;
+
         MonoDetourLogger.Log(
             MonoDetourLogger.LogChannel.Error,
             () =>
-                $"Hook '{manipulator}' threw an exception,"
-                + $" and its {nameof(MonoDetourManager)}'s hooks will be disposed.\n"
+                $"Hook '{manipulator}' targeting method '{target}' from type '{targetTypeName}'"
+                + $" threw an exception, and its {nameof(MonoDetourManager)}'s hooks will be disposed.\n"
                 + $"The Exception that was thrown: {ex}"
         );
-        info.Data.Owner!.DisposeHooks();
+        try
+        {
+            bool hadHandler = info.Data.Owner!.CallOnDispose(info);
+
+            if (!hadHandler)
+            {
+                MonoDetourLogger.Log(
+                    MonoDetourLogger.LogChannel.Warn,
+                    () =>
+                        $"No disposal event handler for the {nameof(MonoDetourManager)} was registered."
+                );
+            }
+        }
+        catch (Exception disposalEx)
+        {
+            MonoDetourLogger.Log(
+                MonoDetourLogger.LogChannel.Error,
+                () => $"Disposal event handler threw an exception:\n{disposalEx}"
+            );
+        }
+        finally
+        {
+            info.Data.Owner!.DisposeHooks();
+        }
     }
 
     // Taken and adapted from HarmonyX

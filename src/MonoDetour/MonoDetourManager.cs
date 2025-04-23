@@ -19,6 +19,27 @@ public class MonoDetourManager
     public List<ILHook> ILHooks { get; } = [];
 
     /// <summary>
+    /// An event which is called when a hook owned by this <see cref="MonoDetourManager"/>
+    /// throws, just before all hooks from the <see cref="MonoDetourManager"/> are disposed
+    /// as a consequence.<br/>
+    /// <br/>
+    /// Use this event for cleaning up related resources to help prevent
+    /// as much damage as possible.<br/>
+    /// <br/>
+    /// The hook which threw is passed as the only argument.
+    /// </summary>
+    public event Action<MonoDetourInfo>? OnDispose;
+
+    internal bool CallOnDispose(MonoDetourInfo info)
+    {
+        if (OnDispose is null)
+            return false;
+
+        OnDispose?.Invoke(info);
+        return true;
+    }
+
+    /// <summary>
     /// Invokes hook initializers for the assembly that calls this method.
     /// </summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -126,5 +147,13 @@ public class MonoDetourManager
         ILHook iLHook = new(info.Data.Target, emitter.Manipulator);
         ILHooks.Add(iLHook);
         return iLHook;
+    }
+
+    /// <summary>
+    /// Disposes the <see cref="MonoDetourManager"/> and its hooks.
+    /// </summary>
+    ~MonoDetourManager()
+    {
+        DisposeHooks();
     }
 }
