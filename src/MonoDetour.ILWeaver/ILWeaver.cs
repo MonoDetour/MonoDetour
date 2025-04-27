@@ -10,6 +10,7 @@ using MonoMod.Cil;
 using MonoMod.SourceGen.Internal;
 using MonoMod.Utils;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
+using MethodBody = Mono.Cecil.Cil.MethodBody;
 
 namespace MonoDetour;
 
@@ -20,6 +21,9 @@ public class ILWeaver(ILContext il)
 
     /// <inheritdoc cref="ILContext.IL"/>
     public ILProcessor IL => Context.IL;
+
+    /// <inheritdoc cref="ILContext.Body"/>
+    public MethodBody Body => Context.Body;
 
     /// <inheritdoc cref="ILContext.Instrs"/>
     public InstrList Instructions => Context.Instrs;
@@ -180,7 +184,8 @@ public class ILWeaver(ILContext il)
     /// <summary>
     /// Create a new <see cref="ExceptionHandler"/> to be assigned the following:<br/>
     /// <see cref="HandlerSetTryStart(Instruction, ExceptionHandler)"/><br/>
-    /// <see cref="HandlerSetTryEnd(Instruction, ExceptionHandler)"/><br/>
+    /// <see cref="HandlerSetTryEnd(Instruction, ExceptionHandler)"/>
+    /// - NOTE: If left null, is set implicitly.<br/>
     /// <see cref="HandlerSetCatchStart(Instruction, ExceptionHandler)"/><br/>
     /// <see cref="HandlerSetCatchEnd(Instruction, ExceptionHandler)"/><br/>
     /// <br/>
@@ -211,6 +216,9 @@ public class ILWeaver(ILContext il)
     /// <summary>
     /// Set the TryStart property of the <see cref="ExceptionHandler"/>.
     /// </summary>
+    /// <remarks>
+    /// This value is inclusive.
+    /// </remarks>
     /// <param name="tryStart">The first instruction in the try block.</param>
     /// <param name="handler">The <see cref="ExceptionHandler"/> to configure.</param>
     /// <returns>This <see cref="ILWeaver"/>.</returns>
@@ -302,12 +310,26 @@ public class ILWeaver(ILContext il)
     {
         if (handler.TryStart is null)
             throw new NullReferenceException("TryStart was not set!");
-        if (handler.TryEnd is null)
-            throw new NullReferenceException("TryEnd was not set!");
         if (handler.HandlerStart is null)
             throw new NullReferenceException("HandlerStart was not set!");
         if (handler.HandlerEnd is null)
             throw new NullReferenceException("HandlerEnd was not set!");
+
+        // We can figure out this one implicitly.
+        if (handler.TryEnd is null)
+        {
+            if (handler.HandlerType == ExceptionHandlerType.Filter)
+            {
+                if (handler.FilterStart is null)
+                    throw new NullReferenceException("FilterStart was not set!");
+
+                handler.TryEnd = handler.FilterStart;
+            }
+            else
+            {
+                handler.TryEnd = handler.HandlerStart;
+            }
+        }
 
         // Turn inclusive ranges exclusive
         handler.TryEnd = handler.TryEnd.Next;
@@ -680,9 +702,44 @@ public class ILWeaver(ILContext il)
         return new ILWeaverResult(this, GetNotMatchedAllError);
     }
 
-    ILWeaver InsertAtInternal(int index, Instruction instruction)
+    ILWeaver InsertAtInternal(int index, Instruction instruction, bool insertAfterIndex)
     {
         Helpers.ThrowIfNull(instruction);
+
+        Instruction InstructionAtIndex = Instructions[index];
+
+        // When inserting before a target instruction that is inside handler ranges,
+        // include the inserted instruction inside the start range.
+        if (!insertAfterIndex)
+        {
+            foreach (var eh in Body.ExceptionHandlers)
+            {
+                if (eh.TryStart == InstructionAtIndex)
+                    eh.TryStart = instruction;
+                if (eh.HandlerStart == InstructionAtIndex)
+                    eh.HandlerStart = instruction;
+                if (eh.FilterStart == InstructionAtIndex)
+                    eh.FilterStart = instruction;
+            }
+        }
+        // In this case we are inserting after a target instruction,
+        // so we want our instruction to be inside the end range.
+        else
+        {
+            foreach (var eh in Body.ExceptionHandlers)
+            {
+                if (eh.TryEnd == InstructionAtIndex)
+                    eh.TryEnd = instruction;
+                if (eh.HandlerEnd == InstructionAtIndex)
+                    eh.HandlerEnd = instruction;
+            }
+        }
+
+        if (insertAfterIndex)
+        {
+            index += 1;
+        }
+
         Instructions.Insert(index, instruction);
         return this;
     }
@@ -690,11 +747,16 @@ public class ILWeaver(ILContext il)
     /// <summary>
     /// Insert instructions before the provided index.
     /// </summary>
+    /// <remarks>
+    /// If the instruction at the provided index is inside the start of
+    /// a try, filter, or catch range, then the first inserted instruction
+    /// will become the new start of that range.
+    /// </remarks>
     public ILWeaver InsertBefore(int index, params IEnumerable<Instruction> instructions)
     {
         foreach (var instruction in instructions)
         {
-            InsertAtInternal(index, instruction);
+            InsertAtInternal(index, instruction, insertAfterIndex: false);
             index++;
         }
 
@@ -704,21 +766,41 @@ public class ILWeaver(ILContext il)
     /// <summary>
     /// Insert instructions before the provided instruction.
     /// </summary>
+    /// <remarks>
+    /// If the provided target instruction is inside the start of
+    /// a try, filter, or catch range, then the first inserted instruction
+    /// will become the new start of that range.
+    /// </remarks>
     public ILWeaver InsertBefore(
-        Instruction anchor,
+        Instruction target,
         params IEnumerable<Instruction> instructions
-    ) => InsertBefore(Context.IndexOf(anchor), instructions);
+    ) => InsertBefore(Context.IndexOf(target), instructions);
 
     /// <summary>
     /// Insert instructions before this weaver's current position.
     /// Current target doesn't change.
     /// </summary>
-    public ILWeaver InsertBeforeCurrent(params IEnumerable<Instruction> instructions)
+    /// <remarks>
+    /// If <see cref="Current"/> is inside the start of
+    /// a try, filter, or catch range, then the first inserted instruction
+    /// will become the new start of that range.
+    /// </remarks>
+    public ILWeaver InsertBeforeCurrent(params IEnumerable<Instruction> instructions) =>
+        InsertBefore(Index, instructions);
+
+    /// <summary>
+    /// Insert instructions after the provided index.
+    /// </summary>
+    /// <remarks>
+    /// If the instruction at the provided index is inside the end of
+    /// a try or a catch range, then the last inserted instruction
+    /// will become the new end of that range.
+    /// </remarks>
+    public ILWeaver InsertAfter(int index, params IEnumerable<Instruction> instructions)
     {
-        int index = Index;
         foreach (var instruction in instructions)
         {
-            InsertAtInternal(index, instruction);
+            InsertAtInternal(index, instruction, insertAfterIndex: true);
             index++;
         }
 
@@ -726,27 +808,31 @@ public class ILWeaver(ILContext il)
     }
 
     /// <summary>
-    /// Insert instructions after the provided index.
-    /// </summary>
-    public ILWeaver InsertAfter(int index, params IEnumerable<Instruction> instructions) =>
-        InsertBefore(index + 1, instructions);
-
-    /// <summary>
     /// Insert instructions after the provided instruction.
     /// </summary>
-    public ILWeaver InsertAfter(Instruction anchor, params IEnumerable<Instruction> instructions) =>
-        InsertAfter(Context.IndexOf(anchor), instructions);
+    /// <remarks>
+    /// If the provided target instruction is inside the end of
+    /// a try or a catch range, then the last inserted instruction
+    /// will become the new end of that range.
+    /// </remarks>
+    public ILWeaver InsertAfter(Instruction target, params IEnumerable<Instruction> instructions) =>
+        InsertAfter(Context.IndexOf(target), instructions);
 
     /// <summary>
     /// Insert instructions after this weaver's current position.
     /// Retargets Current to the last inserted instruction.
     /// </summary>
+    /// <remarks>
+    /// If <see cref="Current"/> is inside the end of
+    /// a try or a catch range, then the last inserted instruction
+    /// will become the new end of that range.
+    /// </remarks>
     public ILWeaver InsertAfterCurrent(params IEnumerable<Instruction> instructions)
     {
-        int index = Index + 1;
+        int index = Index;
         foreach (var instruction in instructions)
         {
-            InsertAtInternal(index, instruction);
+            InsertAtInternal(index, instruction, insertAfterIndex: true);
             CurrentTo(instruction.Next);
             index++;
         }
