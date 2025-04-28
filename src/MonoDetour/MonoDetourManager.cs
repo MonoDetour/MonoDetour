@@ -11,7 +11,7 @@ namespace MonoDetour;
 /// <summary>
 /// A manager for your MonoDetour hooks.
 /// </summary>
-public class MonoDetourManager
+public class MonoDetourManager : IDisposable
 {
     /// <summary>
     /// The hooks applied by this MonoDetourManager.
@@ -28,14 +28,24 @@ public class MonoDetourManager
     /// <br/>
     /// The hook which threw is passed as the only argument.
     /// </summary>
-    public event Action<MonoDetourInfo>? OnDispose;
+    public event Action<MonoDetourInfo>? OnHookThrew;
 
-    internal bool CallOnDispose(MonoDetourInfo info)
+    bool isDisposed = false;
+
+    void ThrowIfDisposed()
     {
-        if (OnDispose is null)
+        if (!isDisposed)
+            return;
+
+        throw new ObjectDisposedException(ToString());
+    }
+
+    internal bool CallOnHookThrew(MonoDetourInfo info)
+    {
+        if (OnHookThrew is null)
             return false;
 
-        OnDispose?.Invoke(info);
+        OnHookThrew?.Invoke(info);
         return true;
     }
 
@@ -92,8 +102,7 @@ public class MonoDetourManager
     public void UndoHooks() => ILHooks.ForEach(x => x.Undo());
 
     /// <summary>
-    /// Cleans up, undoes and gets rid of all hooks belonging to this manager.
-    /// Use this is you never want to see those hooks again.
+    /// Undoes and disposes all hooks belonging to this manager.
     /// </summary>
     public void DisposeHooks()
     {
@@ -107,6 +116,8 @@ public class MonoDetourManager
     /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourInfo?)"/>
     public ILHook Hook(MethodBase target, ILContext.Manipulator manipulator)
     {
+        // TODO: make this call Hook(MethodBase target, MethodBase manipulator, MonoDetourInfo info)
+        ThrowIfDisposed();
         var ilHook = new ILHook(target, manipulator);
         ILHooks.Add(ilHook);
         return ilHook;
@@ -133,6 +144,7 @@ public class MonoDetourManager
     /// <returns>The hook.</returns>
     public ILHook Hook(MethodBase target, MethodBase manipulator, MonoDetourInfo info)
     {
+        ThrowIfDisposed();
         Helpers.ThrowIfNull(target);
         Helpers.ThrowIfNull(manipulator);
         Helpers.ThrowIfNull(info);
@@ -149,11 +161,25 @@ public class MonoDetourManager
         return iLHook;
     }
 
-    /// <summary>
-    /// Disposes the <see cref="MonoDetourManager"/> and its hooks.
-    /// </summary>
-    ~MonoDetourManager()
+    void Dispose(bool disposing)
     {
-        DisposeHooks();
+        if (isDisposed)
+        {
+            return;
+        }
+
+        if (disposing)
+        {
+            DisposeHooks();
+        }
+
+        isDisposed = true;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 }

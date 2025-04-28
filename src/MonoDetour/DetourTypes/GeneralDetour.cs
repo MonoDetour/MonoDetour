@@ -117,7 +117,7 @@ static class GeneralDetour
         );
         try
         {
-            bool hadHandler = info.Data.Owner!.CallOnDispose(info);
+            bool hadHandler = info.Data.Owner!.CallOnHookThrew(info);
 
             if (!hadHandler)
             {

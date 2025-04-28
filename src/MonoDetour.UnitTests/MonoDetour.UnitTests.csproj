@@ -50,6 +50,8 @@
       ReferenceOutputAssembly="false"/>
 
     <ProjectReference Include="../MonoDetour/MonoDetour.csproj" />
+    <ProjectReference Include="../MonoDetour.ILWeaver/MonoDetour.ILWeaver.csproj" />
+
     <ProjectReference
       Include="../MonoDetour.UnitTests.TestLib/MonoDetour.UnitTests.TestLib.csproj"
       Publicize="true" />

@@ -43,6 +43,16 @@ public class ILWeaver(ILContext il)
     }
 
     /// <summary>
+    /// Gets the first instruction in the method body.
+    /// </summary>
+    public Instruction First => Instructions[0];
+
+    /// <summary>
+    /// Gets the last instruction in the method body.
+    /// </summary>
+    public Instruction Last => Instructions[^1];
+
+    /// <summary>
     /// The index of the instruction on <see cref="Current"/>
     /// </summary>
     /// <remarks>
@@ -193,13 +203,13 @@ public class ILWeaver(ILContext il)
     /// <see cref="HandlerSetFilterStart(Instruction, ExceptionHandler)"/><br/>
     /// <br/>
     /// The <see cref="ExceptionHandler"/> needs to then finally be applied to the method body with:<br/>
-    /// <see cref="ApplyExceptionHandler(ExceptionHandler)"/><br/>
+    /// <see cref="HandlerApply(ExceptionHandler)"/><br/>
     /// </summary>
     /// <param name="exceptionHandlerType">The type of the <see cref="ExceptionHandler"/>.</param>
     /// <param name="catchType">The types of Exceptions that should be catched.</param>
     /// <param name="handler">The created <see cref="ExceptionHandler"/> to be configured and then applied.</param>
     /// <returns></returns>
-    public ILWeaver CreateExceptionHandler(
+    public ILWeaver HandlerCreateNew(
         ExceptionHandlerType exceptionHandlerType,
         Type? catchType,
         out ExceptionHandler handler
@@ -207,7 +217,7 @@ public class ILWeaver(ILContext il)
     {
         handler = new ExceptionHandler(exceptionHandlerType)
         {
-            CatchType = catchType != null ? IL.Import(catchType) : null,
+            CatchType = catchType != null ? IL.Import(catchType) : IL.Import(typeof(Exception)),
         };
 
         return this;
@@ -306,19 +316,31 @@ public class ILWeaver(ILContext il)
     /// <param name="handler">The handler to apply.</param>
     /// <returns>This <see cref="ILWeaver"/>.</returns>
     /// <exception cref="NullReferenceException"></exception>
-    public ILWeaver ApplyExceptionHandler(ExceptionHandler handler)
+    public ILWeaver HandlerApply(ExceptionHandler handler)
     {
         if (handler.TryStart is null)
             throw new NullReferenceException("TryStart was not set!");
-        if (handler.HandlerStart is null)
-            throw new NullReferenceException("HandlerStart was not set!");
         if (handler.HandlerEnd is null)
             throw new NullReferenceException("HandlerEnd was not set!");
 
-        // We can figure out this one implicitly.
+        bool isFilter = handler.HandlerType == ExceptionHandlerType.Filter;
+
+        if (handler.TryEnd is not null && handler.TryEnd == handler.HandlerStart)
+        {
+            string notFilterMessage =
+                " Either don't set HandlerStart and let it be set implicitly, or"
+                + " set it to the next instruction.";
+
+            throw new InvalidOperationException(
+                "TryEnd was set to the same instruction as HandlerStart."
+                    + (isFilter ? null : notFilterMessage)
+            );
+        }
+
+        // Time to figure out values implicitly.
         if (handler.TryEnd is null)
         {
-            if (handler.HandlerType == ExceptionHandlerType.Filter)
+            if (isFilter)
             {
                 if (handler.FilterStart is null)
                     throw new NullReferenceException("FilterStart was not set!");
@@ -327,24 +349,56 @@ public class ILWeaver(ILContext il)
             }
             else
             {
+                if (handler.HandlerStart is null)
+                    throw new NullReferenceException(
+                        "TryEnd and HandlerStart were not set!"
+                            + " Note that only one of then needs to be set."
+                    );
+
                 handler.TryEnd = handler.HandlerStart;
             }
         }
+        else
+        {
+            // inclusive range → exclusive
+            handler.TryEnd = handler.TryEnd.Next;
+        }
 
-        // Turn inclusive ranges exclusive
-        handler.TryEnd = handler.TryEnd.Next;
-        handler.HandlerEnd = handler.HandlerEnd.Next;
+        if (handler.HandlerStart is null)
+        {
+            if (isFilter)
+            {
+                throw new NullReferenceException(
+                    "HandlerStart must be set when HandlerType is Filter!"
+                );
+            }
+            else
+            {
+                handler.HandlerStart = handler.TryEnd;
+            }
+        }
 
+        if (handler.HandlerEnd.Next is null)
+        {
+            InsertAfter(handler.HandlerEnd, Create(OpCodes.Nop));
+        }
+        // inclusive range → exclusive
+        handler.HandlerEnd = handler.HandlerEnd.Next!;
+
+        // Now we can start inserting all our instructions.
         ILLabel leaveDestination = Context.DefineLabel(handler.HandlerEnd);
         Instruction leave = Create(OpCodes.Leave, leaveDestination);
 
         // And emit the actual leave instructions.
-        // Try should have a normal leave instruction.
-        InsertBefore(handler.TryEnd, leave);
+        // Try should have a normal leave instruction or nothing if it throws.
+        if (handler.TryEnd.Previous.OpCode != OpCodes.Throw)
+        {
+            InsertBefore(handler.TryEnd, leave);
+        }
 
         // If we have a filter, aka: catch (Exception ex) when (/* statement */)
         // then we need the endfilter instruction.
-        if (handler.HandlerType == ExceptionHandlerType.Filter)
+        if (isFilter)
         {
             if (handler.FilterStart is null)
                 throw new NullReferenceException("FilterStart was not set!");
@@ -363,6 +417,14 @@ public class ILWeaver(ILContext il)
             // For anything other than finally, use a normal leave instruction.
             InsertBefore(handler.HandlerEnd, leave);
         }
+        // We retarget handler end again as it must be after leave instructions.
+        // handler.HandlerEnd = handler.HandlerEnd.Next;
+
+        // Body.Method.RecalculateILOffsets();
+        // Console.WriteLine("handler.TryStart:     " + handler.TryStart);
+        // Console.WriteLine("handler.TryEnd:       " + handler.TryEnd);
+        // Console.WriteLine("handler.HandlerStart: " + handler.HandlerStart);
+        // Console.WriteLine("handler.HandlerEnd:   " + handler.HandlerEnd);
 
         Context.Body.ExceptionHandlers.Add(handler);
         return this;
@@ -833,7 +895,7 @@ public class ILWeaver(ILContext il)
         foreach (var instruction in instructions)
         {
             InsertAtInternal(index, instruction, insertAfterIndex: true);
-            CurrentTo(instruction.Next);
+            CurrentTo(instruction);
             index++;
         }
 
@@ -925,7 +987,7 @@ public class ILWeaver(ILContext il)
     /// instance to be loaded. If it is a lambda expression, use <see cref="CreateDelegate"/>.
     /// </remarks>
     /// <inheritdoc cref="Create"/>
-    public Instruction Create(OpCode opcode, Delegate method) => IL.Create(opcode, method.Method);
+    public Instruction CreateCall(Delegate method) => IL.Create(OpCodes.Call, method.Method);
 
     /// <summary>
     /// Create a new instruction accessing a given member, to be emitted by
