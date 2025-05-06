@@ -206,20 +206,18 @@ public class ILWeaver(ILContext il)
     /// <see cref="HandlerApply(ExceptionHandler)"/><br/>
     /// </summary>
     /// <param name="exceptionHandlerType">The type of the <see cref="ExceptionHandler"/>.</param>
-    /// <param name="catchType">The types of Exceptions that should be catched.</param>
+    /// <param name="catchType">The types of Exceptions that should be catched.
+    /// If left null, type `System.Exception` is used.</param>
     /// <param name="handler">The created <see cref="ExceptionHandler"/> to be configured and then applied.</param>
     /// <returns></returns>
-    public ILWeaver HandlerCreateNew(
+    public ILWeaver HandlerCreate(
         ExceptionHandlerType exceptionHandlerType,
         Type? catchType,
         out ExceptionHandler handler
     )
     {
-        handler = new ExceptionHandler(exceptionHandlerType)
-        {
-            CatchType = catchType != null ? IL.Import(catchType) : IL.Import(typeof(Exception)),
-        };
-
+        catchType ??= typeof(Exception);
+        handler = new ExceptionHandler(exceptionHandlerType) { CatchType = IL.Import(catchType) };
         return this;
     }
 

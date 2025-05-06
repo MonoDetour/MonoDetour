@@ -17,7 +17,7 @@ public static partial class ILWeaverTryCatchTests
         ILWeaver w = new(il);
         Console.WriteLine(il);
 
-        w.HandlerCreateNew(ExceptionHandlerType.Catch, null, out var handler)
+        w.HandlerCreate(ExceptionHandlerType.Catch, null, out var handler)
             .HandlerSetTryStart(w.First, handler)
             .HandlerSetTryEnd(w.Last, handler)
             .InsertAfter(w.Last, w.CreateCall(PrintException))
