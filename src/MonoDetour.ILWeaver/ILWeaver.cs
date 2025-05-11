@@ -101,9 +101,16 @@ public class ILWeaver(ILContext il)
     public ILWeaver Clone() => new(this, copyState: true);
 
     /// <summary>
-    /// Enumerates all labels which point to the current instruction (<c>label.Target == Current</c>)
+    /// Gets all branching labels pointing to <see cref="Current"/>.
     /// </summary>
-    public IEnumerable<ILLabel> GetIncomingLabels() => Context.GetIncomingLabels(Current);
+    public IEnumerable<ILLabel> GetIncomingLabelsForCurrent() => Context.GetIncomingLabels(Current);
+
+    /// <summary>
+    /// Gets all branching labels pointing to the provided instruction.
+    /// </summary>
+    /// <param name="target">The target instruction for the labels.</param>
+    public IEnumerable<ILLabel> GetIncomingLabelsFor(Instruction target) =>
+        Context.GetIncomingLabels(target);
 
     /// <summary>
     /// Retargets ILLabels to a target instruction.
