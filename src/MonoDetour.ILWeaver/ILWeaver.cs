@@ -68,6 +68,8 @@ public class ILWeaver(ILContext il)
 
     Instruction current = il.Instrs[0];
 
+    readonly List<ILLabel> pendingFutureNextInsertLabels = [];
+
     const string gotoMatchingDocsLink = "<insert documentation link here>";
 
     /// <summary>
@@ -136,6 +138,118 @@ public class ILWeaver(ILContext il)
             label.Target = target;
         }
 
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the target of a label to the provided <see cref="Instruction"/>.
+    /// </summary>
+    /// <param name="target">The target for the label.</param>
+    /// <param name="label">The label to mark.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver MarkLabelTo(Instruction target, ILLabel label)
+    {
+        Helpers.ThrowIfNull(target);
+        label = Context.DefineLabel(target);
+        return this;
+    }
+
+    /// <summary>
+    /// Creates a new label targetting the provided <see cref="Instruction"/>.
+    /// </summary>
+    /// <param name="markedLabel">The marked label.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver MarkLabelTo(Instruction target, out ILLabel markedLabel)
+    {
+        Helpers.ThrowIfNull(target);
+        markedLabel = Context.DefineLabel(target);
+        return this;
+    }
+
+    /// <summary>
+    /// Creates a new label targetting the future next inserted instruction.
+    /// </summary>
+    /// <param name="futureMarkedLabel">The marked label.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver MarkLabelToFutureNextInsert(out ILLabel futureMarkedLabel)
+    {
+        futureMarkedLabel = Context.DefineLabel();
+        pendingFutureNextInsertLabels.Add(futureMarkedLabel);
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the target of a label to <see cref="Current"/>.
+    /// </summary>
+    /// <param name="label">The label to mark.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver MarkLabelToCurrent(ILLabel label)
+    {
+        Helpers.ThrowIfNull(label);
+        label.Target = Current;
+        return this;
+    }
+
+    /// <summary>
+    /// Creates a new label targetting <see cref="Current"/>.
+    /// </summary>
+    /// <param name="markedLabel">The marked label.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver MarkLabelToCurrent(out ILLabel markedLabel)
+    {
+        markedLabel = Context.DefineLabel(Current);
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the target of a label to <see cref="Current"/>'s <see cref="Instruction.Previous"/>.
+    /// </summary>
+    /// <remarks>
+    /// The label will point to the Previous instruction at the moment of calling this method.
+    /// </remarks>
+    /// <param name="label">The label to mark.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver MarkLabelToCurrentPrevious(ILLabel label)
+    {
+        Helpers.ThrowIfNull(label);
+        label.Target = Current.Previous;
+        return this;
+    }
+
+    /// <summary>
+    /// Creates a new label targetting <see cref="Current"/>'s <see cref="Instruction.Previous"/>.
+    /// </summary>
+    /// <param name="markedLabel">The marked label.</param>
+    /// <inheritdoc cref="MarkLabelToCurrentPrevious(ILLabel)"/>
+    public ILWeaver MarkLabelToCurrentPrevious(out ILLabel markedLabel)
+    {
+        markedLabel = Context.DefineLabel(Current.Previous);
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the target of a label to <see cref="Current"/>'s <see cref="Instruction.Next"/>.
+    /// </summary>
+    /// <remarks>
+    /// The label will point to the Next instruction at the moment of calling this method.
+    /// </remarks>
+    /// <param name="label">The label to mark.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver MarkLabelToCurrentNext(ILLabel label)
+    {
+        Helpers.ThrowIfNull(label);
+        label.Target = Current.Next;
+        return this;
+    }
+
+    /// <summary>
+    /// Creates a new label targetting <see cref="Current"/>'s <see cref="Instruction.Next"/>.
+    /// </summary>
+    /// <param name="markedLabel">The marked label.</param>
+    /// <inheritdoc cref="MarkLabelToCurrentNext(ILLabel)"/>
+    public ILWeaver MarkLabelToCurrentNext(out ILLabel markedLabel)
+    {
+        markedLabel = Context.DefineLabel(Current.Next);
         return this;
     }
 
@@ -806,6 +920,9 @@ public class ILWeaver(ILContext il)
         {
             index += 1;
         }
+
+        RetargetLabels(pendingFutureNextInsertLabels, instruction);
+        pendingFutureNextInsertLabels.Clear();
 
         Instructions.Insert(index, instruction);
         return this;
