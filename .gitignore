@@ -1,8 +1,15 @@
+# Ignore everything on root level
 /*
-*csproj.user
 
+# Ignore always
+*csproj.user
+bin/
+obj/
+
+# Add source files
 !/src/
 
+# Add root level files
 !.gitignore
 !Directory.Build.props
 !Directory.Build.targets

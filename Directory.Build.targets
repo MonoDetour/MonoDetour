@@ -1,17 +1,11 @@
 <Project>
-  <!-- References -->
+  <!-- Main references -->
   <ItemGroup>
-    <PackageReference Include="MonoMod.RuntimeDetour" Version="25.2.3"
-      Condition="$(ImplicitRuntimeDetourReference) != 'false'"/>
-
-    <!-- <PackageReference Include="MonoMod.RuntimeDetour" Version="21.12.13.1" /> -->
-
-    <PackageReference Include="PolySharp" Version="1.14.1"
-      Condition="$(ImplicitPolySharpReference) != 'false'">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-
+    <PackageReference
+      Include="PolySharp"
+      Version="1.14.1"
+      PrivateAssets="all"
+      Condition="$(ImplicitPolySharpReference) != 'false'"
+    />
   </ItemGroup>
-
 </Project>

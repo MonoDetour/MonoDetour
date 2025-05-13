@@ -1,21 +1,22 @@
 <Project>
-
+  <!-- Main configuration -->
   <PropertyGroup>
-    <CheckEolTargetFramework>false</CheckEolTargetFramework>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>13</LangVersion>
     <Nullable>enable</Nullable>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <Product>$(MSBuildProjectName)</Product>
+    <AssemblyTitle>$(MSBuildProjectName)</AssemblyTitle>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
-
+  <!-- Substitute full path to project directory with ./, hiding it from debug symbols. -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <!-- Trim the project path in debug symbols -->
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=./</PathMap>
   </PropertyGroup>
-
+  <!-- Custom props -->
   <PropertyGroup>
-    <RootNamespace>MonoDetour</RootNamespace>
-    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <!-- https://learn.microsoft.com/en-us/nuget/concepts/package-versioning?tabs=semver20sort#version-ranges -->
+    <RuntimeDetourVersion>[25.*,)</RuntimeDetourVersion>
+    <!-- TODO: needs to work with 21.12.13.1 -->
   </PropertyGroup>
-
 </Project>

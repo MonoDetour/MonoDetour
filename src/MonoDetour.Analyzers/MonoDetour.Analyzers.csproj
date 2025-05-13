@@ -1,18 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>com.github.MonoDetour.Analyzers</AssemblyName>
-    <Product>MonoDetour.Analyzers</Product>
     <Version>1.0.0</Version>
-
-    <ImplicitRuntimeDetourReference>false</ImplicitRuntimeDetourReference>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.12.*" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.*" PrivateAssets="all" />
+    <PackageReference
+      Include="Microsoft.CodeAnalysis.Analyzers"
+      Version="3.*"
+      PrivateAssets="all"
+    />
   </ItemGroup>
-
-
 </Project>
