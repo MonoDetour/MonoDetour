@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoDetour.Interop.MonoModUtils;
 using MonoMod.Cil;
 using MonoMod.SourceGen.Internal;
 using MonoMod.Utils;
@@ -123,7 +124,7 @@ public class ILWeaver(ILContext il)
     public ILWeaver RetargetLabels(IEnumerable<ILLabel> labels, Instruction target)
     {
         foreach (var label in labels)
-            label.Target = target;
+            label.InteropSetTarget(target);
 
         return this;
     }
@@ -135,7 +136,7 @@ public class ILWeaver(ILContext il)
     {
         if (label is not null)
         {
-            label.Target = target;
+            label.InteropSetTarget(target);
         }
 
         return this;
@@ -186,7 +187,7 @@ public class ILWeaver(ILContext il)
     public ILWeaver MarkLabelToCurrent(ILLabel label)
     {
         Helpers.ThrowIfNull(label);
-        label.Target = Current;
+        label.InteropSetTarget(Current);
         return this;
     }
 
@@ -212,7 +213,7 @@ public class ILWeaver(ILContext il)
     public ILWeaver MarkLabelToCurrentPrevious(ILLabel label)
     {
         Helpers.ThrowIfNull(label);
-        label.Target = Current.Previous;
+        label.InteropSetTarget(Current.Previous);
         return this;
     }
 
@@ -238,7 +239,7 @@ public class ILWeaver(ILContext il)
     public ILWeaver MarkLabelToCurrentNext(ILLabel label)
     {
         Helpers.ThrowIfNull(label);
-        label.Target = Current.Next;
+        label.InteropSetTarget(Current.Next);
         return this;
     }
 

@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using Mono.Cecil.Cil;
 using MonoMod.Cil;
 
 namespace MonoDetour.DetourTypes;

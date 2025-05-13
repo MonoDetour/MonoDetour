@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil.Cil;
+using MonoDetour.Interop.MonoModUtils;
 using MonoDetour.Logging;
 using MonoMod.Cil;
 using MonoMod.Utils;
@@ -58,7 +59,7 @@ static class GeneralDetour
 
         if (storedReturnValue is not null)
         {
-            firstParamForHook.Target = storedReturnValue.Next;
+            firstParamForHook.InteropSetTarget(storedReturnValue.Next);
         }
 
         var outsideThisHook = il.DefineLabel(c.Next!);
@@ -67,7 +68,7 @@ static class GeneralDetour
 
         // This is the start of an exception handler block,
         // and the exception should be on the stack if we are here.
-        c.EmitReference(info);
+        c.InteropEmitReference(info);
         c.EmitDelegate(DisposeBadHooks);
         c.Emit(OpCodes.Leave, outsideThisHook);
         Instruction leaveCallInCatch = c.Previous;
@@ -76,7 +77,7 @@ static class GeneralDetour
         {
             // This must be outside of the catch and we must branch to it.
             c.ApplyReturnValue(info, (int)retLocIdx);
-            outsideThisHook.Target = c.Previous;
+            outsideThisHook.InteropSetTarget(c.Previous);
         }
 
         il.Body.ExceptionHandlers.Add(
@@ -84,7 +85,7 @@ static class GeneralDetour
             {
                 CatchType = il.Import(typeof(Exception)),
 
-                TryStart = firstParamForHook.Target,
+                TryStart = firstParamForHook.InteropGetTarget(),
                 TryEnd = leaveCallInTry.Next,
 
                 HandlerStart = leaveCallInTry.Next,
@@ -168,12 +169,13 @@ static class GeneralDetour
             // If that is the case, redirect their ret to the existing label.
             if (
                 target is not null
-                && c.Body.Instructions.IndexOf(ins) < c.Body.Instructions.IndexOf(target.Target)
+                && c.Body.Instructions.IndexOf(ins)
+                    < c.Body.Instructions.IndexOf(target.InteropGetTarget())
             )
             {
                 // Console.WriteLine("Retargeted instruction!");
                 ins.OpCode = OpCodes.Br;
-                ins.Operand = target.Target!.Next;
+                ins.Operand = target.InteropGetTarget()!.Next;
                 continue;
             }
 
@@ -185,13 +187,13 @@ static class GeneralDetour
         Instruction lastInstruction = c.Body.Instructions[c.Body.Instructions.Count - 1];
         lastInstruction.OpCode = hasRet ? OpCodes.Ret : OpCodes.Nop;
         lastInstruction.Operand = null;
-        retLabel.Target = lastInstruction;
+        retLabel.InteropSetTarget(lastInstruction);
 
-        if (target is not null && c.Body.Instructions.IndexOf(target.Target) == -1)
+        if (target is not null && c.Body.Instructions.IndexOf(target.InteropGetTarget()) == -1)
         {
             // We set the first target to previous instruction so it
             // doesn't get retargeted as someone who points to a ret label.
-            target.Target = lastInstruction.Previous;
+            target.InteropSetTarget(lastInstruction.Previous);
         }
 
         // Console.WriteLine("Last instruction is " + lastInstruction);

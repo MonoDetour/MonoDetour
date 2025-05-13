@@ -1,6 +1,4 @@
 using System;
-using System.ComponentModel;
-using MonoDetour.DetourTypes;
 
 namespace MonoDetour;
 

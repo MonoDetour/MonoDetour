@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net7.0</TargetFrameworks>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>com.github.MonoDetour</AssemblyName>
     <Version>1.0.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -8,5 +8,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MonoMod.RuntimeDetour" Version="$(RuntimeDetourVersion)" />
+    <ProjectReference Include="../MonoDetour.Bindings.Reorg/MonoDetour.Bindings.Reorg.csproj" />
   </ItemGroup>
 </Project>

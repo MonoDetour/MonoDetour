@@ -1,5 +1,3 @@
-using System;
-using System.Reflection;
 using MonoMod.Cil;
 
 namespace MonoDetour.DetourTypes;

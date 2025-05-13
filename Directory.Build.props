@@ -16,7 +16,6 @@
   <!-- Custom props -->
   <PropertyGroup>
     <!-- https://learn.microsoft.com/en-us/nuget/concepts/package-versioning?tabs=semver20sort#version-ranges -->
-    <RuntimeDetourVersion>[25.*,)</RuntimeDetourVersion>
-    <!-- TODO: needs to work with 21.12.13.1 -->
+    <RuntimeDetourVersion>[21.12.13.1,)</RuntimeDetourVersion>
   </PropertyGroup>
 </Project>

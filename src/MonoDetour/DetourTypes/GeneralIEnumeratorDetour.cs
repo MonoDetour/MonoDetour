@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Mono.Cecil.Cil;
+using MonoDetour.Interop.MonoModUtils;
 using MonoDetour.Logging;
 using MonoMod.Cil;
 using MonoMod.Utils;
@@ -34,7 +35,7 @@ internal class GeneralIEnumeratorDetour
         }
         else
         {
-            c.EmitReference(info);
+            c.InteropEmitReference(info);
             if (info.Data.Target is MethodInfo methodInfo && methodInfo.ReturnType.IsGenericType)
             {
                 var genericType = methodInfo.ReturnType.GenericTypeArguments[0];
