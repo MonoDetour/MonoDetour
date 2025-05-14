@@ -3,7 +3,7 @@
   <ItemGroup>
     <PackageReference
       Include="PolySharp"
-      Version="1.14.1"
+      Version="1.15.0"
       PrivateAssets="all"
       Condition="$(ImplicitPolySharpReference) != 'false'"
     />
