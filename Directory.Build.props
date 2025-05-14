@@ -17,5 +17,6 @@
   <PropertyGroup>
     <!-- https://learn.microsoft.com/en-us/nuget/concepts/package-versioning?tabs=semver20sort#version-ranges -->
     <RuntimeDetourVersion>[21.12.13.1,)</RuntimeDetourVersion>
+    <SolutionRoot>$(MSBuildThisFileDirectory)</SolutionRoot>
   </PropertyGroup>
 </Project>

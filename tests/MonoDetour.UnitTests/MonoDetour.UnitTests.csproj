@@ -36,15 +36,15 @@
   </ItemGroup>
   <!-- Local project references -->
   <ItemGroup>
-    <ProjectReference Include="../MonoDetour/MonoDetour.csproj" />
-    <ProjectReference Include="../MonoDetour.ILWeaver/MonoDetour.ILWeaver.csproj" />
+    <ProjectReference Include="$(SolutionRoot)src/MonoDetour/MonoDetour.csproj" />
+    <ProjectReference Include="$(SolutionRoot)src/MonoDetour.ILWeaver/MonoDetour.ILWeaver.csproj" />
     <ProjectReference
-      Include="../MonoDetour.HookGen/MonoDetour.HookGen.csproj"
+      Include="$(SolutionRoot)src/MonoDetour.HookGen/MonoDetour.HookGen.csproj"
       OutputItemType="Analyzer"
       ReferenceOutputAssembly="true"
     />
     <ProjectReference
-      Include="../MonoDetour.Analyzers/MonoDetour.Analyzers.csproj"
+      Include="$(SolutionRoot)src/MonoDetour.Analyzers/MonoDetour.Analyzers.csproj"
       OutputItemType="Analyzer"
       ReferenceOutputAssembly="false"
     />
