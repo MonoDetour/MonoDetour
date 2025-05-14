@@ -3,7 +3,7 @@ using MonoMod.Cil;
 
 namespace MonoDetour.Bindings.Reorg.MonoModUtils;
 
-class ReorgILLabel
+static class ReorgILLabel
 {
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static Instruction? GetTarget(ILLabel label) => label.Target;
