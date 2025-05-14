@@ -11,6 +11,7 @@ obj/
 
 # Add root level files
 !.gitignore
+!CONTRIBUTING.md
 !Directory.Build.props
 !Directory.Build.targets
 !LICENSE
