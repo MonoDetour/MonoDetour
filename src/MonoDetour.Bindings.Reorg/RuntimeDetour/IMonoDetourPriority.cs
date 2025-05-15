@@ -5,10 +5,10 @@ using System.Collections.Generic;
 
 namespace MonoDetour.Bindings.Reorg.RuntimeDetour;
 
-internal interface IDetourConfig
+internal interface IMonoDetourPriority
 {
-    public string Id { get; }
-    public int? Priority { get; }
+    public string? OverrideId { get; }
+    public int Priority { get; }
     public IEnumerable<string> Before { get; }
     public IEnumerable<string> After { get; }
     // private int SubPriority { get; } // For now not public since this is not supported in legacy.

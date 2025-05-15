@@ -34,12 +34,13 @@ public static partial class HookBehaviorTests
 
     private static int PerformHooks()
     {
-        var m = new MonoDetourManager();
-        TakeAndReturnInt.Postfix(Postfix1_2nd_Add1ToNum, manager: m);
-        TakeAndReturnInt.ILHook(ILHook2_1st_Add100ToNum_Returns, manager: m);
+        var m = DefaultMonoDetourManager.New();
+
+        TakeAndReturnInt.ILHook(ILHook1_5th_ReturnWithLdarg1, manager: m);
+        TakeAndReturnInt.Postfix(Postfix2_4th_Add1ToNum, manager: m);
         TakeAndReturnInt.ILHook(ILHook3_3rd_Returns, manager: m);
-        TakeAndReturnInt.Postfix(Postfix4_4th_Add1ToNum, manager: m);
-        TakeAndReturnInt.ILHook(ILHook5_5th_ReturnWithLdarg1, manager: m);
+        TakeAndReturnInt.ILHook(ILHook4_1st_Add100ToNum_Returns, manager: m);
+        TakeAndReturnInt.Postfix(Postfix5_2nd_Add1ToNum, manager: m);
 
         var someType = new LibraryMethods();
         var retVal = someType.TakeAndReturnInt(0);
@@ -48,7 +49,7 @@ public static partial class HookBehaviorTests
         return retVal;
     }
 
-    private static void Postfix1_2nd_Add1ToNum(
+    private static void Postfix5_2nd_Add1ToNum(
         LibraryMethods self,
         ref int number,
         ref int returnValue
@@ -58,7 +59,7 @@ public static partial class HookBehaviorTests
         order.Enqueue(2);
     }
 
-    private static void ILHook2_1st_Add100ToNum_Returns(ILContext il)
+    private static void ILHook4_1st_Add100ToNum_Returns(ILContext il)
     {
         ILCursor c = new(il);
         c.EmitDelegate(() =>
@@ -94,7 +95,7 @@ public static partial class HookBehaviorTests
         c.Emit(OpCodes.Ret);
     }
 
-    private static void Postfix4_4th_Add1ToNum(
+    private static void Postfix2_4th_Add1ToNum(
         LibraryMethods self,
         ref int number,
         ref int returnValue
@@ -104,7 +105,7 @@ public static partial class HookBehaviorTests
         order.Enqueue(4);
     }
 
-    private static void ILHook5_5th_ReturnWithLdarg1(ILContext il)
+    private static void ILHook1_5th_ReturnWithLdarg1(ILContext il)
     {
         ILCursor c = new(il);
         c.Index -= 1;

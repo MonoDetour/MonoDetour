@@ -7,7 +7,7 @@ public static partial class InvokeHookInitializersTests
     [Fact]
     public static void CanInvokeHookInitializersProperly()
     {
-        var m = new MonoDetourManager();
+        var m = DefaultMonoDetourManager.New();
 
         Assert.Equal(0, count);
 

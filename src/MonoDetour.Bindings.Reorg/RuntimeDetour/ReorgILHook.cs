@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Reflection;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
@@ -7,7 +7,9 @@ namespace MonoDetour.Bindings.Reorg.RuntimeDetour;
 
 static class ReorgILHook
 {
-    static readonly Dictionary<IDetourConfig, DetourConfig> interfaceToConfig = [];
+    static readonly ConcurrentDictionary<IMonoDetourPriority, DetourConfig> interfaceToConfig = [];
+    static readonly ConcurrentDictionary<DetourConfig, DetourConfig> configToConfig = [];
+    static readonly ConcurrentDictionary<string, DetourConfig> idToConfig = [];
 
     /// <summary>
     /// Constructs a reorg ILHook, mapping MonoDetour's IDetourConfig to a real DetourConfig type.<br/>
@@ -17,21 +19,47 @@ static class ReorgILHook
     internal static ILHook ConstructILHook(
         MethodBase target,
         ILContext.Manipulator manipulator,
-        IDetourConfig? config
+        IMonoDetourPriority? config,
+        string id
     )
     {
         if (config is null)
         {
-            return new ILHook(target, manipulator, applyByDefault: false);
+            var contextConfig = DetourContext.GetDefaultConfig();
+            if (contextConfig is null)
+            {
+                if (!idToConfig.TryGetValue(id, out var idConfig))
+                {
+                    idConfig = new(id: id, priority: 0);
+                    idToConfig.TryAdd(id, idConfig);
+                }
+                return new ILHook(target, manipulator, idConfig, applyByDefault: false);
+            }
+
+            if (contextConfig.Priority is not null)
+            {
+                return new(target, manipulator, contextConfig, applyByDefault: false);
+            }
+
+            if (!configToConfig.TryGetValue(contextConfig, out var configWithPriority))
+            {
+                configWithPriority = contextConfig.WithPriority(0);
+                configToConfig.TryAdd(contextConfig, configWithPriority);
+            }
+
+            return new ILHook(target, manipulator, configWithPriority, applyByDefault: false);
         }
 
-        if (interfaceToConfig.TryGetValue(config, out var realConfig))
+        if (!interfaceToConfig.TryGetValue(config, out var realConfig))
         {
-            return new ILHook(target, manipulator, realConfig, applyByDefault: false);
+            realConfig = new DetourConfig(
+                config.OverrideId ?? id,
+                config.Priority,
+                config.Before,
+                config.After
+            );
+            interfaceToConfig.TryAdd(config, realConfig);
         }
-
-        realConfig = new DetourConfig(config.Id, config.Priority, config.Before, config.After);
-        interfaceToConfig.Add(config, realConfig);
 
         return new ILHook(target, manipulator, realConfig, applyByDefault: false);
     }

@@ -12,7 +12,7 @@ namespace MonoDetour.Interop.RuntimeDetour;
 
 static class ProxyILHookConstructor
 {
-    static Dictionary<IDetourConfig, ILHookConfig>? interfaceToConfig;
+    static Dictionary<IMonoDetourPriority, ILHookConfig>? interfaceToConfig;
     static readonly ILHook detourContextHook = null!;
 
     static ProxyILHookConstructor()
@@ -47,23 +47,24 @@ static class ProxyILHookConstructor
     }
 
     /// <summary>
-    /// Constructs an ILHook for either legacy or reorg, mapping <see cref="IDetourConfig"/>
+    /// Constructs an ILHook for either legacy or reorg, mapping <see cref="IMonoDetourPriority"/>
     /// to a valid config for either.<br/>
     /// Does not apply by default.
     /// </summary>
     internal static ILHook ConstructILHook(
         MethodBase target,
         ILContext.Manipulator manipulator,
-        IDetourConfig? config
+        IMonoDetourPriority? config,
+        string id
     )
     {
         if (MonoModVersion.IsReorg)
         {
-            return ReorgILHook.ConstructILHook(target, manipulator, config);
+            return ReorgILHook.ConstructILHook(target, manipulator, config, id);
         }
         else
         {
-            return ConstructLegacyILHook(target, manipulator, config);
+            return ConstructLegacyILHook(target, manipulator, config, id);
         }
     }
 
@@ -75,7 +76,8 @@ static class ProxyILHookConstructor
     private static ILHook ConstructLegacyILHook(
         MethodBase target,
         ILContext.Manipulator manipulator,
-        IDetourConfig? config
+        IMonoDetourPriority? config,
+        string id
     )
     {
         interfaceToConfig ??= [];
@@ -89,9 +91,10 @@ static class ProxyILHookConstructor
             DetourContext existingContext = DetourContextGetCurrent();
             if (existingContext is null)
             {
-                return new ILHook(target, manipulator, new ILHookConfig() { ManualApply = true });
+                return new ILHook(target, manipulator, new() { ID = id, ManualApply = true });
             }
 
+            // We'll use the DetourContext's ID since it defaults to a sensible value (assembly name).
             var contextILHookConfig = existingContext.ILHookConfig;
             if (contextILHookConfig.ManualApply == true)
             {
@@ -109,8 +112,8 @@ static class ProxyILHookConstructor
 
         realConfig = new ILHookConfig()
         {
-            ID = config.Id,
-            Priority = config.Priority ?? 0,
+            ID = config.OverrideId ?? id,
+            Priority = config.Priority,
             Before = config.Before,
             After = config.After,
             ManualApply = true,

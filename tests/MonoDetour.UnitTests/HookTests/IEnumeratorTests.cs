@@ -10,7 +10,7 @@ public static partial class IEnumeratorTests
     {
         order1.Clear();
 
-        var m = new MonoDetourManager();
+        var m = DefaultMonoDetourManager.New();
         EnumerateRange.IEnumeratorDetour(Hook_IEnumeratorDetour, m);
 
         var lib = new LibraryMethods();
@@ -40,7 +40,7 @@ public static partial class IEnumeratorTests
     {
         order2.Clear();
 
-        var m = new MonoDetourManager();
+        var m = DefaultMonoDetourManager.New();
         EnumerateIntRange.IEnumeratorDetour(Hook_IEnumeratorIntDetour, m);
 
         var lib = new LibraryMethods();

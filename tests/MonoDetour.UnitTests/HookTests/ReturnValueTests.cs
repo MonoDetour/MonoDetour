@@ -7,7 +7,7 @@ public static partial class ReturnValueTests
     [Fact]
     public static void CanChangeReturnValue()
     {
-        var m = new MonoDetourManager();
+        var m = DefaultMonoDetourManager.New();
         var lib = new LibraryMethods();
 
         Assert.Equal(100, lib.TakeAndReturnInt2(100));

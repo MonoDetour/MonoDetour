@@ -10,21 +10,24 @@ namespace MonoDetour;
 /// <summary>
 /// Priority configuration for a MonoDetour Hook.
 /// </summary>
-public class MonoDetourPriority : IDetourConfig
+public class MonoDetourPriority : IMonoDetourPriority
 {
     /// <summary>
-    /// Gets the ID of the detours represented by this config. Typically, this will be the name of the mod which creates this detour.
+    /// Gets the override ID if one is defined. If not defined,
+    /// MonoDetour applies <see cref="MonoDetourManager.Id"/> as the hooks' ID.
     /// </summary>
-    public string Id { get; }
+    public string? OverrideId { get; }
 
     /// <summary>
-    /// Gets the priority of the detours represented by this config, if present.
+    /// Gets the priority of the detours represented by this config.
     /// </summary>
     /// <remarks>
-    /// The priority only affects the relative ordering of detours which are not otherwise ordered by e.g. <see cref="Before"/> or <see cref="After"/>.
-    /// Detours with no priority are ordered <i>after</i> all detours which have a priority.
+    /// The priority only affects the relative ordering of detours which are not otherwise ordered by e.g.
+    /// <see cref="Before"/> or <see cref="After"/>.<br/>
+    /// MonoDetour hooks always have a priority which is 0 by default.<br/>
+    /// MonoMod detours with no priority are ordered <i>after</i> all detours which have a priority.
     /// </remarks>
-    public int? Priority { get; }
+    public int Priority { get; }
 
     /// <summary>
     /// Gets the detour IDs to run before this detour.
@@ -54,21 +57,22 @@ public class MonoDetourPriority : IDetourConfig
     /// <summary>
     /// Constructs a <see cref="MonoDetourPriority"/> with a specific ID, and any of the ordering options.
     /// </summary>
-    /// <param name="id">The ID of the detour config.</param>
     /// <param name="priority">The priority of the detour config. Refer to <see cref="Priority"/> for details.</param>
     /// <param name="before">An enumerable containing the list of IDs of detours to run before detours with this config.</param>
     /// <param name="after">An enumerable containing the list of IDs of detours to run after detours with this config.</param>
+    /// <param name="overrideId">The ID for hooks. If not defined,
+    /// MonoDetour applies <see cref="MonoDetourManager.Id"/> as the hooks' ID.</param>
     public MonoDetourPriority(
-        string id,
-        int? priority = null,
+        int priority = 0,
         IEnumerable<string>? before = null,
-        IEnumerable<string>? after = null
+        IEnumerable<string>? after = null,
+        string? overrideId = null
     )
     {
-        Id = id;
         Priority = priority;
         Before = AsFixedSize(before ?? []);
         After = AsFixedSize(after ?? []);
+        OverrideId = overrideId;
     }
 
     // : this(id, priority, before, after, 0) { }
@@ -90,7 +94,7 @@ public class MonoDetourPriority : IDetourConfig
     //     int subPriority
     // )
     // {
-    //     Id = id;
+    //     OverrideId = id;
     //     Priority = priority;
     //     Before = AsFixedSize(before ?? []);
     //     After = AsFixedSize(after ?? []);
@@ -111,12 +115,12 @@ public class MonoDetourPriority : IDetourConfig
     /// </summary>
     /// <param name="priority">The priority of the new <see cref="MonoDetourPriority"/>.</param>
     /// <returns>A <see cref="MonoDetourPriority"/> identical to this one, but with <see cref="Priority"/> equal to <paramref name="priority"/>.</returns>
-    public MonoDetourPriority WithPriority(int? priority) =>
+    public MonoDetourPriority WithPriority(int priority) =>
         new(
-            Id,
             priority,
             Before,
-            After /* , SubPriority */
+            After, /* , SubPriority */
+            OverrideId
         );
 
     /// <summary>
@@ -126,10 +130,10 @@ public class MonoDetourPriority : IDetourConfig
     /// <returns>A <see cref="MonoDetourPriority"/> identical to this one, but with <see cref="Before"/> equal to <paramref name="before"/>.</returns>
     public MonoDetourPriority WithBefore(IEnumerable<string> before) =>
         new(
-            Id,
             Priority,
             before,
-            After /* , SubPriority */
+            After, /* , SubPriority */
+            OverrideId
         );
 
     /// <summary>
@@ -147,10 +151,10 @@ public class MonoDetourPriority : IDetourConfig
     /// <returns>A <see cref="MonoDetourPriority"/> identical to this one, but with <see cref="After"/> equal to <paramref name="after"/>.</returns>
     public MonoDetourPriority WithAfter(IEnumerable<string> after) =>
         new(
-            Id,
             Priority,
             Before,
-            after /* , SubPriority */
+            after, /* , SubPriority */
+            OverrideId
         );
 
     /// <summary>

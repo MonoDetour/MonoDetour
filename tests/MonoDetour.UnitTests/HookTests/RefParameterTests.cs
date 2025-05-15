@@ -7,7 +7,7 @@ public static partial class RefParametersTests
     [Fact]
     public static void CanHookMethodWithReferenceTypeParams()
     {
-        var m = new MonoDetourManager();
+        var m = DefaultMonoDetourManager.New();
         var lib = new LibraryMethods();
 
         string? val = null;
@@ -29,7 +29,7 @@ public static partial class RefParametersTests
     [Fact]
     public static void CanHookMethodWithRefParams()
     {
-        var m = new MonoDetourManager();
+        var m = DefaultMonoDetourManager.New();
         var lib = new LibraryMethods();
 
         string? val = null;
@@ -53,7 +53,7 @@ public static partial class RefParametersTests
     [Fact]
     public static void CanHookMethodWithOutParams()
     {
-        var m = new MonoDetourManager();
+        var m = DefaultMonoDetourManager.New();
         var lib = new LibraryMethods();
 
         // This test is somewhat useless since the out param

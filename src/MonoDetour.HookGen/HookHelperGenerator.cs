@@ -30,8 +30,6 @@ namespace MonoDetour.HookGen
         }
 
         public const string GenHelperForTypeAttributeFqn = "MonoDetour.MonoDetourTargetsAttribute";
-        public const string GenerateWhenUsedAttributeFqn =
-            "MonoDetour.HookGen.GenerateWhenUsedAttribute";
         private const string ILHookParameterType = "global::MonoMod.Cil.ILContext.Manipulator";
         public const string GenHelperForTypeAttrFile = "GenerateHookHelpersAttribute.g.cs";
         public const string DelegateTypesFile = "DelegateTypes.g.cs";
@@ -46,7 +44,8 @@ namespace MonoDetour.HookGen
             {
             #if DEBUG
                 /// <summary>
-                /// The default MonoDetourManager generated for this assembly.
+                /// Contains the default MonoDetourManager generated for this assembly
+                /// and a helper method for creating new instances using the default values.
                 /// </summary>
             #endif
                 internal static class DefaultMonoDetourManager
@@ -57,12 +56,15 @@ namespace MonoDetour.HookGen
                     /// This automatically used when none is specified.
                     /// </summary>
             #endif
-                    internal static global::MonoDetour.MonoDetourManager Instance { get; } = new();
-                }
+                    internal static global::MonoDetour.MonoDetourManager Instance { get; } = New();
 
-                [System.AttributeUsage(System.AttributeTargets.Class)]
-                internal sealed class GenerateWhenUsedAttribute : System.Attribute
-                {
+            #if DEBUG
+                    /// <summary>
+                    /// Creates a new MonoDetourManager instance using the assembly name.
+                    /// </summary>
+            #endif
+                    internal static global::MonoDetour.MonoDetourManager New() =>
+                        new(typeof(DefaultMonoDetourManager).Assembly.GetName().Name!);
                 }
             }
             """;
@@ -897,7 +899,6 @@ namespace MonoDetour.HookGen
                 ? ILHookParameterType
                 : "global::MonoMod.HookGen." + GetHookDelegateName(member.Signature);
 
-            // cb.Write("[global::").Write(GenerateWhenUsedAttributeFqn).WriteLine(']');
             cb.Write("internal static partial class ").Write(SanitizeName(member.Name));
 
             if (member.HasOverloads || member.DistinguishByName)

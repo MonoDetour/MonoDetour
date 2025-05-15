@@ -12,8 +12,22 @@ namespace MonoDetour;
 /// <summary>
 /// A manager for your MonoDetour hooks.
 /// </summary>
-public class MonoDetourManager : IDisposable
+/// <param name="id">
+/// The identifier for this manager. This will be used as
+/// the identifier in <see cref="MonoDetourPriority"/> by default.<br/>
+/// This ID should be unique per mod, such as the assembly name, but
+/// a single mod can use the same ID for all its <see cref="MonoDetourManager"/>s.
+/// </param>
+public class MonoDetourManager(string id) : IDisposable
 {
+    /// <summary>
+    /// Identifier for a <see cref="MonoDetourManager"/>.
+    /// This will be used as the identifier in <see cref="MonoDetourPriority"/> by default.<br/>
+    /// This ID should be unique per mod, such as the assembly name, but
+    /// a single mod can use the same ID for all its <see cref="MonoDetourManager"/>s.
+    /// </summary>
+    public string Id { get; } = Helpers.ThrowIfNull(id);
+
     /// <summary>
     /// The hooks applied by this MonoDetourManager.
     /// </summary>
@@ -183,7 +197,8 @@ public class MonoDetourManager : IDisposable
         ILHook applierILHook = ProxyILHookConstructor.ConstructILHook(
             target,
             applierInstance.ApplierManipulator,
-            config.DetourPriority
+            config.DetourPriority,
+            Id
         );
         MonoDetourHook monoDetourHook = new(target, manipulator, this, config, applierILHook);
         applierInstance.Hook = monoDetourHook;
