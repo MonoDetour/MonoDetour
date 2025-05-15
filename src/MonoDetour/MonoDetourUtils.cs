@@ -14,15 +14,15 @@ internal static class MonoDetourUtils
 {
     public static int? EmitParams(
         this ILCursor c,
-        MonoDetourInfo info,
+        MonoDetourHook hook,
         out Instruction? storedReturnValue
     )
     {
-        var manipParams = info.Data.Manipulator!.GetParameters();
+        var manipParams = hook.Manipulator.GetParameters();
 
         int? retTypeIdx = null;
 
-        if (info.Data.Target is MethodInfo methodInfo)
+        if (hook.Target is MethodInfo methodInfo)
         {
             if (methodInfo.ReturnType != typeof(void))
             {
@@ -32,7 +32,7 @@ internal static class MonoDetourUtils
         }
 
         ParameterInfo? retField = null;
-        if (info.DetourType == typeof(PostfixDetour))
+        if (hook.Config.DetourType == typeof(PostfixDetour))
         {
             retField = manipParams.FirstOrDefault(x => x.Name == "returnValue");
         }
@@ -46,7 +46,7 @@ internal static class MonoDetourUtils
             storedReturnValue = c.Previous;
         }
 
-        bool isStatic = info.Data.Target!.IsStatic;
+        bool isStatic = hook.Target.IsStatic;
 
         foreach (var origParam in c.Method.Parameters)
         {
@@ -71,9 +71,9 @@ internal static class MonoDetourUtils
         return retTypeIdx;
     }
 
-    public static void ApplyReturnValue(this ILCursor c, MonoDetourInfo info, int retTypeIdx)
+    public static void ApplyReturnValue(this ILCursor c, MonoDetourHook hook, int retTypeIdx)
     {
-        var manipParams = info.Data.Manipulator!.GetParameters();
+        var manipParams = hook.Manipulator.GetParameters();
 
         ParameterInfo? retField = manipParams.FirstOrDefault(x => x.Name == "returnValue");
         if (retField is not null)
@@ -162,9 +162,9 @@ internal static class MonoDetourUtils
         [CallerArgumentExpression(nameof(detourType))] string name = ""
     )
     {
-        if (!typeof(IMonoDetourHookEmitter).IsAssignableFrom(detourType))
+        if (!typeof(IMonoDetourHookApplier).IsAssignableFrom(detourType))
             throw new ArgumentException(
-                $"{nameof(MonoDetourInfo)}.{nameof(MonoDetourInfo.DetourType)} must implement {nameof(IMonoDetourHookEmitter)}.",
+                $"{nameof(MonoDetourConfig)}.{nameof(MonoDetourConfig.DetourType)} must implement {nameof(IMonoDetourHookApplier)}.",
                 name
             );
     }

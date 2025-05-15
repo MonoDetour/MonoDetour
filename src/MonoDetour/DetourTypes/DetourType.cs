@@ -1,7 +1,7 @@
 namespace MonoDetour.DetourTypes;
 
 /// <summary>
-/// The basic detour types implemented by MonoDetour. See <see cref="IMonoDetourHookEmitter"/>
+/// The basic detour types implemented by MonoDetour. See <see cref="IMonoDetourHookApplier"/>
 /// for implementing custom detour types.
 /// </summary>
 public enum DetourType

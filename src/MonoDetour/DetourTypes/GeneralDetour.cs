@@ -15,14 +15,9 @@ static class GeneralDetour
     static readonly Dictionary<MethodBase, ILLabel> firstRedirectForMethod = [];
     static readonly object _lock = new();
 
-    public static void Manipulator(ILContext il, MonoDetourInfo info)
+    public static void Manipulator(ILContext il, MonoDetourHook hook)
     {
-        if (!info.Data.IsInitialized())
-            throw new InvalidProgramException();
-
-        MonoDetourData data = info.Data;
-
-        if (!data.Manipulator.IsStatic)
+        if (!hook.Manipulator.IsStatic)
         {
             throw new NotSupportedException(
                 "Only static manipulator methods are supported for now."
@@ -31,18 +26,18 @@ static class GeneralDetour
 
         ILCursor c = new(il);
 
-        if (info.DetourType == typeof(PostfixDetour))
+        if (hook.Config.DetourType == typeof(PostfixDetour))
         {
             c.Index -= 1;
             lock (_lock)
             {
-                bool found = firstRedirectForMethod.TryGetValue(info.Data.Target, out var target);
+                bool found = firstRedirectForMethod.TryGetValue(hook.Target, out var target);
 
                 ILLabel redirectedRet = RedirectEarlyReturnsToLabel(c, target);
 
                 if (!found)
                 {
-                    firstRedirectForMethod.Add(info.Data.Target, redirectedRet);
+                    firstRedirectForMethod.Add(hook.Target, redirectedRet);
                 }
             }
 
@@ -53,9 +48,9 @@ static class GeneralDetour
 
         ILLabel firstParamForHook = c.MarkLabel();
 
-        int? retLocIdx = c.EmitParams(info, out var storedReturnValue);
+        int? retLocIdx = c.EmitParams(hook, out var storedReturnValue);
 
-        c.Emit(OpCodes.Call, data.Manipulator);
+        c.Emit(OpCodes.Call, hook.Manipulator);
 
         if (storedReturnValue is not null)
         {
@@ -68,15 +63,15 @@ static class GeneralDetour
 
         // This is the start of an exception handler block,
         // and the exception should be on the stack if we are here.
-        c.InteropEmitReference(info);
+        c.InteropEmitReference(hook);
         c.EmitDelegate(DisposeBadHooks);
         c.Emit(OpCodes.Leave, outsideThisHook);
         Instruction leaveCallInCatch = c.Previous;
 
-        if (info.DetourType == typeof(PostfixDetour) && retLocIdx is not null)
+        if (hook.Config.DetourType == typeof(PostfixDetour) && retLocIdx is not null)
         {
             // This must be outside of the catch and we must branch to it.
-            c.ApplyReturnValue(info, (int)retLocIdx);
+            c.ApplyReturnValue(hook, (int)retLocIdx);
             outsideThisHook.InteropSetTarget(c.Previous);
         }
 
@@ -98,15 +93,15 @@ static class GeneralDetour
             () =>
             {
                 c.Method.RecalculateILOffsets();
-                return $"Manipulated by {info.Data.Manipulator.Name}: {il}";
+                return $"Manipulated by {hook.Manipulator.Name}: {il}";
             }
         );
     }
 
-    static void DisposeBadHooks(Exception ex, MonoDetourInfo info)
+    static void DisposeBadHooks(Exception ex, MonoDetourHook hook)
     {
-        MethodBase manipulator = info.Data.Manipulator!;
-        MethodBase target = info.Data.Target!;
+        MethodBase manipulator = hook.Manipulator;
+        MethodBase target = hook.Target;
         string? targetTypeName = target.DeclaringType?.FullName;
 
         MonoDetourLogger.Log(
@@ -118,7 +113,7 @@ static class GeneralDetour
         );
         try
         {
-            bool hadHandler = info.Data.Owner!.CallOnHookThrew(info);
+            bool hadHandler = hook.Owner.CallOnHookThrew(hook);
 
             if (!hadHandler)
             {
@@ -138,7 +133,7 @@ static class GeneralDetour
         }
         finally
         {
-            info.Data.Owner!.DisposeHooks();
+            hook.Owner.DisposeHooks();
         }
     }
 

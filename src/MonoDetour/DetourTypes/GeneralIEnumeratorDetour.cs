@@ -21,22 +21,19 @@ internal class GeneralIEnumeratorDetour
         (BindingFlags)~0
     )!;
 
-    public static void Manipulator(ILContext il, MonoDetourInfo info)
+    public static void Manipulator(ILContext il, MonoDetourHook hook)
     {
-        if (!info.Data.IsInitialized())
-            throw new InvalidProgramException();
-
         ILCursor c = new(il);
         c.Index -= 1;
 
-        if (info.DetourType == typeof(IEnumeratorDetour))
+        if (hook.Config.DetourType == typeof(IEnumeratorDetour))
         {
-            c.Emit(OpCodes.Call, info.Data.Manipulator!);
+            c.Emit(OpCodes.Call, hook.Manipulator);
         }
         else
         {
-            c.InteropEmitReference(info);
-            if (info.Data.Target is MethodInfo methodInfo && methodInfo.ReturnType.IsGenericType)
+            c.InteropEmitReference(hook);
+            if (hook.Target is MethodInfo methodInfo && methodInfo.ReturnType.IsGenericType)
             {
                 var genericType = methodInfo.ReturnType.GenericTypeArguments[0];
                 var method = genericEnumeratorDriver.MakeGenericMethod(genericType);
@@ -44,10 +41,7 @@ internal class GeneralIEnumeratorDetour
             }
             else
             {
-                c.Emit(
-                    OpCodes.Call,
-                    new Func<IEnumerator, MonoDetourInfo, IEnumerator>(EnumeratorDriver).Method
-                );
+                c.Emit(OpCodes.Call, ((Delegate)EnumeratorDriver).Method);
             }
         }
 
@@ -56,35 +50,35 @@ internal class GeneralIEnumeratorDetour
             () =>
             {
                 c.Method.RecalculateILOffsets();
-                return $"Manipulated by {info.Data.Manipulator.Name}: {il}";
+                return $"Manipulated by {hook.Manipulator.Name}: {il}";
             }
         );
     }
 
-    private static IEnumerator EnumeratorDriver(IEnumerator enumerator, MonoDetourInfo info)
+    private static IEnumerator EnumeratorDriver(IEnumerator enumerator, MonoDetourHook hook)
     {
-        if (info.DetourType == typeof(IEnumeratorPrefixDetour))
-            info.Data.Manipulator!.Invoke(null, [enumerator]);
+        if (hook.Config.DetourType == typeof(IEnumeratorPrefixDetour))
+            hook.Manipulator.Invoke(null, [enumerator]);
 
         while (enumerator.MoveNext())
             yield return enumerator.Current;
 
-        if (info.DetourType == typeof(IEnumeratorPostfixDetour))
-            info.Data.Manipulator!.Invoke(null, [enumerator]);
+        if (hook.Config.DetourType == typeof(IEnumeratorPostfixDetour))
+            hook.Manipulator.Invoke(null, [enumerator]);
     }
 
     private static IEnumerator<T> GenericEnumeratorDriver<T>(
         IEnumerator<T> enumerator,
-        MonoDetourInfo info
+        MonoDetourHook hook
     )
     {
-        if (info.DetourType == typeof(IEnumeratorPrefixDetour))
-            info.Data.Manipulator!.Invoke(null, [enumerator]);
+        if (hook.Config.DetourType == typeof(IEnumeratorPrefixDetour))
+            hook.Manipulator.Invoke(null, [enumerator]);
 
         while (enumerator.MoveNext())
             yield return enumerator.Current;
 
-        if (info.DetourType == typeof(IEnumeratorPostfixDetour))
-            info.Data.Manipulator!.Invoke(null, [enumerator]);
+        if (hook.Config.DetourType == typeof(IEnumeratorPostfixDetour))
+            hook.Manipulator.Invoke(null, [enumerator]);
     }
 }

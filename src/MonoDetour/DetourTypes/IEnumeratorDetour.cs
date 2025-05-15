@@ -31,11 +31,11 @@ namespace MonoDetour.DetourTypes;
 /// </code>
 /// </example>
 /// </summary>
-public class IEnumeratorDetour : IMonoDetourHookEmitter
+public class IEnumeratorDetour : IMonoDetourHookApplier
 {
     /// <inheritdoc/>
-    public MonoDetourInfo Info { get; set; } = null!;
+    public MonoDetourHook Hook { get; set; } = null!;
 
     /// <inheritdoc/>
-    public void Manipulator(ILContext il) => GeneralIEnumeratorDetour.Manipulator(il, Info);
+    public void ApplierManipulator(ILContext il) => GeneralIEnumeratorDetour.Manipulator(il, Hook);
 }

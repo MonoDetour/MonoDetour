@@ -6,11 +6,11 @@ namespace MonoDetour.DetourTypes;
 /// Implements MonoDetour support for a Hook that runs before an IEnumerator method
 /// has started enumerating.
 /// </summary>
-public class IEnumeratorPrefixDetour : IMonoDetourHookEmitter
+public class IEnumeratorPrefixDetour : IMonoDetourHookApplier
 {
     /// <inheritdoc/>
-    public MonoDetourInfo Info { get; set; } = null!;
+    public MonoDetourHook Hook { get; set; } = null!;
 
     /// <inheritdoc/>
-    public void Manipulator(ILContext il) => GeneralIEnumeratorDetour.Manipulator(il, Info);
+    public void ApplierManipulator(ILContext il) => GeneralIEnumeratorDetour.Manipulator(il, Hook);
 }

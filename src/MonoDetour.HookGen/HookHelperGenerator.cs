@@ -892,7 +892,7 @@ namespace MonoDetour.HookGen
                 ? BindingFlags.Static
                 : BindingFlags.Instance;
 
-            var hookType = "global::MonoMod.RuntimeDetour.ILHook";
+            var hookType = "global::MonoDetour.MonoDetourHook";
             var parameterType = il
                 ? ILHookParameterType
                 : "global::MonoMod.HookGen." + GetHookDelegateName(member.Signature);
@@ -980,7 +980,7 @@ namespace MonoDetour.HookGen
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorDetour)));"
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, global::MonoDetour.MonoDetourConfig.Create<global::MonoDetour.DetourTypes.IEnumeratorDetour>());"
                     )
                     .DecreaseIndent()
                     .WriteLine();
@@ -994,7 +994,7 @@ namespace MonoDetour.HookGen
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorPrefixDetour)));"
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, global::MonoDetour.MonoDetourConfig.Create<global::MonoDetour.DetourTypes.IEnumeratorPrefixDetour>());"
                     )
                     .DecreaseIndent()
                     .WriteLine();
@@ -1008,7 +1008,7 @@ namespace MonoDetour.HookGen
                     )
                     .IncreaseIndent()
                     .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, new(typeof(global::MonoDetour.DetourTypes.IEnumeratorPostfixDetour)));"
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), enumerator.Method, global::MonoDetour.MonoDetourConfig.Create<global::MonoDetour.DetourTypes.IEnumeratorPostfixDetour>());"
                     )
                     .DecreaseIndent()
                     .WriteLine();
@@ -1074,7 +1074,7 @@ namespace MonoDetour.HookGen
                 )
                 .IncreaseIndent()
                 .WriteLine(
-                    "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook(Target(), manipulator);"
+                    "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).ILHook(Target(), manipulator);"
                 )
                 .DecreaseIndent()
                 .WriteLine();

@@ -8,7 +8,7 @@ public static partial class ILWeaverTryCatchTests
     public static void CanWriteTryCatch()
     {
         using var m = new MonoDetourManager();
-        m.Hook(new Action(Throw).Method, WriteTryCatch);
+        m.ILHook(new Action(Throw).Method, WriteTryCatch);
         Throw();
     }
 

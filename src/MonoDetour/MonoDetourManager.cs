@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using MonoDetour.DetourTypes;
+using MonoDetour.Interop.RuntimeDetour;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 
@@ -16,7 +17,7 @@ public class MonoDetourManager : IDisposable
     /// <summary>
     /// The hooks applied by this MonoDetourManager.
     /// </summary>
-    public List<ILHook> ILHooks { get; } = [];
+    public List<MonoDetourHook> MonoDetourHooks { get; } = [];
 
     /// <summary>
     /// An event which is called when a hook owned by this <see cref="MonoDetourManager"/>
@@ -28,7 +29,7 @@ public class MonoDetourManager : IDisposable
     /// <br/>
     /// The hook which threw is passed as the only argument.
     /// </summary>
-    public event Action<MonoDetourInfo>? OnHookThrew;
+    public event Action<MonoDetourHook>? OnHookThrew;
 
     bool isDisposed = false;
 
@@ -40,12 +41,12 @@ public class MonoDetourManager : IDisposable
         throw new ObjectDisposedException(ToString());
     }
 
-    internal bool CallOnHookThrew(MonoDetourInfo info)
+    internal bool CallOnHookThrew(MonoDetourHook hook)
     {
         if (OnHookThrew is null)
             return false;
 
-        OnHookThrew?.Invoke(info);
+        OnHookThrew?.Invoke(hook);
         return true;
     }
 
@@ -94,45 +95,67 @@ public class MonoDetourManager : IDisposable
     /// You need to initialize the hooks first, either calling them manually or using
     /// <see cref="InvokeHookInitializers()"/> or any of its overloads.
     /// </remarks>
-    public void ApplyHooks() => ILHooks.ForEach(x => x.Apply());
+    public void ApplyHooks() => MonoDetourHooks.ForEach(x => x.Apply());
 
     /// <summary>
     /// Undoes all applied hooks belonging to this manager.
     /// </summary>
-    public void UndoHooks() => ILHooks.ForEach(x => x.Undo());
+    public void UndoHooks() => MonoDetourHooks.ForEach(x => x.Undo());
 
     /// <summary>
     /// Undoes and disposes all hooks belonging to this manager.
     /// </summary>
     public void DisposeHooks()
     {
-        ILHooks.ForEach(x => x.Dispose());
-        ILHooks.Clear();
+        MonoDetourHooks.ForEach(x => x.Dispose());
+        MonoDetourHooks.Clear();
     }
 
+    /// <inheritdoc cref="ILHook(MethodBase, ILContext.Manipulator, MonoDetourPriority?, bool)"/>
+    public MonoDetourHook ILHook(
+        Delegate target,
+        ILContext.Manipulator manipulator,
+        MonoDetourPriority? detourPriority = null,
+        bool applyByDefault = true
+    ) => ILHook(target.Method, manipulator, detourPriority, applyByDefault);
+
     /// <summary>
-    /// Applies a regular <see cref="ILHook"/>.
+    /// Creates a <see cref="ILHookDetour"/> hook using the information defined.
     /// </summary>
-    /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourInfo?)"/>
-    public ILHook Hook(MethodBase target, ILContext.Manipulator manipulator)
+    /// <param name="manipulator">The manipulator method.</param>
+    /// <param name="detourPriority">The priority configuration for this hook.</param>
+    /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
+    /// <param name="target"/>
+    /// <param name="applyByDefault"/>
+    public MonoDetourHook ILHook(
+        MethodBase target,
+        ILContext.Manipulator manipulator,
+        MonoDetourPriority? detourPriority = null,
+        bool applyByDefault = true
+    )
     {
-        // TODO: make this call Hook(MethodBase target, MethodBase manipulator, MonoDetourInfo info)
-        ThrowIfDisposed();
-        var ilHook = new ILHook(target, manipulator);
-        ILHooks.Add(ilHook);
-        return ilHook;
+        var config = MonoDetourConfig.Create<ILHookDetour>(detourPriority);
+        return Hook(target, manipulator.Method, config, applyByDefault);
     }
 
-    /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourInfo)"/>
-    public ILHook Hook(Delegate target, Delegate manipulator, MonoDetourInfo info) =>
-        Hook(target.Method, manipulator.Method, info);
+    /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
+    public MonoDetourHook Hook(
+        Delegate target,
+        Delegate manipulator,
+        MonoDetourConfig config,
+        bool applyByDefault = true
+    ) => Hook(target.Method, manipulator.Method, config, applyByDefault);
 
-    /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourInfo)"/>
-    public ILHook Hook(MethodBase target, Delegate manipulator, MonoDetourInfo info) =>
-        Hook(target, manipulator.Method, info);
+    /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
+    public MonoDetourHook Hook(
+        MethodBase target,
+        Delegate manipulator,
+        MonoDetourConfig config,
+        bool applyByDefault = true
+    ) => Hook(target, manipulator.Method, config, applyByDefault);
 
     /// <summary>
-    /// Applies a MonoDetour Hook using the information defined.
+    /// Creates a MonoDetour Hook using the information defined.
     /// </summary>
     /// <remarks>
     /// This method is not intended to be used directly, but is instead
@@ -140,25 +163,38 @@ public class MonoDetourManager : IDisposable
     /// </remarks>
     /// <param name="target">The method to be hooked.</param>
     /// <param name="manipulator">The hook or manipulator method.</param>
-    /// <param name="info">Metadata configuration for the MonoDetour Hook.</param>
+    /// <param name="config">Metadata configuration for the MonoDetour Hook.</param>
+    /// <param name="applyByDefault">Whether or not the hook should be applied
+    /// after it has been constructed.</param>
     /// <returns>The hook.</returns>
-    public ILHook Hook(MethodBase target, MethodBase manipulator, MonoDetourInfo info)
+    public MonoDetourHook Hook(
+        MethodBase target,
+        MethodBase manipulator,
+        MonoDetourConfig config,
+        bool applyByDefault = true
+    )
     {
         ThrowIfDisposed();
         Helpers.ThrowIfNull(target);
         Helpers.ThrowIfNull(manipulator);
-        Helpers.ThrowIfNull(info);
+        Helpers.ThrowIfNull(config);
 
-        info.Data.Owner = this;
-        info.Data.Target = target;
-        info.Data.Manipulator = manipulator;
+        var applierInstance = (IMonoDetourHookApplier)Activator.CreateInstance(config.DetourType);
+        ILHook applierILHook = ProxyILHookConstructor.ConstructILHook(
+            target,
+            applierInstance.ApplierManipulator,
+            config.DetourPriority
+        );
+        MonoDetourHook monoDetourHook = new(target, manipulator, this, config, applierILHook);
+        applierInstance.Hook = monoDetourHook;
+        MonoDetourHooks.Add(monoDetourHook);
 
-        var emitter = (IMonoDetourHookEmitter)Activator.CreateInstance(info.DetourType)!;
-        emitter.Info = info;
+        if (applyByDefault)
+        {
+            applierILHook.Apply();
+        }
 
-        ILHook iLHook = new(info.Data.Target, emitter.Manipulator);
-        ILHooks.Add(iLHook);
-        return iLHook;
+        return monoDetourHook;
     }
 
     void Dispose(bool disposing)

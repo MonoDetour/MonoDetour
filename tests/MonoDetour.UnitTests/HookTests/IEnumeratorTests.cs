@@ -2,12 +2,13 @@ namespace MonoDetour.UnitTests.HookTests;
 
 public static partial class IEnumeratorTests
 {
-    private static readonly Queue<int> order = [];
+    private static readonly Queue<int> order1 = [];
+    private static readonly Queue<int> order2 = [];
 
     [Fact]
     public static void CanHookIEnumerator()
     {
-        order.Clear();
+        order1.Clear();
 
         var m = new MonoDetourManager();
         EnumerateRange.IEnumeratorDetour(Hook_IEnumeratorDetour, m);
@@ -18,8 +19,8 @@ public static partial class IEnumeratorTests
         while (enumerator.MoveNext())
             continue;
 
-        Assert.Equal([1, 2, 3, 4], order);
-        order.Clear();
+        Assert.Equal([1, 2, 3, 4], order1);
+        order1.Clear();
 
         // Now do it with more hooks.
 
@@ -31,13 +32,13 @@ public static partial class IEnumeratorTests
             continue;
 
         m.DisposeHooks();
-        Assert.Equal([0, 1, 2, 3, 4, 4], order);
+        Assert.Equal([0, 1, 2, 3, 4, 4], order1);
     }
 
     [Fact]
     public static void CanHookIEnumeratorTWhereTisInt()
     {
-        order.Clear();
+        order2.Clear();
 
         var m = new MonoDetourManager();
         EnumerateIntRange.IEnumeratorDetour(Hook_IEnumeratorIntDetour, m);
@@ -48,8 +49,8 @@ public static partial class IEnumeratorTests
         while (enumerator.MoveNext())
             continue;
 
-        Assert.Equal([1, 2, 3, 4], order);
-        order.Clear();
+        Assert.Equal([1, 2, 3, 4], order2);
+        order2.Clear();
 
         // Now do it with more hooks.
 
@@ -61,14 +62,14 @@ public static partial class IEnumeratorTests
             continue;
 
         m.DisposeHooks();
-        Assert.Equal([0, 1, 2, 3, 4, 4], order);
+        Assert.Equal([0, 1, 2, 3, 4, 4], order2);
     }
 
     private static IEnumerator Hook_IEnumeratorDetour(IEnumerator enumerator)
     {
         while (enumerator.MoveNext())
         {
-            order.Enqueue((int)enumerator.Current);
+            order1.Enqueue((int)enumerator.Current);
             yield return enumerator.Current;
         }
     }
@@ -76,20 +77,20 @@ public static partial class IEnumeratorTests
     private static void Hook_IEnumeratorPrefix(IEnumerator enumerator)
     {
         // Remember, enumerator.Current will be null here since we are in a prefix!
-        order.Enqueue(0);
+        order1.Enqueue(0);
     }
 
     private static void Hook_IEnumeratorPostfix(IEnumerator enumerator)
     {
         var current = (int)enumerator.Current;
-        order.Enqueue(current);
+        order1.Enqueue(current);
     }
 
     private static IEnumerator<int> Hook_IEnumeratorIntDetour(IEnumerator<int> enumerator)
     {
         while (enumerator.MoveNext())
         {
-            order.Enqueue(enumerator.Current);
+            order2.Enqueue(enumerator.Current);
             yield return enumerator.Current;
         }
     }
@@ -97,12 +98,12 @@ public static partial class IEnumeratorTests
     private static void Hook_IEnumeratorIntPrefix(IEnumerator<int> enumerator)
     {
         // Remember, enumerator.Current will be null here since we are in a prefix!
-        order.Enqueue(0);
+        order2.Enqueue(0);
     }
 
     private static void Hook_IEnumeratorIntPostfix(IEnumerator<int> enumerator)
     {
         var current = enumerator.Current;
-        order.Enqueue(current);
+        order2.Enqueue(current);
     }
 }

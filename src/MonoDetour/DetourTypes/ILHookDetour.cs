@@ -6,11 +6,11 @@ namespace MonoDetour.DetourTypes;
 /// Implements MonoDetour support for a regular <see cref="MonoMod.RuntimeDetour.ILHook"/>
 /// which supports modifying the target method on the CIL level.
 /// </summary>
-public class ILHookDetour : IMonoDetourHookEmitter
+public class ILHookDetour : IMonoDetourHookApplier
 {
     /// <inheritdoc/>
-    public MonoDetourInfo Info { get; set; } = null!;
+    public MonoDetourHook Hook { get; set; } = null!;
 
     /// <inheritdoc/>
-    public void Manipulator(ILContext il) => Info.Data.Manipulator!.Invoke(null, [il]);
+    public void ApplierManipulator(ILContext il) => Hook.Manipulator.Invoke(null, [il]);
 }

@@ -5,11 +5,11 @@ namespace MonoDetour.DetourTypes;
 /// <summary>
 /// Implements MonoDetour support for a Hook that will run at the end of the target method.
 /// </summary>
-public class PostfixDetour : IMonoDetourHookEmitter
+public class PostfixDetour : IMonoDetourHookApplier
 {
     /// <inheritdoc/>
-    public MonoDetourInfo Info { get; set; } = null!;
+    public MonoDetourHook Hook { get; set; } = null!;
 
     /// <inheritdoc/>
-    public void Manipulator(ILContext il) => GeneralDetour.Manipulator(il, Info);
+    public void ApplierManipulator(ILContext il) => GeneralDetour.Manipulator(il, Hook);
 }
