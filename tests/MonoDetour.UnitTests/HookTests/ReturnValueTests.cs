@@ -12,7 +12,7 @@ public static partial class ReturnValueTests
 
         Assert.Equal(100, lib.TakeAndReturnInt2(100));
 
-        TakeAndReturnInt2.Postfix(Postfix_TakeAndReturnInt2, m);
+        TakeAndReturnInt2.Postfix(Postfix_TakeAndReturnInt2, manager: m);
 
         Assert.Equal(150, lib.TakeAndReturnInt2(100));
 

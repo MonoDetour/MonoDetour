@@ -13,7 +13,7 @@ public static partial class RefParametersTests
         string? val = null;
         Assert.Equal("hello", lib.ReturnNullStringAsHello(val));
 
-        ReturnNullStringAsHello.Prefix(Prefix_ReturnStringToHooked, m);
+        ReturnNullStringAsHello.Prefix(Prefix_ReturnStringToHooked, manager: m);
 
         val = "not null";
         Assert.Equal("hooked", lib.ReturnNullStringAsHello(val));
@@ -36,7 +36,7 @@ public static partial class RefParametersTests
         lib.SetNullStringToHello(ref val);
         Assert.Equal("hello", val);
 
-        SetNullStringToHello.Prefix(Prefix_SetStringToHooked, m);
+        SetNullStringToHello.Prefix(Prefix_SetStringToHooked, manager: m);
 
         val = null;
         lib.SetNullStringToHello(ref val);
@@ -65,7 +65,7 @@ public static partial class RefParametersTests
         Assert.False(lib.TryGetThis(false, out res));
         Assert.True(res is null);
 
-        TryGetThis.Prefix(Prefix_TryGetThis, m);
+        TryGetThis.Prefix(Prefix_TryGetThis, manager: m);
 
         Assert.True(lib.TryGetThis(false, out res));
         Assert.True(res is not null);
