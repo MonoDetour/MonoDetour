@@ -7,15 +7,13 @@ public static partial class InvokeHookInitializersTests
     [Fact]
     public static void CanInvokeHookInitializersProperly()
     {
-        var m = DefaultMonoDetourManager.New();
-
         Assert.Equal(0, count);
 
-        m.InvokeHookInitializers(typeof(InvokeHookInitializersTests).Assembly);
+        MonoDetourManager.InvokeHookInitializers(typeof(InvokeHookInitializersTests).Assembly);
 
         Assert.Equal(2, count);
 
-        m.InvokeHookInitializers(typeof(HookDoNotInitWithoutDirectReference));
+        MonoDetourManager.InvokeHookInitializers(typeof(HookDoNotInitWithoutDirectReference));
 
         Assert.Equal(3, count);
     }

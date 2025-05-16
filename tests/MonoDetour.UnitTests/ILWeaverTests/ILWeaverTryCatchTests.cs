@@ -10,8 +10,9 @@ public static partial class ILWeaverTryCatchTests
         Throw();
     }
 
-    static void WriteTryCatch(ILContext il)
+    static void WriteTryCatch(ManipulationInfo info)
     {
+        var il = info.ManipulationContext;
         ILWeaver w = new(il);
         Console.WriteLine(il);
 

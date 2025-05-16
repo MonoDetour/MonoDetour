@@ -1075,7 +1075,7 @@ namespace MonoDetour.HookGen
                 .Write(hookType)
                 .Write("<ILHookDetour>")
                 .WriteLine(
-                    " ILHook(global::MonoMod.Cil.ILContext.Manipulator manipulator, global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                    " ILHook(global::MonoDetour.DetourTypes.ILHookDetour.Manipulator manipulator, global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
                 )
                 .IncreaseIndent()
                 .WriteLine(

@@ -124,10 +124,10 @@ public class MonoDetourManager(string id) : IDisposable
         MonoDetourHooks.Clear();
     }
 
-    /// <inheritdoc cref="ILHook(MethodBase, ILContext.Manipulator, MonoDetourConfig?, bool)"/>
+    /// <inheritdoc cref="ILHook(MethodBase, ILHookDetour.Manipulator, MonoDetourConfig?, bool)"/>
     public MonoDetourHook<ILHookDetour> ILHook(
         Delegate target,
-        ILContext.Manipulator manipulator,
+        ILHookDetour.Manipulator manipulator,
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     ) => ILHook(target.Method, manipulator, config, applyByDefault);
@@ -142,7 +142,7 @@ public class MonoDetourManager(string id) : IDisposable
     /// <param name="applyByDefault"/>
     public MonoDetourHook<ILHookDetour> ILHook(
         MethodBase target,
-        ILContext.Manipulator manipulator,
+        ILHookDetour.Manipulator manipulator,
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )

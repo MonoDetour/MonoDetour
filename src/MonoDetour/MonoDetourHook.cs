@@ -94,7 +94,6 @@ public class MonoDetourHook<TApplier> : IMonoDetourHook<TApplier>
 
         if (disposing)
         {
-            Owner.MonoDetourHooks.Remove(this);
             Applier.Dispose();
         }
 
