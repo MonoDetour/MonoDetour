@@ -68,13 +68,14 @@ public class MonoDetourManager(string id) : IDisposable
     /// Invokes hook initializers for the assembly that calls this method.
     /// </summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public void InvokeHookInitializers() => InvokeHookInitializers(Assembly.GetCallingAssembly());
+    public static void InvokeHookInitializers() =>
+        InvokeHookInitializers(Assembly.GetCallingAssembly());
 
     /// <summary>
     /// Invokes hook initializers for the specified assembly.
     /// </summary>
     /// <param name="assembly">The assembly whose hook initializers to invoke.</param>
-    public void InvokeHookInitializers(Assembly assembly)
+    public static void InvokeHookInitializers(Assembly assembly)
     {
         foreach (Type type in MonoDetourUtils.GetTypesFromAssembly(assembly))
         {
@@ -89,7 +90,7 @@ public class MonoDetourManager(string id) : IDisposable
     /// Invokes hook initializers for the specified type.
     /// </summary>
     /// <param name="type">The type whose hook initializers to invoke.</param>
-    public void InvokeHookInitializers(Type type)
+    public static void InvokeHookInitializers(Type type)
     {
         MethodInfo[] methods = type.GetMethods((BindingFlags)~0);
         foreach (var method in methods)
@@ -193,18 +194,7 @@ public class MonoDetourManager(string id) : IDisposable
         where T : IMonoDetourHookApplier
     {
         ThrowIfDisposed();
-        Helpers.ThrowIfNull(target);
-        Helpers.ThrowIfNull(manipulator);
-
-        var monoDetourHook = new MonoDetourHook<T>(
-            target,
-            manipulator,
-            this,
-            config,
-            applyByDefault
-        );
-
-        return monoDetourHook;
+        return new MonoDetourHook<T>(target, manipulator, this, config, applyByDefault);
     }
 
     void Dispose(bool disposing)

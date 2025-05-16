@@ -38,6 +38,10 @@ public class MonoDetourHook<TApplier> : IMonoDetourHook<TApplier>
 
     bool isDisposed = false;
 
+    /// <summary>
+    /// Constructs a <see cref="MonoDetourHook{TApplier}"/> with <see cref="Applier"/> defined by
+    /// <typeparamref name="TApplier"/>.
+    /// </summary>
     /// <param name="target">The method to hook.</param>
     /// <param name="manipulator">The hook or manipulator method.</param>
     /// <param name="owner">The owner of this hook.</param>
@@ -90,6 +94,7 @@ public class MonoDetourHook<TApplier> : IMonoDetourHook<TApplier>
 
         if (disposing)
         {
+            Owner.MonoDetourHooks.Remove(this);
             Applier.Dispose();
         }
 
