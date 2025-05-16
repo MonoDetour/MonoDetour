@@ -141,8 +141,7 @@ public class MonoDetourConfig : IMonoDetourConfig
     /// </summary>
     /// <param name="before">The <see cref="Before"/> list for the new <see cref="MonoDetourConfig"/>.</param>
     /// <returns>A <see cref="MonoDetourConfig"/> identical to this one, but with <see cref="Before"/> equal to <paramref name="before"/>.</returns>
-    public MonoDetourConfig WithBefore(params string[] before) =>
-        WithBefore(before.AsEnumerable());
+    public MonoDetourConfig WithBefore(params string[] before) => WithBefore(before.AsEnumerable());
 
     /// <summary>
     /// Creates a new <see cref="MonoDetourConfig"/> which is identical to this one, but with <see cref="After"/> equal to <paramref name="after"/>.
