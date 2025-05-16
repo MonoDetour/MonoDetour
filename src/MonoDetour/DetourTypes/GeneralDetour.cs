@@ -15,7 +15,7 @@ static class GeneralDetour
     static readonly Dictionary<MethodBase, ILLabel> firstRedirectForMethod = [];
     static readonly object _lock = new();
 
-    public static void Manipulator(ILContext il, MonoDetourHook hook)
+    public static void Manipulator(ILContext il, IReadOnlyMonoDetourHook hook)
     {
         if (!hook.Manipulator.IsStatic)
         {
@@ -26,7 +26,7 @@ static class GeneralDetour
 
         ILCursor c = new(il);
 
-        if (hook.Config.DetourType == typeof(PostfixDetour))
+        if (hook is MonoDetourHook<PostfixDetour>)
         {
             c.Index -= 1;
             lock (_lock)
@@ -68,7 +68,7 @@ static class GeneralDetour
         c.Emit(OpCodes.Leave, outsideThisHook);
         Instruction leaveCallInCatch = c.Previous;
 
-        if (hook.Config.DetourType == typeof(PostfixDetour) && retLocIdx is not null)
+        if (hook is MonoDetourHook<PostfixDetour> && retLocIdx is not null)
         {
             // This must be outside of the catch and we must branch to it.
             c.ApplyReturnValue(hook, (int)retLocIdx);
@@ -98,7 +98,7 @@ static class GeneralDetour
         );
     }
 
-    static void DisposeBadHooks(Exception ex, MonoDetourHook hook)
+    static void DisposeBadHooks(Exception ex, IReadOnlyMonoDetourHook hook)
     {
         MethodBase manipulator = hook.Manipulator;
         MethodBase target = hook.Target;
@@ -179,7 +179,7 @@ static class GeneralDetour
             ins.Operand = retLabel;
         }
 
-        Instruction lastInstruction = c.Body.Instructions[c.Body.Instructions.Count - 1];
+        Instruction lastInstruction = c.Body.Instructions[^1];
         lastInstruction.OpCode = hasRet ? OpCodes.Ret : OpCodes.Nop;
         lastInstruction.Operand = null;
         retLabel.InteropSetTarget(lastInstruction);

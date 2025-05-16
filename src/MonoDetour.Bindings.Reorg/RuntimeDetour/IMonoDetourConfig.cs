@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace MonoDetour.Bindings.Reorg.RuntimeDetour;
 
-internal interface IMonoDetourPriority
+internal interface IMonoDetourConfig
 {
     public string? OverrideId { get; }
     public int Priority { get; }

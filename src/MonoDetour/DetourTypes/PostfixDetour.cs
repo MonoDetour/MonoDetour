@@ -8,7 +8,7 @@ namespace MonoDetour.DetourTypes;
 public class PostfixDetour : IMonoDetourHookApplier
 {
     /// <inheritdoc/>
-    public MonoDetourHook Hook { get; set; } = null!;
+    public IReadOnlyMonoDetourHook Hook { get; set; } = null!;
 
     /// <inheritdoc/>
     public void ApplierManipulator(ILContext il) => GeneralDetour.Manipulator(il, Hook);

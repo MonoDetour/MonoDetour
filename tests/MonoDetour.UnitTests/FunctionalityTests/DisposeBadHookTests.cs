@@ -6,8 +6,8 @@ public static partial class DisposeBadHookTests
     public static void CanDisposeBadHook()
     {
         var m = DefaultMonoDetourManager.New();
-        m.Hook(Return1, Postfix_Return10, new(DetourTypes.DetourType.PostfixDetour));
-        m.Hook(ReturnFoo, Postfix_ReturnBar, new(DetourTypes.DetourType.PostfixDetour));
+        m.Hook<PostfixDetour>(Return1, Postfix_Return10);
+        m.Hook<PostfixDetour>(ReturnFoo, Postfix_ReturnBar);
 
         Assert.Equal(10, Return1());
         Assert.Equal(1, Return1());

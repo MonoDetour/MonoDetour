@@ -12,7 +12,7 @@ namespace MonoDetour.Interop.RuntimeDetour;
 
 static class ProxyILHookConstructor
 {
-    static Dictionary<IMonoDetourPriority, ILHookConfig>? interfaceToConfig;
+    static Dictionary<IMonoDetourConfig, ILHookConfig>? interfaceToConfig;
     static readonly ILHook detourContextHook = null!;
 
     static ProxyILHookConstructor()
@@ -47,14 +47,14 @@ static class ProxyILHookConstructor
     }
 
     /// <summary>
-    /// Constructs an ILHook for either legacy or reorg, mapping <see cref="IMonoDetourPriority"/>
+    /// Constructs an ILHook for either legacy or reorg, mapping <see cref="IMonoDetourConfig"/>
     /// to a valid config for either.<br/>
     /// Does not apply by default.
     /// </summary>
     internal static ILHook ConstructILHook(
         MethodBase target,
         ILContext.Manipulator manipulator,
-        IMonoDetourPriority? config,
+        IMonoDetourConfig? config,
         string id
     )
     {
@@ -76,7 +76,7 @@ static class ProxyILHookConstructor
     private static ILHook ConstructLegacyILHook(
         MethodBase target,
         ILContext.Manipulator manipulator,
-        IMonoDetourPriority? config,
+        IMonoDetourConfig? config,
         string id
     )
     {

@@ -14,7 +14,7 @@ internal static class MonoDetourUtils
 {
     public static int? EmitParams(
         this ILCursor c,
-        MonoDetourHook hook,
+        IReadOnlyMonoDetourHook hook,
         out Instruction? storedReturnValue
     )
     {
@@ -32,7 +32,7 @@ internal static class MonoDetourUtils
         }
 
         ParameterInfo? retField = null;
-        if (hook.Config.DetourType == typeof(PostfixDetour))
+        if (hook is MonoDetourHook<PostfixDetour>)
         {
             retField = manipParams.FirstOrDefault(x => x.Name == "returnValue");
         }
@@ -71,7 +71,11 @@ internal static class MonoDetourUtils
         return retTypeIdx;
     }
 
-    public static void ApplyReturnValue(this ILCursor c, MonoDetourHook hook, int retTypeIdx)
+    public static void ApplyReturnValue(
+        this ILCursor c,
+        IReadOnlyMonoDetourHook hook,
+        int retTypeIdx
+    )
     {
         var manipParams = hook.Manipulator.GetParameters();
 
@@ -154,18 +158,5 @@ internal static class MonoDetourUtils
             parameterType = parameterType.GetElementType()!;
 
         return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void ThrowIfInvalidDetourType(
-        Type detourType,
-        [CallerArgumentExpression(nameof(detourType))] string name = ""
-    )
-    {
-        if (!typeof(IMonoDetourHookApplier).IsAssignableFrom(detourType))
-            throw new ArgumentException(
-                $"{nameof(MonoDetourConfig)}.{nameof(MonoDetourConfig.DetourType)} must implement {nameof(IMonoDetourHookApplier)}.",
-                name
-            );
     }
 }

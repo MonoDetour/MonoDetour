@@ -7,7 +7,7 @@ namespace MonoDetour.Bindings.Reorg.RuntimeDetour;
 
 static class ReorgILHook
 {
-    static readonly ConcurrentDictionary<IMonoDetourPriority, DetourConfig> interfaceToConfig = [];
+    static readonly ConcurrentDictionary<IMonoDetourConfig, DetourConfig> interfaceToConfig = [];
     static readonly ConcurrentDictionary<DetourConfig, DetourConfig> configToConfig = [];
     static readonly ConcurrentDictionary<string, DetourConfig> idToConfig = [];
 
@@ -19,7 +19,7 @@ static class ReorgILHook
     internal static ILHook ConstructILHook(
         MethodBase target,
         ILContext.Manipulator manipulator,
-        IMonoDetourPriority? config,
+        IMonoDetourConfig? config,
         string id
     )
     {

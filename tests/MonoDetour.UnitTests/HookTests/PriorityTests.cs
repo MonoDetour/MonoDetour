@@ -10,25 +10,21 @@ public static partial class PriorityTests
     public static void HookOrderTest()
     {
         var m = DefaultMonoDetourManager.New();
-
-        var defaultConfig = MonoDetourConfig.Create<PostfixDetour>();
         // Also test that things work as expected with DetourContext.
         var scope = new DetourConfigContext(new(id: "detourContext")).Use();
 
         // Hooks with a default priority apply in reverse order
         // and MonoDetour enforces a default priority for its hooks.
-        m.Hook(Stub, Postfix2DetourContextId, defaultConfig);
-        m.Hook(Stub, Postfix1DetourContextId, defaultConfig);
+        m.Hook<PostfixDetour>(Stub, Postfix2DetourContextId, config: null);
+        m.Hook<PostfixDetour>(Stub, Postfix1DetourContextId, config: null);
 
         Stub();
         Assert.Equal([1, 2], order);
         order.Clear();
 
-        var lowerPriority = MonoDetourConfig.Create<PostfixDetour>(
-            new(priority: -1, overrideId: "lowerPriority")
-        );
+        MonoDetourConfig lowerPriority = new(priority: -1, overrideId: "lowerPriority");
 
-        m.Hook(Stub, Postfix5LowerPriority, lowerPriority);
+        m.Hook<PostfixDetour>(Stub, Postfix5LowerPriority, lowerPriority);
 
         scope.Dispose();
 
@@ -36,17 +32,13 @@ public static partial class PriorityTests
         Assert.Equal([1, 2, 5], order);
         order.Clear();
 
-        var beforeLowerPriority = MonoDetourConfig.Create<PostfixDetour>(
-            new(priority: -2, before: ["lowerPriority"])
-        );
+        MonoDetourConfig beforeLowerPriority = new(priority: -2, before: ["lowerPriority"]);
 
-        m.Hook(Stub, Postfix4BeforeLowerPriority, beforeLowerPriority);
-        m.Hook(
+        m.Hook<PostfixDetour>(Stub, Postfix4BeforeLowerPriority, beforeLowerPriority);
+        m.Hook<PostfixDetour>(
             Stub,
             Postfix3BeforeAnyWithAssemblyNameAsId,
-            MonoDetourConfig.Create<PostfixDetour>(
-                new(priority: -100, before: [typeof(PriorityTests).Assembly.GetName().Name!])
-            )
+            new(priority: -100, before: [typeof(PriorityTests).Assembly.GetName().Name!])
         );
 
         Stub();

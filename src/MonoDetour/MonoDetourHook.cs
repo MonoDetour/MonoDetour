@@ -1,5 +1,7 @@
 using System;
 using System.Reflection;
+using MonoDetour.DetourTypes;
+using MonoDetour.Interop.RuntimeDetour;
 using MonoMod.RuntimeDetour;
 
 namespace MonoDetour;
@@ -7,58 +9,77 @@ namespace MonoDetour;
 /// <summary>
 /// A MonoDetour Hook.
 /// </summary>
-/// <param name="target">The method to hook.</param>
-/// <param name="manipulator">The hook or manipulator method.</param>
-/// <param name="owner">The owner of this hook.</param>
-/// <param name="config">The config which defines how to apply and treat this hook.</param>
-/// <param name="applier">The <see cref="ILHook"/> which applies this <see cref="MonoDetourHook"/>.</param>
-public class MonoDetourHook(
-    MethodBase target,
-    MethodBase manipulator,
-    MonoDetourManager owner,
-    MonoDetourConfig config,
-    ILHook applier
-) : IDisposable
+/// <typeparam name="TApplier">The <see cref="IMonoDetourHookApplier"/>
+/// type to define how to apply this hook.</typeparam>
+public class MonoDetourHook<TApplier> : IMonoDetourHook<TApplier>
+    where TApplier : IMonoDetourHookApplier
 {
-    /// <summary>
-    /// The method to hook.
-    /// </summary>
-    public MethodBase Target { get; } = Helpers.ThrowIfNull(target);
+    /// <inheritdoc/>
+    public MethodBase Target { get; }
 
-    /// <summary>
-    /// The hook or manipulator method.
-    /// </summary>
     /// <remarks>
-    /// This differs from <see cref="ManipulatorApplier"/>'s <see cref="ILHook.Manipulator"/>,
-    /// as that points to the <see cref="ManipulatorApplier"/> itself.
+    /// This differs from <see cref="Applier"/>'s <see cref="ILHook.Manipulator"/>,
+    /// as that points to the <see cref="Applier"/> itself.
     /// </remarks>
-    public MethodBase Manipulator { get; } = Helpers.ThrowIfNull(manipulator);
+    /// <inheritdoc/>
+    public MethodBase Manipulator { get; }
 
-    /// <summary>
-    /// The owner <see cref="MonoDetourManager"/> of this hook.
-    /// </summary>
-    public MonoDetourManager Owner { get; } = Helpers.ThrowIfNull(owner);
+    /// <inheritdoc/>
+    public MonoDetourManager Owner { get; }
 
     /// <inheritdoc cref="MonoDetourConfig"/>
-    public MonoDetourConfig Config { get; } = Helpers.ThrowIfNull(config);
+    public MonoDetourConfig? Config { get; }
 
     /// <summary>
     /// The <see cref="ILHook"/> that applies the <see cref="Manipulator"/> method.<br/>
-    /// An applier comes from a class implementing <see cref="DetourTypes.IMonoDetourHookApplier"/>.
+    /// An applier comes from a class implementing <see cref="IMonoDetourHookApplier"/>.
     /// </summary>
-    public ILHook ManipulatorApplier { get; } = Helpers.ThrowIfNull(applier);
+    public ILHook Applier { get; }
 
     bool isDisposed = false;
 
-    /// <summary>
-    /// Applies the <see cref="ManipulatorApplier"/> if it was not already applied.
-    /// </summary>
-    public void Apply() => ManipulatorApplier.Apply();
+    /// <param name="target">The method to hook.</param>
+    /// <param name="manipulator">The hook or manipulator method.</param>
+    /// <param name="owner">The owner of this hook.</param>
+    /// <param name="config">The config which defines how to apply and treat this hook.</param>
+    /// <param name="applyByDefault">Whether or not the hook should be applied
+    /// after it has been constructed.</param>
+    public MonoDetourHook(
+        MethodBase target,
+        MethodBase manipulator,
+        MonoDetourManager owner,
+        MonoDetourConfig? config = null,
+        bool applyByDefault = true
+    )
+    {
+        Target = Helpers.ThrowIfNull(target);
+        Manipulator = Helpers.ThrowIfNull(manipulator);
+        Owner = Helpers.ThrowIfNull(owner);
+        Config = config;
 
-    /// <summary>
-    /// Undoes the <see cref="ManipulatorApplier"/> if it was applied.
-    /// </summary>
-    public void Undo() => ManipulatorApplier.Undo();
+        var applierInstance = Activator.CreateInstance<TApplier>();
+        applierInstance.Hook = this;
+
+        owner.MonoDetourHooks.Add(this);
+
+        Applier = ProxyILHookConstructor.ConstructILHook(
+            target,
+            applierInstance.ApplierManipulator,
+            config,
+            owner.Id
+        );
+
+        if (applyByDefault)
+        {
+            Applier.Apply();
+        }
+    }
+
+    /// <inheritdoc/>
+    public void Apply() => Applier.Apply();
+
+    /// <inheritdoc/>
+    public void Undo() => Applier.Undo();
 
     void Dispose(bool disposing)
     {
@@ -69,7 +90,7 @@ public class MonoDetourHook(
 
         if (disposing)
         {
-            ManipulatorApplier.Dispose();
+            Applier.Dispose();
         }
 
         isDisposed = true;
@@ -84,7 +105,7 @@ public class MonoDetourHook(
     }
 
     /// <summary>
-    /// Disposes the <see cref="ManipulatorApplier"/> hook, disposing this <see cref="MonoDetourHook"/>.
+    /// Disposes the <see cref="Applier"/> hook, disposing this <see cref="MonoDetourHook{TApplier}"/>.
     /// </summary>
     public void Dispose()
     {

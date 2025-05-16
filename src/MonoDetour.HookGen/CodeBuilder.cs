@@ -26,6 +26,9 @@ internal sealed class CodeBuilder
         WriteLine("#nullable enable");
         Write("#pragma warning disable CS0649 ");
         WriteLine("// Field is never assigned to, and will always have its default value null");
+        WriteLine("using PrefixDetour = global::MonoDetour.DetourTypes.PrefixDetour;");
+        WriteLine("using PostfixDetour = global::MonoDetour.DetourTypes.PostfixDetour;");
+        WriteLine("using ILHookDetour = global::MonoDetour.DetourTypes.ILHookDetour;");
         return this;
     }
 

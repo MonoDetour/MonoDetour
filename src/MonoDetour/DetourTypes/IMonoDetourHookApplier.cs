@@ -21,7 +21,7 @@ public interface IMonoDetourHookApplier
     /// <summary>
     /// All the available metadata for the MonoDetour Hook.
     /// </summary>
-    MonoDetourHook Hook { get; set; }
+    IReadOnlyMonoDetourHook Hook { get; set; }
 
     /// <summary>
     /// The <see cref="ILContext.Manipulator"/> method that is called

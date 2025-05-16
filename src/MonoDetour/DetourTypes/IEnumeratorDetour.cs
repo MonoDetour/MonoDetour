@@ -34,7 +34,7 @@ namespace MonoDetour.DetourTypes;
 public class IEnumeratorDetour : IMonoDetourHookApplier
 {
     /// <inheritdoc/>
-    public MonoDetourHook Hook { get; set; } = null!;
+    public IReadOnlyMonoDetourHook Hook { get; set; } = null!;
 
     /// <inheritdoc/>
     public void ApplierManipulator(ILContext il) => GeneralIEnumeratorDetour.Manipulator(il, Hook);

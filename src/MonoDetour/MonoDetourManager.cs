@@ -14,7 +14,7 @@ namespace MonoDetour;
 /// </summary>
 /// <param name="id">
 /// The identifier for this manager. This will be used as
-/// the identifier in <see cref="MonoDetourPriority"/> by default.<br/>
+/// the identifier in <see cref="MonoDetourConfig"/> by default.<br/>
 /// This ID should be unique per mod, such as the assembly name, but
 /// a single mod can use the same ID for all its <see cref="MonoDetourManager"/>s.
 /// </param>
@@ -22,7 +22,7 @@ public class MonoDetourManager(string id) : IDisposable
 {
     /// <summary>
     /// Identifier for a <see cref="MonoDetourManager"/>.
-    /// This will be used as the identifier in <see cref="MonoDetourPriority"/> by default.<br/>
+    /// This will be used as the identifier in <see cref="MonoDetourConfig"/> by default.<br/>
     /// This ID should be unique per mod, such as the assembly name, but
     /// a single mod can use the same ID for all its <see cref="MonoDetourManager"/>s.
     /// </summary>
@@ -31,7 +31,7 @@ public class MonoDetourManager(string id) : IDisposable
     /// <summary>
     /// The hooks applied by this MonoDetourManager.
     /// </summary>
-    public List<MonoDetourHook> MonoDetourHooks { get; } = [];
+    public List<IMonoDetourHook> MonoDetourHooks { get; } = [];
 
     /// <summary>
     /// An event which is called when a hook owned by this <see cref="MonoDetourManager"/>
@@ -43,7 +43,7 @@ public class MonoDetourManager(string id) : IDisposable
     /// <br/>
     /// The hook which threw is passed as the only argument.
     /// </summary>
-    public event Action<MonoDetourHook>? OnHookThrew;
+    public event Action<IReadOnlyMonoDetourHook>? OnHookThrew;
 
     bool isDisposed = false;
 
@@ -55,7 +55,7 @@ public class MonoDetourManager(string id) : IDisposable
         throw new ObjectDisposedException(ToString());
     }
 
-    internal bool CallOnHookThrew(MonoDetourHook hook)
+    internal bool CallOnHookThrew(IReadOnlyMonoDetourHook hook)
     {
         if (OnHookThrew is null)
             return false;
@@ -125,48 +125,51 @@ public class MonoDetourManager(string id) : IDisposable
         MonoDetourHooks.Clear();
     }
 
-    /// <inheritdoc cref="ILHook(MethodBase, ILContext.Manipulator, MonoDetourPriority?, bool)"/>
-    public MonoDetourHook ILHook(
+    /// <inheritdoc cref="ILHook(MethodBase, ILContext.Manipulator, MonoDetourConfig?, bool)"/>
+    public MonoDetourHook<ILHookDetour> ILHook(
         Delegate target,
         ILContext.Manipulator manipulator,
-        MonoDetourPriority? detourPriority = null,
+        MonoDetourConfig? config = null,
         bool applyByDefault = true
-    ) => ILHook(target.Method, manipulator, detourPriority, applyByDefault);
+    ) => ILHook(target.Method, manipulator, config, applyByDefault);
 
     /// <summary>
     /// Creates a <see cref="ILHookDetour"/> hook using the information defined.
     /// </summary>
     /// <param name="manipulator">The manipulator method.</param>
-    /// <param name="detourPriority">The priority configuration for this hook.</param>
+    /// <param name="config">The priority configuration for this hook.</param>
     /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
     /// <param name="target"/>
     /// <param name="applyByDefault"/>
-    public MonoDetourHook ILHook(
+    public MonoDetourHook<ILHookDetour> ILHook(
         MethodBase target,
         ILContext.Manipulator manipulator,
-        MonoDetourPriority? detourPriority = null,
+        MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
     {
-        var config = MonoDetourConfig.Create<ILHookDetour>(detourPriority);
-        return Hook(target, manipulator.Method, config, applyByDefault);
+        return Hook<ILHookDetour>(target, manipulator.Method, config, applyByDefault);
     }
 
     /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
-    public MonoDetourHook Hook(
+    public MonoDetourHook<T> Hook<T>(
         Delegate target,
         Delegate manipulator,
-        MonoDetourConfig config,
+        MonoDetourConfig? config = null,
         bool applyByDefault = true
-    ) => Hook(target.Method, manipulator.Method, config, applyByDefault);
+    )
+        where T : IMonoDetourHookApplier =>
+        Hook<T>(target.Method, manipulator.Method, config, applyByDefault);
 
     /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
-    public MonoDetourHook Hook(
+    public MonoDetourHook<T> Hook<T>(
         MethodBase target,
         Delegate manipulator,
-        MonoDetourConfig config,
+        MonoDetourConfig? config = null,
         bool applyByDefault = true
-    ) => Hook(target, manipulator.Method, config, applyByDefault);
+    )
+        where T : IMonoDetourHookApplier =>
+        Hook<T>(target, manipulator.Method, config, applyByDefault);
 
     /// <summary>
     /// Creates a MonoDetour Hook using the information defined.
@@ -181,33 +184,25 @@ public class MonoDetourManager(string id) : IDisposable
     /// <param name="applyByDefault">Whether or not the hook should be applied
     /// after it has been constructed.</param>
     /// <returns>The hook.</returns>
-    public MonoDetourHook Hook(
+    public MonoDetourHook<T> Hook<T>(
         MethodBase target,
         MethodBase manipulator,
-        MonoDetourConfig config,
+        MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
+        where T : IMonoDetourHookApplier
     {
         ThrowIfDisposed();
         Helpers.ThrowIfNull(target);
         Helpers.ThrowIfNull(manipulator);
-        Helpers.ThrowIfNull(config);
 
-        var applierInstance = (IMonoDetourHookApplier)Activator.CreateInstance(config.DetourType);
-        ILHook applierILHook = ProxyILHookConstructor.ConstructILHook(
+        var monoDetourHook = new MonoDetourHook<T>(
             target,
-            applierInstance.ApplierManipulator,
-            config.DetourPriority,
-            Id
+            manipulator,
+            this,
+            config,
+            applyByDefault
         );
-        MonoDetourHook monoDetourHook = new(target, manipulator, this, config, applierILHook);
-        applierInstance.Hook = monoDetourHook;
-        MonoDetourHooks.Add(monoDetourHook);
-
-        if (applyByDefault)
-        {
-            applierILHook.Apply();
-        }
 
         return monoDetourHook;
     }
