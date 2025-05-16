@@ -1,4 +1,3 @@
-using MonoDetour.Logging;
 using Xunit.Sdk;
 using Xunit.v3;
 

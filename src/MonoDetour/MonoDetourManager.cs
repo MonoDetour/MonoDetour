@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using MonoDetour.DetourTypes;
-using MonoDetour.Interop.RuntimeDetour;
 using MonoMod.Cil;
-using MonoMod.RuntimeDetour;
 
 namespace MonoDetour;
 

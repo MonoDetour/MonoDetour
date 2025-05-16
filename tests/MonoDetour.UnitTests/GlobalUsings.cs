@@ -1,5 +1,3 @@
-global using System.Collections;
-global using System.Diagnostics.CodeAnalysis;
 global using Mono.Cecil.Cil;
 global using MonoDetour.DetourTypes;
 global using MonoDetour.HookGen;

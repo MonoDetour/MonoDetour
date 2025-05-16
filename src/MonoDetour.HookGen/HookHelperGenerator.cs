@@ -11,7 +11,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using MonoMod.SourceGen.Internal;
-using MonoMod.SourceGen.Internal.Extensions;
 using MonoMod.SourceGen.Internal.Helpers;
 
 namespace MonoDetour.HookGen

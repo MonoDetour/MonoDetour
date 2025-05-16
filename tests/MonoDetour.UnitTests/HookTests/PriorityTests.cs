@@ -1,5 +1,3 @@
-using MonoDetour.DetourTypes;
-
 namespace MonoDetour.UnitTests.HookTests;
 
 public static partial class PriorityTests

@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace MonoDetour.UnitTests.ILWeaverTests;
 
 public static partial class ILWeaverTryCatchTests
