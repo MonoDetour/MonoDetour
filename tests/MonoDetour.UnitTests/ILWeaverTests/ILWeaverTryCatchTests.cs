@@ -10,11 +10,22 @@ public static partial class ILWeaverTryCatchTests
     public static void CanWriteTryCatch()
     {
         using var m = DefaultMonoDetourManager.New();
-        m.ILHook(new Action(Throw).Method, WriteTryCatch);
+        m.ILHook(Throw, WriteTryCatch);
 
         Assert.False(caught);
         Throw();
         Assert.True(caught);
+    }
+
+    [Fact]
+    public static void CanInsertInstructionAfterTryCatchWithoutInvalidIL()
+    {
+        using var m = DefaultMonoDetourManager.New();
+        m.ILHook(HasTryCatchAndReturnFalse, WriteReturnTrue);
+        m.ILHook(HasTryCatchAndReturnFalse, WriteThrowInsideTry);
+
+        bool result = HasTryCatchAndReturnFalse();
+        Assert.True(result);
     }
 
     static void WriteTryCatch(ILManipulationInfo info)
@@ -37,4 +48,30 @@ public static partial class ILWeaverTryCatchTests
     }
 
     static void Throw() => throw new NotImplementedException();
+
+    private static void WriteReturnTrue(ILManipulationInfo info)
+    {
+        ILWeaver w = new(info);
+
+        w.Match(x => x.MatchLdcI4(0) && w.SetCurrentTo(x));
+        w.InsertAfterCurrent(w.Create(OpCodes.Pop), w.Create(OpCodes.Ldc_I4_1));
+    }
+
+    private static void WriteThrowInsideTry(ILManipulationInfo info)
+    {
+        ILWeaver w = new(info);
+
+        var exceptionCtor =
+            typeof(Exception).GetConstructor([]) ?? throw new NullReferenceException();
+
+        w.CurrentTo(w.Body.ExceptionHandlers.First().TryStart);
+        w.InsertBeforeCurrent(w.Create(OpCodes.Newobj, exceptionCtor), w.Create(OpCodes.Throw));
+    }
+
+    static bool HasTryCatchAndReturnFalse()
+    {
+        try { }
+        catch { }
+        return false;
+    }
 }

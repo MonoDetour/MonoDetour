@@ -609,7 +609,7 @@ public class ILWeaver(ILManipulationInfo il)
     /// See also <see cref="CurrentTo(int)"/><br/>
     /// <br/>
     /// For use in <see cref="Match(Predicate{Instruction}[])"/> and other variations,
-    /// use <see cref="PointCurrentTo"/> as that method returns true.
+    /// use <see cref="SetCurrentTo"/> as that method returns true.
     /// </summary>
     /// <returns>this <see cref="ILWeaver"/></returns>
     /// <exception cref="ArgumentNullException"></exception>
@@ -632,7 +632,7 @@ public class ILWeaver(ILManipulationInfo il)
     /// </summary>
     /// <param name="instruction">The instruction to set as current.</param>
     /// <returns>true</returns>
-    public bool PointCurrentTo(Instruction instruction)
+    public bool SetCurrentTo(Instruction instruction)
     {
         CurrentTo(instruction);
         return true;
@@ -673,7 +673,7 @@ public class ILWeaver(ILManipulationInfo il)
     /// weaver
     ///     .Match(
     ///         x => x.MatchLdloc(1),
-    ///         x => x.MatchBrtrue(out _) && weaver.PointCurrentTo(x)
+    ///         x => x.MatchBrtrue(out _) && weaver.SetCurrentTo(x)
     ///     )
     ///     .ThrowIfFailure()
     ///     .EmitBeforeCurrent(weaver.Create(OpCodes.Call, GetCustomNumber));
@@ -709,7 +709,7 @@ public class ILWeaver(ILManipulationInfo il)
     ///             );
     ///         },
     ///         x => x.MatchLdloc(1),
-    ///         x => x.MatchBrtrue(out _) && weaver.PointCurrentTo(x)
+    ///         x => x.MatchBrtrue(out _) && weaver.SetCurrentTo(x)
     ///     )
     ///     .ThrowIfFailure();
     /// ]]>
@@ -931,18 +931,21 @@ public class ILWeaver(ILManipulationInfo il)
                     eh.FilterStart = instruction;
             }
         }
-        // In this case we are inserting after a target instruction,
-        // so we want our instruction to be inside the end range.
-        else
-        {
-            foreach (var eh in Body.ExceptionHandlers)
-            {
-                if (eh.TryEnd == InstructionAtIndex)
-                    eh.TryEnd = instruction;
-                if (eh.HandlerEnd == InstructionAtIndex)
-                    eh.HandlerEnd = instruction;
-            }
-        }
+        // TODO: The following is actually terrible default behavior because
+        // hander end ranges are exclusive (end instruction is after leave instruction).
+        // Should this even be an option?
+        // // In this case we are inserting after a target instruction,
+        // // so we want our instruction to be inside the end range.
+        // // else
+        // // {
+        // //     foreach (var eh in Body.ExceptionHandlers)
+        // //     {
+        // //         if (eh.TryEnd == InstructionAtIndex)
+        // //             eh.TryEnd = instruction;
+        // //         if (eh.HandlerEnd == InstructionAtIndex)
+        // //             eh.HandlerEnd = instruction;
+        // //     }
+        // // }
 
         if (insertAfterIndex)
         {
