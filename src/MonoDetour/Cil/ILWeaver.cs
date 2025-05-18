@@ -321,7 +321,9 @@ public class ILWeaver(ILManipulationInfo il)
     }
 
     /// <summary>
-    /// Create a new <see cref="IWeaverExceptionHandler"/> to be assigned its ranges.<br/>
+    /// Create a new <see cref="IWeaverExceptionHandler"/> to be assigned its ranges.
+    /// Note that certain values can be figured out implicitly such as HandlerStart when
+    /// TryEnd is defined.<br/>
     /// <br/>
     /// The <see cref="IWeaverExceptionHandler"/> needs to be applied to the method body with
     /// <see cref="HandlerApply(IWeaverExceptionHandler)"/> after which it becomes immutable.<br/>
@@ -384,10 +386,6 @@ public class ILWeaver(ILManipulationInfo il)
         return this;
     }
 
-    /// <inheritdoc cref="HandlerSetTryStart(Instruction, IWeaverExceptionHandler)"/>
-    public ILWeaver HandlerSetTryStartOnCurrent(IWeaverExceptionHandler handler) =>
-        HandlerSetTryStart(Current, handler);
-
     /// <summary>
     /// Set the TryEnd property of the <see cref="IWeaverExceptionHandler"/>.
     /// </summary>
@@ -398,10 +396,6 @@ public class ILWeaver(ILManipulationInfo il)
         handler.TryEnd = tryEnd;
         return this;
     }
-
-    /// <inheritdoc cref="HandlerSetTryEnd(Instruction, IWeaverExceptionHandler)"/>
-    public ILWeaver HandlerSetTryEndOnCurrent(IWeaverExceptionHandler handler) =>
-        HandlerSetTryEnd(Current, handler);
 
     /// <summary>
     /// Set the FilterStart property of the <see cref="WeaverExceptionFilterHandler"/>.
@@ -417,10 +411,6 @@ public class ILWeaver(ILManipulationInfo il)
         return this;
     }
 
-    /// <inheritdoc cref="HandlerSetFilterStart(Instruction, WeaverExceptionFilterHandler)"/>
-    public ILWeaver HandlerSetFilterStartOnCurrent(WeaverExceptionFilterHandler handler) =>
-        HandlerSetFilterStart(Current, handler);
-
     /// <summary>
     /// Set the HandlerStart property of the <see cref="IWeaverExceptionHandler"/>.
     /// </summary>
@@ -432,10 +422,6 @@ public class ILWeaver(ILManipulationInfo il)
         return this;
     }
 
-    /// <inheritdoc cref="HandlerSetHandlerStart(Instruction, IWeaverExceptionHandler)"/>
-    public ILWeaver HandlerSetCatchStartOnCurrent(IWeaverExceptionHandler handler) =>
-        HandlerSetHandlerStart(Current, handler);
-
     /// <summary>
     /// Set the HandlerEnd property of the <see cref="IWeaverExceptionHandler"/>.
     /// </summary>
@@ -446,10 +432,6 @@ public class ILWeaver(ILManipulationInfo il)
         handler.HandlerEnd = catchEnd;
         return this;
     }
-
-    /// <inheritdoc cref="HandlerSetHandlerEnd(Instruction, IWeaverExceptionHandler)"/>
-    public ILWeaver HandlerSetCatchEndOnCurrent(IWeaverExceptionHandler handler) =>
-        HandlerSetHandlerEnd(Current, handler);
 
     /// <summary>
     /// Writes the leave instructions for try, catch or finally blocks and applies the
