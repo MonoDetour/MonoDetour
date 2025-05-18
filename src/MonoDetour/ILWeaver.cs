@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoDetour.DetourTypes;
 using MonoDetour.Interop.MonoModUtils;
 using MonoMod.Cil;
 using MonoMod.SourceGen.Internal;
@@ -15,10 +16,17 @@ using MethodBody = Mono.Cecil.Cil.MethodBody;
 
 namespace MonoDetour;
 
-public class ILWeaver(ILContext il)
+// TODO: fix all warnings.
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
+
+public class ILWeaver(ILManipulationInfo il)
 {
+    /// <inheritdoc cref="ILManipulationInfo"/>
+    public ILManipulationInfo ManipulationInfo { get; } = il;
+
     /// <inheritdoc cref="ILContext"/>
-    public ILContext Context { get; } = il;
+    public ILContext Context { get; } = il.ManipulationContext;
 
     /// <inheritdoc cref="ILContext.IL"/>
     public ILProcessor IL => Context.IL;
@@ -67,19 +75,19 @@ public class ILWeaver(ILContext il)
         set => CurrentTo(value);
     }
 
-    Instruction current = il.Instrs[0];
+    Instruction current = il.ManipulationContext.Instrs[0];
 
     readonly List<ILLabel> pendingFutureNextInsertLabels = [];
 
     const string gotoMatchingDocsLink = "<insert documentation link here>";
 
     /// <summary>
-    /// Create a new <see cref="ILWeaver"/> for the current <see cref="ILContext"/>
-    /// or a copy with state included.
+    /// Create a new <see cref="ILWeaver"/> for the current <see cref="ILManipulationInfo"/>
+    /// with state copied optionally.
     /// </summary>
     /// <returns>A new <see cref="ILWeaver"/> or a copy with state.</returns>
     public ILWeaver(ILWeaver weaver, bool copyState = true)
-        : this(weaver.Context)
+        : this(weaver.ManipulationInfo)
     {
         if (copyState == false)
             return;
@@ -88,11 +96,11 @@ public class ILWeaver(ILContext il)
     }
 
     /// <summary>
-    /// Create a new <see cref="ILWeaver"/> for the current <see cref="ILContext"/>
+    /// Create a new <see cref="ILWeaver"/> for the current <see cref="ILManipulationInfo"/>
     /// using the <see cref="ILWeaver(ILWeaver, bool)"/> constructor.<br/>
     /// Does not copy state.
     /// </summary>
-    /// <returns>A new <see cref="ILWeaver"/> for the current <see cref="ILContext"/>.</returns>
+    /// <returns>A new <see cref="ILWeaver"/> for the current <see cref="ILManipulationInfo"/>.</returns>
     public ILWeaver New() => new(this, copyState: false);
 
     /// <summary>
@@ -653,8 +661,7 @@ public class ILWeaver(ILContext il)
     /// </code>
     /// </example>
     /// </summary>
-    /// <param name="target">The instruction where <see cref="Current"/> will point to
-    /// if the match is successful.</param>
+    /// if the match is successful.
     /// <param name="predicates">The predicates to match against.</param>
     /// <returns>An <see cref="ILWeaverResult"/> which can be used
     /// for checking if the match was a success or a failure.</returns>
@@ -1025,6 +1032,7 @@ public class ILWeaver(ILContext il)
         return this;
     }
 
+#pragma warning disable CS1572 // XML comment has a param tag, but there is no parameter by that name
     /// <summary>
     /// Create a new instruction to be emitted by
     /// <see cref="InsertBeforeCurrent(IEnumerable{Instruction})"/> or any of the variations.
@@ -1045,72 +1053,75 @@ public class ILWeaver(ILContext il)
     /// <exception cref="ArgumentException"></exception>
     public Instruction Create(OpCode opcode, ParameterDefinition parameter) =>
         IL.Create(opcode, parameter);
+#pragma warning restore CS1572 // XML comment has a param tag, but there is no parameter by that name
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, VariableDefinition variable) =>
         IL.Create(opcode, variable);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, Instruction[] targets) => IL.Create(opcode, targets);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, Instruction target) => IL.Create(opcode, target);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, double value) => IL.Create(opcode, value);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, float value) => IL.Create(opcode, value);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, long value) => IL.Create(opcode, value);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, sbyte value) => IL.Create(opcode, value);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, byte value) => IL.Create(opcode, value);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, string value) => IL.Create(opcode, value);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, FieldReference field) => IL.Create(opcode, field);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, CallSite site) => IL.Create(opcode, site);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, TypeReference type) => IL.Create(opcode, type);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode) => IL.Create(opcode);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, int value) => IL.Create(opcode, value);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, MethodReference method) => IL.Create(opcode, method);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, FieldInfo field) => IL.Create(opcode, field);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, MethodBase method) => IL.Create(opcode, method);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, Type type) => IL.Create(opcode, type);
 
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, object operand) => IL.Create(opcode, operand);
 
+#pragma warning disable CS1574 // XML comment has cref attribute that could not be resolved
     /// <remarks>
     /// If the delegate method isn't static, its instance must be pushed to the stack first.<br/>
     /// The delegate method must not be a lambda expression, as one requires an anonymous
     /// instance to be loaded. If it is a lambda expression, use <see cref="CreateDelegate"/>.
     /// </remarks>
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction CreateCall(Delegate method) => IL.Create(OpCodes.Call, method.Method);
+#pragma warning restore CS1574 // XML comment has cref attribute that could not be resolved
 
     /// <summary>
     /// Create a new instruction accessing a given member, to be emitted by
@@ -1118,7 +1129,7 @@ public class ILWeaver(ILContext il)
     /// </summary>
     /// <typeparam name="T">The type in which the member is defined.</typeparam>
     /// <param name="memberName">The accessed member name.</param>
-    /// <inheritdoc cref="Create"/>
+    /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     /// <exception cref="NotSupportedException"></exception>
     public Instruction Create<T>(OpCode opcode, string memberName) =>
         IL.Create(opcode, typeof(T).GetMember(memberName, (BindingFlags)(-1)).First());

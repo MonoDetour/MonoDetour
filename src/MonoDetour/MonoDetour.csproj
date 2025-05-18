@@ -7,6 +7,9 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../MonoDetour.HookGen/CodeBuilder.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="MonoMod.RuntimeDetour" Version="$(RuntimeDetourVersion)" />
     <ProjectReference Include="../MonoDetour.Bindings.Reorg/MonoDetour.Bindings.Reorg.csproj" />
   </ItemGroup>

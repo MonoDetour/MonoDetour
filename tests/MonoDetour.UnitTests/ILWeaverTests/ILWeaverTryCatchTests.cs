@@ -2,19 +2,22 @@ namespace MonoDetour.UnitTests.ILWeaverTests;
 
 public static partial class ILWeaverTryCatchTests
 {
+    static bool caught = false;
+
     [Fact]
     public static void CanWriteTryCatch()
     {
         using var m = DefaultMonoDetourManager.New();
         m.ILHook(new Action(Throw).Method, WriteTryCatch);
+
+        Assert.False(caught);
         Throw();
+        Assert.True(caught);
     }
 
-    static void WriteTryCatch(ManipulationInfo info)
+    static void WriteTryCatch(ILManipulationInfo info)
     {
-        var il = info.ManipulationContext;
-        ILWeaver w = new(il);
-        Console.WriteLine(il);
+        ILWeaver w = new(info);
 
         w.HandlerCreate(ExceptionHandlerType.Catch, null, out var handler)
             .HandlerSetTryStart(w.First, handler)
@@ -23,12 +26,13 @@ public static partial class ILWeaverTryCatchTests
             .HandlerSetCatchEnd(w.Last, handler)
             .HandlerApply(handler)
             .InsertAfter(w.Last, w.Create(OpCodes.Ret));
-
-        il.Method.RecalculateILOffsets();
-        Console.WriteLine(il);
     }
 
-    static void PrintException(Exception exception) => Console.WriteLine(exception.ToString());
+    static void PrintException(Exception exception)
+    {
+        Helpers.ThrowIfArgumentNull(exception);
+        caught = true;
+    }
 
     static void Throw() => throw new NotImplementedException();
 }

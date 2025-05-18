@@ -11,7 +11,7 @@ namespace MonoDetour.DetourTypes;
 /// </summary>
 /// <param name="il">The main <see cref="ILContext"/> for manipulation.</param>
 /// <param name="original">The original method.</param>
-public class ManipulationInfo(ILContext il, MethodBase original)
+public class ILManipulationInfo(ILContext il, MethodBase original)
 {
     /// <summary>
     /// The original method.

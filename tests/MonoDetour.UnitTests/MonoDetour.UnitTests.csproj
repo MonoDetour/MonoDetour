@@ -37,7 +37,6 @@
   <!-- Local project references -->
   <ItemGroup>
     <ProjectReference Include="$(SolutionRoot)src/MonoDetour/MonoDetour.csproj" />
-    <ProjectReference Include="$(SolutionRoot)src/MonoDetour.ILWeaver/MonoDetour.ILWeaver.csproj" />
     <ProjectReference
       Include="$(SolutionRoot)src/MonoDetour.HookGen/MonoDetour.HookGen.csproj"
       OutputItemType="Analyzer"

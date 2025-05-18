@@ -59,7 +59,7 @@ public static partial class HookBehaviorTests
         order.Enqueue(2);
     }
 
-    private static void ILHook4_1st_Add100ToNum_Returns(ManipulationInfo info)
+    private static void ILHook4_1st_Add100ToNum_Returns(ILManipulationInfo info)
     {
         ILCursor c = new(info.ManipulationContext);
         c.EmitDelegate(() =>
@@ -79,7 +79,7 @@ public static partial class HookBehaviorTests
             c.Emit(OpCodes.Ret);
     }
 
-    private static void ILHook3_3rd_Returns(ManipulationInfo info)
+    private static void ILHook3_3rd_Returns(ILManipulationInfo info)
     {
         ILCursor c = new(info.ManipulationContext);
         c.Index -= 1;
@@ -105,7 +105,7 @@ public static partial class HookBehaviorTests
         order.Enqueue(4);
     }
 
-    private static void ILHook1_5th_ReturnWithLdarg1(ManipulationInfo info)
+    private static void ILHook1_5th_ReturnWithLdarg1(ILManipulationInfo info)
     {
         ILCursor c = new(info.ManipulationContext);
         c.Index -= 1;
