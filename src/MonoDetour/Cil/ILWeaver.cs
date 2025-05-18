@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using MonoDetour.DetourTypes;
 using MonoDetour.Interop.MonoModUtils;
 using MonoMod.Cil;
 using MonoMod.SourceGen.Internal;
@@ -14,7 +13,7 @@ using MonoMod.Utils;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 
-namespace MonoDetour;
+namespace MonoDetour.Cil;
 
 // TODO: fix all warnings.
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member

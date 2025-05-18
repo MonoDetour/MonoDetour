@@ -1,3 +1,5 @@
+using MonoDetour.Cil;
+
 namespace MonoDetour.UnitTests.HookTests;
 
 public static partial class HookBehaviorTests

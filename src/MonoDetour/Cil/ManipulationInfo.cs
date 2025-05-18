@@ -2,7 +2,7 @@ using System.Reflection;
 using MonoMod.Cil;
 using MonoMod.Utils;
 
-namespace MonoDetour.DetourTypes;
+namespace MonoDetour.Cil;
 
 /// <summary>
 /// A manipulation info containing the <see cref="ILContext"/> intended for manipulation
@@ -13,6 +13,17 @@ namespace MonoDetour.DetourTypes;
 /// <param name="original">The original method.</param>
 public class ILManipulationInfo(ILContext il, MethodBase original)
 {
+    /// <summary>
+    /// An IL manipulator method accepting a <see cref="ILManipulationInfo"/>.
+    /// </summary>
+    /// <param name="info">
+    /// A manipulation info containing the <see cref="ILContext"/> intended for manipulation
+    /// and an untouched <see cref="ILContext"/> useful for observing the untouched
+    /// state, including the original method as a <see cref="MethodBase"/>.
+    /// See <see cref="ILManipulationInfo"/> for more.
+    /// </param>
+    public delegate void Manipulator(ILManipulationInfo info);
+
     /// <summary>
     /// The original method.
     /// </summary>
