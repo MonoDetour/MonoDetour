@@ -567,8 +567,6 @@ public class ILWeaver(ILManipulationInfo il)
             // For anything other than finally, use a normal leave instruction.
             InsertBefore(cecilHandler.HandlerEnd, leave);
         }
-        // We retarget handler end again as it must be after leave instructions.
-        // handler.HandlerEnd = handler.HandlerEnd.Next;
 
         // Body.Method.RecalculateILOffsets();
         // Console.WriteLine("handler.TryStart:     " + handler.TryStart);
