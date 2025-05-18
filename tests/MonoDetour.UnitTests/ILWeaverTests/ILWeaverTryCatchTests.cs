@@ -21,11 +21,11 @@ public static partial class ILWeaverTryCatchTests
     {
         ILWeaver w = new(info);
 
-        w.HandlerCreate(ExceptionHandlerType.Catch, null, out var handler)
+        w.HandlerCreateCatch(null, out var handler)
             .HandlerSetTryStart(w.First, handler)
             .HandlerSetTryEnd(w.Last, handler)
             .InsertAfter(w.Last, w.CreateCall(PrintException))
-            .HandlerSetCatchEnd(w.Last, handler)
+            .HandlerSetHandlerEnd(w.Last, handler)
             .HandlerApply(handler)
             .InsertAfter(w.Last, w.Create(OpCodes.Ret));
     }
