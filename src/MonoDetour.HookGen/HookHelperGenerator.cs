@@ -963,9 +963,11 @@ namespace MonoDetour.HookGen
 
             if (member.Signature.IteratorStateMachine is not null)
             {
-                cb.WriteLine("public delegate void MoveNextPrefixSignature(object self);\n");
                 cb.WriteLine(
-                    "public delegate void MoveNextPostfixSignature(object self, ref bool continueEnumeration);\n"
+                    "public delegate void MoveNextPrefixSignature(global::System.Collections.IEnumerator self);\n"
+                );
+                cb.WriteLine(
+                    "public delegate void MoveNextPostfixSignature(global::System.Collections.IEnumerator self, ref bool continueEnumeration);\n"
                 );
             }
 

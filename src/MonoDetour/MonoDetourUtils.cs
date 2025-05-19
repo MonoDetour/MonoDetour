@@ -31,9 +31,9 @@ internal static class MonoDetourUtils
         }
 
         ParameterInfo? retField = null;
-        if (hook is MonoDetourHook<PostfixDetour>)
+        if (retTypeIdx is not null && hook is MonoDetourHook<PostfixDetour>)
         {
-            retField = manipParams.FirstOrDefault(x => x.Name == "returnValue");
+            retField = manipParams.LastOrDefault();
         }
 
         storedReturnValue = null;
@@ -76,14 +76,8 @@ internal static class MonoDetourUtils
         int retTypeIdx
     )
     {
-        var manipParams = hook.Manipulator.GetParameters();
-
-        ParameterInfo? retField = manipParams.FirstOrDefault(x => x.Name == "returnValue");
-        if (retField is not null)
-        {
-            // We push the possibly manipulated return value to stack here.
-            c.Emit(OpCodes.Ldloc, retTypeIdx);
-        }
+        // We push the possibly manipulated return value to stack here.
+        c.Emit(OpCodes.Ldloc, retTypeIdx);
     }
 
     public static bool TryGetCustomAttribute<T>(

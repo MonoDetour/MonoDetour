@@ -1,4 +1,4 @@
-using MonoDetour.Reflection;
+using MonoDetour.Reflection.Unspeakable;
 
 namespace MonoDetour.UnitTests.FunctionalityTests;
 
@@ -6,13 +6,13 @@ public class IEnumeratorReflectionTests
 {
     public int Number { get; set; } = 0;
 
-    static EnumeratorFieldGetter<IEnumeratorReflectionTests> getInstance = null!;
+    static FieldReference<IEnumeratorReflectionTests> instanceRef = null!;
 
     [Fact]
     void CanGetThisField()
     {
         var stateMachineTarget = ((Delegate)GetEnumerator).Method.GetStateMachineTarget()!;
-        stateMachineTarget.EnumeratorFastThisFieldGetter(ref getInstance);
+        stateMachineTarget.EnumeratorFastFieldReferenceThis(ref instanceRef);
 
         using var m = DefaultMonoDetourManager.New();
         m.Hook<PrefixDetour>(stateMachineTarget, Prefix);
@@ -24,7 +24,7 @@ public class IEnumeratorReflectionTests
 
     static void Prefix(object self)
     {
-        getInstance(self).Number++;
+        instanceRef(self).Number++;
     }
 
     public IEnumerator<int> GetEnumerator()
