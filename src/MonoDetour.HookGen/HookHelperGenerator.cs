@@ -961,59 +961,12 @@ namespace MonoDetour.HookGen
             }
             cb.WriteLine(");").DecreaseIndent().WriteLine();
 
-            bool returnTypeIsIEnumerator =
-                member.Signature.ReturnType.FqName == "global::System.Collections.IEnumerator"
-                || member.Signature.ReturnType.FqName.StartsWith(
-                    "global::System.Collections.Generic.IEnumerator<"
-                );
-
-            if (returnTypeIsIEnumerator)
+            if (member.Signature.IteratorStateMachine is not null)
             {
-                // TODO: Change how IEnumerator hooks work because inlining is a problem.
-
-                // cb.Write("public static ")
-                //     .Write(hookType)
-                //     .Write(" IEnumeratorDetour(global::System.Func<")
-                //     .Write(member.Signature.ReturnType.FqName)
-                //     .Write(", ")
-                //     .Write(member.Signature.ReturnType.FqName)
-                //     .WriteLine(
-                //         "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                //     )
-                //     .IncreaseIndent()
-                //     .WriteLine(
-                //         "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook<global::MonoDetour.DetourTypes.IEnumeratorDetour>(Target(), enumerator.Method);"
-                //     )
-                //     .DecreaseIndent()
-                //     .WriteLine();
-
-                // cb.Write("public static ")
-                //     .Write(hookType)
-                //     .Write(" IEnumeratorPrefix(global::System.Action<")
-                //     .Write(member.Signature.ReturnType.FqName)
-                //     .WriteLine(
-                //         "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                //     )
-                //     .IncreaseIndent()
-                //     .WriteLine(
-                //         "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook<global::MonoDetour.DetourTypes.IEnumeratorPrefixDetour>(Target(), enumerator.Method);"
-                //     )
-                //     .DecreaseIndent()
-                //     .WriteLine();
-
-                // cb.Write("public static ")
-                //     .Write(hookType)
-                //     .Write(" IEnumeratorPostfix(global::System.Action<")
-                //     .Write(member.Signature.ReturnType.FqName)
-                //     .WriteLine(
-                //         "> enumerator, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                //     )
-                //     .IncreaseIndent()
-                //     .WriteLine(
-                //         "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook<global::MonoDetour.DetourTypes.IEnumeratorPostfixDetour>(Target(), enumerator.Method);"
-                //     )
-                //     .DecreaseIndent()
-                //     .WriteLine();
+                cb.WriteLine("public delegate void MoveNextPrefixSignature(object self);\n");
+                cb.WriteLine(
+                    "public delegate void MoveNextPostfixSignature(object self, ref bool continueEnumeration);\n"
+                );
             }
 
             void PrintIEnumeratorWarning(string correspondingIEnumeratorHook)
@@ -1034,55 +987,91 @@ namespace MonoDetour.HookGen
                     .WriteLine("#endif");
             }
 
-            if (returnTypeIsIEnumerator)
-                PrintIEnumeratorWarning("IEnumeratorPrefix");
+            WriteHooks(forMoveNext: false);
 
-            cb.Write("public static ")
-                .Write(hookType)
-                .Write("<PrefixDetour>")
-                .WriteLine(
-                    " Prefix(PrefixSignature hook, global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                )
-                .IncreaseIndent()
-                .WriteLine(
-                    "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook<PrefixDetour>(Target(), hook.Method, config, applyByDefault);"
-                )
-                .DecreaseIndent()
-                .WriteLine();
+            if (member.Signature.IteratorStateMachine is not null)
+            {
+                WriteHooks(forMoveNext: true);
+            }
 
-            if (returnTypeIsIEnumerator)
-                PrintIEnumeratorWarning("IEnumeratorPostfix");
+            void WriteHooks(bool forMoveNext)
+            {
+                bool warnIEnumerator =
+                    !forMoveNext && member.Signature.IteratorStateMachine is not null;
 
-            cb.Write("public static ")
-                .Write(hookType)
-                .Write("<PostfixDetour>")
-                .WriteLine(
-                    " Postfix(PostfixSignature hook, global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                )
-                .IncreaseIndent()
-                .WriteLine(
-                    "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).Hook<PostfixDetour>(Target(), hook.Method, config, applyByDefault);"
-                )
-                .DecreaseIndent()
-                .WriteLine();
+                if (warnIEnumerator)
+                    PrintIEnumeratorWarning("MoveNextPrefix");
 
-            if (returnTypeIsIEnumerator)
-                PrintIEnumeratorWarning(
-                    "the ILHook on the corresponding state machine class' MoveNext() method"
-                );
+                cb.Write("public static ").Write(hookType).Write("<PrefixDetour> ");
+                if (forMoveNext)
+                    cb.Write("MoveNextPrefix(MoveNextPrefixSignature hook, ");
+                else
+                    cb.Write("Prefix(PrefixSignature hook, ");
+                cb.WriteLine(
+                        "global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                    )
+                    .IncreaseIndent()
+                    .WriteLine(
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance)"
+                    )
+                    .IncreaseIndent();
+                if (forMoveNext)
+                    cb.Write(".Hook<PrefixDetour>(StateMachineTarget()");
+                else
+                    cb.Write(".Hook<PrefixDetour>(Target()");
+                cb.WriteLine(", hook.Method, config, applyByDefault);")
+                    .DecreaseIndent()
+                    .DecreaseIndent()
+                    .WriteLine();
 
-            cb.Write("public static ")
-                .Write(hookType)
-                .Write("<ILHookDetour>")
-                .WriteLine(
-                    " ILHook(global::MonoDetour.Cil.ILManipulationInfo.Manipulator manipulator, global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                )
-                .IncreaseIndent()
-                .WriteLine(
-                    "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).ILHook(Target(), manipulator, config, applyByDefault);"
-                )
-                .DecreaseIndent()
-                .WriteLine();
+                if (warnIEnumerator)
+                    PrintIEnumeratorWarning("MoveNextPostfix");
+
+                cb.Write("public static ").Write(hookType).Write("<PostfixDetour> ");
+                if (forMoveNext)
+                    cb.Write("MoveNextPostfix(MoveNextPostfixSignature hook, ");
+                else
+                    cb.Write("Postfix(PostfixSignature hook, ");
+                cb.WriteLine(
+                        "global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                    )
+                    .IncreaseIndent()
+                    .WriteLine(
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance)"
+                    )
+                    .IncreaseIndent();
+                if (forMoveNext)
+                    cb.Write(".Hook<PostfixDetour>(StateMachineTarget()");
+                else
+                    cb.Write(".Hook<PostfixDetour>(Target()");
+                cb.WriteLine(", hook.Method, config, applyByDefault);")
+                    .DecreaseIndent()
+                    .DecreaseIndent()
+                    .WriteLine();
+
+                if (warnIEnumerator)
+                    PrintIEnumeratorWarning("ILHookMoveNext");
+
+                cb.Write("public static ").Write(hookType).Write("<ILHookDetour> ILHook");
+                if (forMoveNext)
+                    cb.Write("MoveNext");
+                cb.WriteLine(
+                        "(global::MonoDetour.Cil.ILManipulationInfo.Manipulator manipulator, global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                    )
+                    .IncreaseIndent()
+                    .WriteLine(
+                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance)"
+                    )
+                    .IncreaseIndent();
+                if (forMoveNext)
+                    cb.Write(".ILHook(StateMachineTarget()");
+                else
+                    cb.Write(".ILHook(Target()");
+                cb.WriteLine(", manipulator, config, applyByDefault);")
+                    .DecreaseIndent()
+                    .DecreaseIndent()
+                    .WriteLine();
+            }
 
             cb.Write("public static ")
                 .Write("global::System.Reflection.MethodBase")
@@ -1159,6 +1148,20 @@ namespace MonoDetour.HookGen
             EmitThrowMissing(type, member, cb, ctx);
             cb.WriteLine($"return method{(ctx.Bcl.DoesNotReturnAttribute ? "" : "!")};")
                 .CloseBlock();
+
+            if (member.Signature.IteratorStateMachine is not null)
+            {
+                cb.WriteLine()
+                    .Write("public static ")
+                    .Write("global::System.Reflection.MethodInfo")
+                    .WriteLine(" StateMachineTarget() =>")
+                    .IncreaseIndent()
+                    .Write(
+                        "global::MonoMod.Utils.Extensions.GetStateMachineTarget((global::System.Reflection.MethodInfo)Target())!;"
+                    )
+                    .DecreaseIndent()
+                    .WriteLine();
+            }
 
             cb.CloseBlock();
         }
@@ -1563,8 +1566,11 @@ namespace MonoDetour.HookGen
         private sealed record MethodSignature(
             TypeRef? ThisType,
             EquatableArray<TypeRef> ParameterTypes,
-            TypeRef ReturnType
+            TypeRef ReturnType,
+            IteratorStateMachineTarget? IteratorStateMachine = null
         );
+
+        private sealed record IteratorStateMachineTarget(TypeRef TargetType);
 
         private sealed record GeneratableMemberModel(
             string Name,
@@ -1809,7 +1815,38 @@ namespace MonoDetour.HookGen
                 );
             }
 
-            var sig = new MethodSignature(thisType, paramTypeBuilder.ToImmutable(), returnType);
+            IteratorStateMachineTarget? iteratorStateMachine = null;
+
+            foreach (var attribute in method.GetAttributes())
+            {
+                var attributeClass = attribute.AttributeClass;
+                if (attributeClass is null)
+                {
+                    continue;
+                }
+
+                if (
+                    !attributeClass
+                        .ToDisplayString()
+                        .Equals("System.Runtime.CompilerServices.IteratorStateMachineAttribute")
+                )
+                {
+                    continue;
+                }
+
+                if (attribute.ConstructorArguments[0].Value is not ITypeSymbol targetType)
+                {
+                    continue;
+                }
+                iteratorStateMachine = new(GenHelpers.CreateRef(targetType));
+            }
+
+            var sig = new MethodSignature(
+                thisType,
+                paramTypeBuilder.ToImmutable(),
+                returnType,
+                iteratorStateMachine
+            );
 
             return new(
                 method.Name,

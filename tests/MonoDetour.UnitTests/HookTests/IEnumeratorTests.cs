@@ -1,111 +1,114 @@
 // TODO: Change how IEnumerator hooks work because inlining is a problem.
 
-// namespace MonoDetour.UnitTests.HookTests;
+using System.Collections;
+using System.Reflection;
 
-// public static partial class IEnumeratorTests
-// {
-//     private static readonly Queue<int> order1 = [];
-//     private static readonly Queue<int> order2 = [];
+namespace MonoDetour.UnitTests.HookTests;
 
-//     [Fact]
-//     public static void CanHookIEnumerator()
-//     {
-//         order1.Clear();
+public static partial class IEnumeratorTests
+{
+    private static readonly Queue<int> order1 = [];
+    private static readonly Queue<int> order2 = [];
 
-//         var m = DefaultMonoDetourManager.New();
-//         EnumerateRange.IEnumeratorDetour(Hook_IEnumeratorDetour, m);
+    [Fact]
+    public static void CanHookIEnumerator()
+    {
+        order1.Clear();
 
-//         var lib = new LibraryMethods();
+        var m = DefaultMonoDetourManager.New();
+        // EnumerateRange.Postfix(Hook_IEnumeratorDetour, m);
 
-//         var enumerator = lib.EnumerateRange(4);
-//         while (enumerator.MoveNext())
-//             continue;
+        var lib = new LibraryMethods();
 
-//         Assert.Equal([1, 2, 3, 4], order1);
-//         order1.Clear();
+        var enumerator = lib.EnumerateRange(4);
+        while (enumerator.MoveNext())
+            continue;
 
-//         // Now do it with more hooks.
+        Assert.Equal([1, 2, 3, 4], order1);
+        order1.Clear();
 
-//         EnumerateRange.IEnumeratorPrefix(Hook_IEnumeratorPrefix, m);
-//         EnumerateRange.IEnumeratorPostfix(Hook_IEnumeratorPostfix, m);
+        // Now do it with more hooks.
 
-//         enumerator = lib.EnumerateRange(4);
-//         while (enumerator.MoveNext())
-//             continue;
+        // EnumerateRange.IEnumeratorPrefix(Hook_IEnumeratorPrefix, m);
+        // EnumerateRange.IEnumeratorPostfix(Hook_IEnumeratorPostfix, m);
 
-//         m.DisposeHooks();
-//         Assert.Equal([0, 1, 2, 3, 4, 4], order1);
-//     }
+        enumerator = lib.EnumerateRange(4);
+        while (enumerator.MoveNext())
+            continue;
 
-//     [Fact]
-//     public static void CanHookIEnumeratorTWhereTisInt()
-//     {
-//         order2.Clear();
+        m.DisposeHooks();
+        Assert.Equal([0, 1, 2, 3, 4, 4], order1);
+    }
 
-//         var m = DefaultMonoDetourManager.New();
-//         EnumerateIntRange.IEnumeratorDetour(Hook_IEnumeratorIntDetour, m);
+    [Fact]
+    public static void CanHookIEnumeratorTWhereTisInt()
+    {
+        order2.Clear();
 
-//         var lib = new LibraryMethods();
+        var m = DefaultMonoDetourManager.New();
+        // EnumerateIntRange.IEnumeratorDetour(Hook_IEnumeratorIntDetour, m);
 
-//         var enumerator = lib.EnumerateIntRange(4);
-//         while (enumerator.MoveNext())
-//             continue;
+        var lib = new LibraryMethods();
 
-//         Assert.Equal([1, 2, 3, 4], order2);
-//         order2.Clear();
+        var enumerator = lib.EnumerateIntRange(4);
+        while (enumerator.MoveNext())
+            continue;
 
-//         // Now do it with more hooks.
+        Assert.Equal([1, 2, 3, 4], order2);
+        order2.Clear();
 
-//         EnumerateIntRange.IEnumeratorPrefix(Hook_IEnumeratorIntPrefix, m);
-//         EnumerateIntRange.IEnumeratorPostfix(Hook_IEnumeratorIntPostfix, m);
+        // Now do it with more hooks.
 
-//         enumerator = lib.EnumerateIntRange(4);
-//         while (enumerator.MoveNext())
-//             continue;
+        // EnumerateIntRange.IEnumeratorPrefix(Hook_IEnumeratorIntPrefix, m);
+        // EnumerateIntRange.IEnumeratorPostfix(Hook_IEnumeratorIntPostfix, m);
 
-//         m.DisposeHooks();
-//         Assert.Equal([0, 1, 2, 3, 4, 4], order2);
-//     }
+        enumerator = lib.EnumerateIntRange(4);
+        while (enumerator.MoveNext())
+            continue;
 
-//     private static IEnumerator Hook_IEnumeratorDetour(IEnumerator enumerator)
-//     {
-//         while (enumerator.MoveNext())
-//         {
-//             order1.Enqueue((int)enumerator.Current);
-//             yield return enumerator.Current;
-//         }
-//     }
+        m.DisposeHooks();
+        Assert.Equal([0, 1, 2, 3, 4, 4], order2);
+    }
 
-//     private static void Hook_IEnumeratorPrefix(IEnumerator enumerator)
-//     {
-//         // Remember, enumerator.Current will be null here since we are in a prefix!
-//         order1.Enqueue(0);
-//     }
+    private static IEnumerator Hook_IEnumeratorDetour(IEnumerator enumerator)
+    {
+        while (enumerator.MoveNext())
+        {
+            order1.Enqueue((int)enumerator.Current);
+            yield return enumerator.Current;
+        }
+    }
 
-//     private static void Hook_IEnumeratorPostfix(IEnumerator enumerator)
-//     {
-//         var current = (int)enumerator.Current;
-//         order1.Enqueue(current);
-//     }
+    private static void Hook_IEnumeratorPrefix(IEnumerator enumerator)
+    {
+        // Remember, enumerator.Current will be null here since we are in a prefix!
+        order1.Enqueue(0);
+    }
 
-//     private static IEnumerator<int> Hook_IEnumeratorIntDetour(IEnumerator<int> enumerator)
-//     {
-//         while (enumerator.MoveNext())
-//         {
-//             order2.Enqueue(enumerator.Current);
-//             yield return enumerator.Current;
-//         }
-//     }
+    private static void Hook_IEnumeratorPostfix(IEnumerator enumerator)
+    {
+        var current = (int)enumerator.Current;
+        order1.Enqueue(current);
+    }
 
-//     private static void Hook_IEnumeratorIntPrefix(IEnumerator<int> enumerator)
-//     {
-//         // Remember, enumerator.Current will be null here since we are in a prefix!
-//         order2.Enqueue(0);
-//     }
+    private static IEnumerator<int> Hook_IEnumeratorIntDetour(IEnumerator<int> enumerator)
+    {
+        while (enumerator.MoveNext())
+        {
+            order2.Enqueue(enumerator.Current);
+            yield return enumerator.Current;
+        }
+    }
 
-//     private static void Hook_IEnumeratorIntPostfix(IEnumerator<int> enumerator)
-//     {
-//         var current = enumerator.Current;
-//         order2.Enqueue(current);
-//     }
-// }
+    private static void Hook_IEnumeratorIntPrefix(IEnumerator<int> enumerator)
+    {
+        // Remember, enumerator.Current will be null here since we are in a prefix!
+        order2.Enqueue(0);
+    }
+
+    private static void Hook_IEnumeratorIntPostfix(IEnumerator<int> enumerator)
+    {
+        var current = enumerator.Current;
+        order2.Enqueue(current);
+    }
+}
