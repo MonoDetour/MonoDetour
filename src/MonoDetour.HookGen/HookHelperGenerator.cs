@@ -75,7 +75,7 @@ namespace MonoDetour.HookGen
             Dictionary<TypeContext, ImmutableArrayBuilder<AttributeModel>>
         > typeIdentBuilderDictPool = new(() => new());
         private static readonly ObjectPool<
-            Dictionary<(DetourKind, bool, bool), InProgressTypeModel>
+            Dictionary<(DetourKind, bool, bool, bool), InProgressTypeModel>
         > inProgressTypeModelDictPool = new(() => new());
 
         private static readonly ObjectPool<HashSet<string>> stringHashSetPool = new(() => new());
@@ -275,7 +275,8 @@ namespace MonoDetour.HookGen
                             var tuple = (
                                 attr.Options.Kind,
                                 attr.Options.IncludeNested,
-                                attr.Options.DistinguishOverloads
+                                attr.Options.DistinguishOverloads,
+                                attr.Options.GenerateControlFlowVariants
                             );
                             if (!dict.TryGetValue(tuple, out var inProgress))
                             {
@@ -360,7 +361,8 @@ namespace MonoDetour.HookGen
                                         kvp.Key.Item3,
                                         kvp.Value.MemberNames,
                                         prefixes,
-                                        suffixes
+                                        suffixes,
+                                        kvp.Key.Item4
                                     )
                                 )
                             );
@@ -945,6 +947,16 @@ namespace MonoDetour.HookGen
             WriteDelegateTypes();
             cb.WriteLine(");").DecreaseIndent();
 
+            if (member.GenerateControlFlowVariants)
+            {
+                cb.WriteLine(
+                        "public delegate global::MonoDetour.DetourTypes.ReturnFlow ControlFlowPrefixSignature("
+                    )
+                    .IncreaseIndent();
+                WriteDelegateTypes();
+                cb.WriteLine(");").DecreaseIndent();
+            }
+
             cb.Write("public delegate void PostfixSignature(").IncreaseIndent();
             WriteDelegateTypes();
             if (member.Signature.ReturnType.FqName != "void")
@@ -964,10 +976,16 @@ namespace MonoDetour.HookGen
             if (member.Signature.IteratorStateMachine is not null)
             {
                 cb.WriteLine(
-                    "public delegate void MoveNextPrefixSignature(global::System.Collections.IEnumerator self);\n"
+                    "public delegate void PrefixMoveNextSignature(global::System.Collections.IEnumerator self);\n"
                 );
+                if (member.GenerateControlFlowVariants)
+                {
+                    cb.WriteLine(
+                        "public delegate global::MonoDetour.DetourTypes.ReturnFlow ControlFlowPrefixMoveNextSignature(global::System.Collections.IEnumerator self);\n"
+                    );
+                }
                 cb.WriteLine(
-                    "public delegate void MoveNextPostfixSignature(global::System.Collections.IEnumerator self, ref bool continueEnumeration);\n"
+                    "public delegate void PostfixMoveNextSignature(global::System.Collections.IEnumerator self, ref bool continueEnumeration);\n"
                 );
             }
 
@@ -1006,7 +1024,7 @@ namespace MonoDetour.HookGen
 
                 cb.Write("public static ").Write(hookType).Write("<PrefixDetour> ");
                 if (forMoveNext)
-                    cb.Write("MoveNextPrefix(MoveNextPrefixSignature hook, ");
+                    cb.Write("PrefixMoveNext(PrefixMoveNextSignature hook, ");
                 else
                     cb.Write("Prefix(PrefixSignature hook, ");
                 cb.WriteLine(
@@ -1026,12 +1044,39 @@ namespace MonoDetour.HookGen
                     .DecreaseIndent()
                     .WriteLine();
 
+                if (member.GenerateControlFlowVariants)
+                {
+                    cb.Write("public static ").Write(hookType).Write("<PrefixDetour> ");
+                    if (forMoveNext)
+                        cb.Write(
+                            "ControlFlowPrefixMoveNext(ControlFlowPrefixMoveNextSignature hook, "
+                        );
+                    else
+                        cb.Write("ControlFlowPrefix(ControlFlowPrefixSignature hook, ");
+                    cb.WriteLine(
+                            "global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
+                        )
+                        .IncreaseIndent()
+                        .WriteLine(
+                            "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance)"
+                        )
+                        .IncreaseIndent();
+                    if (forMoveNext)
+                        cb.Write(".Hook<PrefixDetour>(StateMachineTarget()");
+                    else
+                        cb.Write(".Hook<PrefixDetour>(Target()");
+                    cb.WriteLine(", hook.Method, config, applyByDefault);")
+                        .DecreaseIndent()
+                        .DecreaseIndent()
+                        .WriteLine();
+                }
+
                 if (warnIEnumerator)
                     PrintIEnumeratorWarning("MoveNextPostfix");
 
                 cb.Write("public static ").Write(hookType).Write("<PostfixDetour> ");
                 if (forMoveNext)
-                    cb.Write("MoveNextPostfix(MoveNextPostfixSignature hook, ");
+                    cb.Write("PostfixMoveNext(PostfixMoveNextSignature hook, ");
                 else
                     cb.Write("Postfix(PostfixSignature hook, ");
                 cb.WriteLine(
@@ -1376,7 +1421,8 @@ namespace MonoDetour.HookGen
             bool DistinguishOverloads,
             HashSet<string>? ExplicitMembers,
             EquatableArray<string> MemberPrefixes,
-            EquatableArray<string> MemberSuffixes
+            EquatableArray<string> MemberSuffixes,
+            bool GenerateControlFlowVariants
         )
         {
             public bool Equals(AttributeOptions other)
@@ -1384,6 +1430,7 @@ namespace MonoDetour.HookGen
                 return Kind == other.Kind
                     && IncludeNested == other.IncludeNested
                     && DistinguishOverloads == other.DistinguishOverloads
+                    && GenerateControlFlowVariants == other.GenerateControlFlowVariants
                     && MemberPrefixes.Equals(other.MemberPrefixes)
                     && MemberSuffixes.Equals(other.MemberSuffixes)
                     && (
@@ -1403,6 +1450,7 @@ namespace MonoDetour.HookGen
                 hc.Add(Kind);
                 hc.Add(IncludeNested);
                 hc.Add(DistinguishOverloads);
+                hc.Add(GenerateControlFlowVariants);
                 hc.Add(MemberPrefixes);
                 hc.Add(MemberSuffixes);
                 if (ExplicitMembers is not null)
@@ -1478,6 +1526,7 @@ namespace MonoDetour.HookGen
 
             var includeNested = true;
             var distinguishOverloads = false;
+            bool generateControlFlowVariants = false;
             var kind = DetourKind.Hook;
             HashSet<string>? explicitMembers = null;
             var memberPrefixes = ImmutableArray<string>.Empty;
@@ -1526,6 +1575,10 @@ namespace MonoDetour.HookGen
                             .Where(s => s is not null)
                             .ToImmutableArray()!;
                         break;
+                    case "GenerateControlFlowVariants"
+                        when named.Value is { Value: bool isGenerateControlFlowVariants }:
+                        generateControlFlowVariants = isGenerateControlFlowVariants;
+                        break;
 
                     default:
                         return null;
@@ -1548,7 +1601,8 @@ namespace MonoDetour.HookGen
                     distinguishOverloads,
                     explicitMembers,
                     memberPrefixes,
-                    memberSuffixes
+                    memberSuffixes,
+                    generateControlFlowVariants
                 )
             );
         }
@@ -1581,7 +1635,8 @@ namespace MonoDetour.HookGen
             bool HasOverloads,
             bool IsCtor,
             Accessibility Accessibility,
-            DetourKind Kind
+            DetourKind Kind,
+            bool GenerateControlFlowVariants
         );
 
         // I'm OK putting this in the pipeline, because the IAssemblySymbol here will always represent a metadata reference.
@@ -1857,7 +1912,8 @@ namespace MonoDetour.HookGen
                 hasOverloads,
                 method.MethodKind is MethodKind.Constructor or MethodKind.StaticConstructor,
                 method.DeclaredAccessibility,
-                options.Kind
+                options.Kind,
+                options.GenerateControlFlowVariants
             );
         }
 

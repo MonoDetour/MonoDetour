@@ -21,8 +21,8 @@ public static partial class IEnumeratorTests
         order.Clear();
 
         using var m = DefaultMonoDetourManager.New();
-        EnumerateRange.MoveNextPrefix(Hook_MoveNextPrefix, manager: m);
-        EnumerateRange.MoveNextPostfix(Hook_MoveNextPostfix, manager: m);
+        EnumerateRange.PrefixMoveNext(Hook_MoveNextPrefix, manager: m);
+        EnumerateRange.PostfixMoveNext(Hook_MoveNextPostfix, manager: m);
 
         var lib = new LibraryMethods();
 

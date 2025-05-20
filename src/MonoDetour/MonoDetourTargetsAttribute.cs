@@ -61,4 +61,10 @@ public class MonoDetourTargetsAttribute(Type? targetType = null) : Attribute
     /// suffixes will be included.
     /// </summary>
     public string[]? MemberNameSuffixes { get; set; }
+
+    /// <summary>
+    /// Whether or not MonoDetour will generate variants of the hooks which can affect control flow of
+    /// the target methods. Defaults to <see langword="false"/>.
+    /// </summary>
+    public bool GenerateControlFlowVariants { get; set; }
 }

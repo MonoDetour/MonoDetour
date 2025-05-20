@@ -24,11 +24,17 @@ static class GeneralDetour
             );
         }
 
+        // Holy hell even I don't understand how this works at this point,
+        // I need to rewrite this logic!! One method that does so much with
+        // a lot of branching perhaps isn't the most readable thing ever.
+
+        bool modifiesControlFlow =
+            hook.Manipulator is MethodInfo mi && mi.ReturnType == typeof(ReturnFlow);
+
         ILCursor c = new(il);
 
-        if (hook is MonoDetourHook<PostfixDetour>)
+        if (hook is MonoDetourHook<PostfixDetour> || modifiesControlFlow)
         {
-            c.Index -= 1;
             lock (_lock)
             {
                 bool found = firstRedirectForMethod.TryGetValue(hook.Target, out var target);
@@ -40,10 +46,13 @@ static class GeneralDetour
                     firstRedirectForMethod.Add(hook.Target, redirectedRet);
                 }
             }
-
-            // Move redirectedRet label to next emitted instruction
-            // as we want it to point to our postfix hook.
-            c.MoveAfterLabels();
+            if (hook is MonoDetourHook<PostfixDetour>)
+            {
+                c.Index -= 1;
+                // Move redirectedRet label to next emitted instruction
+                // as we want it to point to our postfix hook.
+                c.MoveAfterLabels();
+            }
         }
 
         ILLabel firstParamForHook = c.MarkLabel();
@@ -51,6 +60,13 @@ static class GeneralDetour
         int? retLocIdx = c.EmitParams(hook, out var storedReturnValue);
 
         c.Emit(OpCodes.Call, hook.Manipulator);
+
+        VariableDefinition? controlFlow = null;
+        if (modifiesControlFlow)
+        {
+            controlFlow = c.Context.DeclareVariable(typeof(int));
+            c.Emit(OpCodes.Stloc, controlFlow);
+        }
 
         if (storedReturnValue is not null)
         {
@@ -66,13 +82,59 @@ static class GeneralDetour
         c.InteropEmitReference(hook);
         c.EmitDelegate(DisposeBadHooks);
         c.Emit(OpCodes.Leave, outsideThisHook);
-        Instruction leaveCallInCatch = c.Previous;
 
         if (hook is MonoDetourHook<PostfixDetour> && retLocIdx is not null)
         {
             // This must be outside of the catch and we must branch to it.
             c.ApplyReturnValue(hook, (int)retLocIdx);
             outsideThisHook.InteropSetTarget(c.Previous);
+        }
+        else if (controlFlow is not null)
+        {
+            c.MarkLabel(outsideThisHook);
+            c.Emit(OpCodes.Ldloc, controlFlow);
+            c.Emit(OpCodes.Switch, new object());
+            var switchInstruction = c.Previous;
+
+            ILLabel doNotReturn = il.DefineLabel(c.Next);
+
+            ILLabel softReturn = c.MarkLabel();
+            if (retLocIdx is not null)
+            {
+                c.Emit(OpCodes.Ldloc, retLocIdx);
+            }
+            if (
+                firstRedirectForMethod.TryGetValue(hook.Target, out var target)
+                && c.Body.Instructions.IndexOf(target.InteropGetTarget()) != -1
+            )
+            {
+                c.Emit(OpCodes.Br, target.InteropGetTarget()!.Next ?? target.InteropGetTarget()!);
+            }
+            else
+            {
+                c.Emit(OpCodes.Ret);
+                c.Emit(OpCodes.Nop);
+            }
+
+            ILLabel hardReturn = c.MarkLabel();
+            if (retLocIdx is not null)
+            {
+                c.Emit(OpCodes.Ldloc, retLocIdx);
+            }
+            c.Emit(OpCodes.Ret);
+            c.Emit(OpCodes.Ret);
+            c.Emit(OpCodes.Nop);
+
+            switchInstruction.Operand = new Instruction[]
+            {
+                doNotReturn.InteropGetTarget()!,
+                softReturn.InteropGetTarget()!,
+                hardReturn.InteropGetTarget()!,
+            };
+            // Bug!! Can't call this if switch labels is ILLabel[] instead of Instruction[]
+            // MonoMod would call this after those are converted, but we have ILLabel[] here.
+            // il.Body.Method.RecalculateILOffsets();
+            // Console.WriteLine(il);
         }
 
         il.Body.ExceptionHandlers.Add(
@@ -84,7 +146,7 @@ static class GeneralDetour
                 TryEnd = leaveCallInTry.Next,
 
                 HandlerStart = leaveCallInTry.Next,
-                HandlerEnd = leaveCallInCatch.Next,
+                HandlerEnd = outsideThisHook.InteropGetTarget(),
             }
         );
 
