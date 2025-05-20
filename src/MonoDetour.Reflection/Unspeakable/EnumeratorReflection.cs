@@ -51,7 +51,7 @@ public static class EnumeratorReflection
     }
 
     /// <summary>
-    /// Builds and sets a fast reference getter method for the <c>&lt;&gt;2__current</c>
+    /// Builds and sets a fast field reference getter method for the <c>&lt;&gt;2__current</c>
     /// field on an IEnumerator to <paramref name="enumeratorFieldReference"/>.
     /// </summary>
     /// <param name="enumeratorFieldReference">The field to set.</param>
@@ -64,7 +64,7 @@ public static class EnumeratorReflection
     ) => enumeratorFieldReference = methodInfo.EnumeratorFastFieldReferenceCurrent<T>();
 
     /// <summary>
-    /// Builds and returns a fast reference getter method for the <c>&lt;&gt;2__current</c>
+    /// Builds and returns a fast field reference getter method for the <c>&lt;&gt;2__current</c>
     /// field on an IEnumerator.
     /// </summary>
     /// <typeparam name="T">The field type.</typeparam>
