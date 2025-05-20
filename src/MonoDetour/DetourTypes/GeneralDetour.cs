@@ -136,19 +136,30 @@ static class GeneralDetour
             // il.Body.Method.RecalculateILOffsets();
             // Console.WriteLine(il);
         }
+        var handler = new ExceptionHandler(ExceptionHandlerType.Catch)
+        {
+            CatchType = il.Import(typeof(object)),
 
-        il.Body.ExceptionHandlers.Add(
-            new ExceptionHandler(ExceptionHandlerType.Catch)
-            {
-                CatchType = il.Import(typeof(Exception)),
+            TryStart = firstParamForHook.InteropGetTarget(),
+            TryEnd = leaveCallInTry.Next,
 
-                TryStart = firstParamForHook.InteropGetTarget(),
-                TryEnd = leaveCallInTry.Next,
+            HandlerStart = leaveCallInTry.Next,
+            HandlerEnd = outsideThisHook.InteropGetTarget(),
+        };
 
-                HandlerStart = leaveCallInTry.Next,
-                HandlerEnd = outsideThisHook.InteropGetTarget(),
-            }
-        );
+        il.Body.ExceptionHandlers.Add(handler);
+
+        // if (hook.Manipulator.Name == "ControlFlowPrefixSkipOriginal")
+        // {
+        //     c.Method.RecalculateILOffsets();
+        //     Console.WriteLine("handler.TryStart:     " + handler.TryStart);
+        //     Console.WriteLine("handler.TryEnd:       " + handler.TryEnd);
+        //     Console.WriteLine("handler.HandlerStart: " + handler.HandlerStart);
+        //     Console.WriteLine("handler.HandlerEnd:   " + handler.HandlerEnd);
+        //     Console.WriteLine("handler.CatchType:   " + handler.CatchType.ToString());
+        //     Console.WriteLine("handler.HandlerType:   " + handler.HandlerType.ToString());
+        //     Console.WriteLine($"Manipulated by {hook.Manipulator.Name}: {il}");
+        // }
 
         MonoDetourLogger.Log(
             MonoDetourLogger.LogChannel.IL,
@@ -160,7 +171,7 @@ static class GeneralDetour
         );
     }
 
-    static void DisposeBadHooks(Exception ex, IReadOnlyMonoDetourHook hook)
+    internal static void DisposeBadHooks(Exception ex, IReadOnlyMonoDetourHook hook)
     {
         MethodBase manipulator = hook.Manipulator;
         MethodBase target = hook.Target;

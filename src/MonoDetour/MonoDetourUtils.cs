@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoDetour.Cil;
 using MonoDetour.DetourTypes;
 using MonoMod.Cil;
 
@@ -11,6 +12,52 @@ namespace MonoDetour;
 
 internal static class MonoDetourUtils
 {
+    public static bool ModifiesControlFlow(this IReadOnlyMonoDetourHook hook) =>
+        hook.Manipulator is MethodInfo mi && mi.ReturnType == typeof(ReturnFlow);
+
+    public static void EmitParamsAndReturnValueBeforeCurrent(
+        this ILWeaver w,
+        VariableDefinition returnValue,
+        IReadOnlyMonoDetourHook hook,
+        bool grabReturnValueFirst = true
+    )
+    {
+        Helpers.ThrowIfNull(returnValue);
+
+        if (grabReturnValueFirst)
+        {
+            // Store the original return value
+            // for use after emitting params.
+            w.InsertBeforeCurrent(w.Create(OpCodes.Stloc, returnValue));
+        }
+
+        w.EmitParamsBeforeCurrent(hook);
+
+        // Push return value address to the stack
+        // so it can be manipulated by a hook.
+        w.InsertBeforeCurrent(w.Create(OpCodes.Ldloca, returnValue));
+    }
+
+    public static void EmitParamsBeforeCurrent(this ILWeaver w, IReadOnlyMonoDetourHook hook)
+    {
+        bool isStatic = hook.Target.IsStatic;
+
+        foreach (var origParam in w.Method.Parameters)
+        {
+            bool isThis = !isStatic && origParam.Index == 0;
+
+            // 'this', and reference types must not be passed by reference.
+            if (isThis || origParam.ParameterType.IsByReference)
+            {
+                w.InsertBeforeCurrent(w.Create(OpCodes.Ldarg, origParam.Index));
+            }
+            else
+            {
+                w.InsertBeforeCurrent(w.Create(OpCodes.Ldarga, origParam.Index));
+            }
+        }
+    }
+
     public static int? EmitParams(
         this ILCursor c,
         IReadOnlyMonoDetourHook hook,

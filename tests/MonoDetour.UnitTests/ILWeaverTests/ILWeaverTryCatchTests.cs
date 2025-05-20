@@ -43,7 +43,7 @@ public static partial class ILWeaverTryCatchTests
 
     static void PrintException(Exception exception)
     {
-        Helpers.ThrowIfArgumentNull(exception);
+        MonoMod.Utils.Helpers.ThrowIfArgumentNull(exception);
         caught = true;
     }
 

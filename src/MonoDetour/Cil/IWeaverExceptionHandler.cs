@@ -1,5 +1,6 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoMod.Cil;
 
 namespace MonoDetour.Cil;
 
@@ -13,24 +14,24 @@ namespace MonoDetour.Cil;
 public interface IWeaverExceptionHandler
 {
     /// <summary>
-    /// Inclusive start instruction for Try block.
+    /// Inclusive start ILLabel for Try block.
     /// </summary>
-    public Instruction? TryStart { get; set; }
+    public ILLabel? TryStart { get; set; }
 
     /// <summary>
-    /// Inclusive try end instruction for Try block.
+    /// Inclusive try end ILLabel for Try block.
     /// </summary>
-    public Instruction? TryEnd { get; set; }
+    public ILLabel? TryEnd { get; set; }
 
     /// <summary>
-    /// Inclusive catch start instruction for handler block.
+    /// Inclusive catch start ILLabel for handler block.
     /// </summary>
-    public Instruction? HandlerStart { get; set; }
+    public ILLabel? HandlerStart { get; set; }
 
     /// <summary>
-    /// Inclusive catch end instruction for handler block.
+    /// Inclusive catch end ILLabel for handler block.
     /// </summary>
-    public Instruction? HandlerEnd { get; set; }
+    public ILLabel? HandlerEnd { get; set; }
 }
 
 /// <summary>
@@ -46,20 +47,20 @@ public class WeaverExceptionCatchHandler(TypeReference catchType) : IWeaverExcep
     public TypeReference CatchType { get; } = catchType;
 
     /// <inheritdoc/>
-    public Instruction? TryStart { get; set; }
+    public ILLabel? TryStart { get; set; }
 
     /// <inheritdoc/>
-    public Instruction? TryEnd { get; set; }
+    public ILLabel? TryEnd { get; set; }
 
     /// <summary>
-    /// Inclusive catch start instruction for Catch block.
+    /// Inclusive catch start ILLabel for Catch block.
     /// </summary>
-    public Instruction? HandlerStart { get; set; }
+    public ILLabel? HandlerStart { get; set; }
 
     /// <summary>
-    /// Inclusive catch end instruction for Catch block.
+    /// Inclusive catch end ILLabel for Catch block.
     /// </summary>
-    public Instruction? HandlerEnd { get; set; }
+    public ILLabel? HandlerEnd { get; set; }
 }
 
 /// <summary>
@@ -72,7 +73,7 @@ public sealed class WeaverExceptionFilterHandler(TypeReference catchType)
     /// <summary>
     /// Inclusive filter start instruction for a catch block with a filter.
     /// </summary>
-    public Instruction? FilterStart { get; set; }
+    public ILLabel? FilterStart { get; set; }
 }
 
 /// <summary>
@@ -82,20 +83,20 @@ public sealed class WeaverExceptionFilterHandler(TypeReference catchType)
 public sealed class WeaverExceptionFinallyHandler : IWeaverExceptionHandler
 {
     /// <inheritdoc/>
-    public Instruction? TryStart { get; set; }
+    public ILLabel? TryStart { get; set; }
 
     /// <inheritdoc/>
-    public Instruction? TryEnd { get; set; }
+    public ILLabel? TryEnd { get; set; }
 
     /// <summary>
-    /// Inclusive finally start instruction for Finally block.
+    /// Inclusive finally start ILLabel for Finally block.
     /// </summary>
-    public Instruction? HandlerStart { get; set; }
+    public ILLabel? HandlerStart { get; set; }
 
     /// <summary>
-    /// Inclusive finally end instruction for Finally block.
+    /// Inclusive finally end ILLabel for Finally block.
     /// </summary>
-    public Instruction? HandlerEnd { get; set; }
+    public ILLabel? HandlerEnd { get; set; }
 }
 
 /// <summary>
@@ -109,18 +110,18 @@ public sealed class WeaverExceptionFinallyHandler : IWeaverExceptionHandler
 public sealed class WeaverExceptionFaultHandler : IWeaverExceptionHandler
 {
     /// <inheritdoc/>
-    public Instruction? TryStart { get; set; }
+    public ILLabel? TryStart { get; set; }
 
     /// <inheritdoc/>
-    public Instruction? TryEnd { get; set; }
+    public ILLabel? TryEnd { get; set; }
 
     /// <summary>
-    /// Inclusive finally start instruction for Fault block.
+    /// Inclusive finally start ILLabel for Fault block.
     /// </summary>
-    public Instruction? HandlerStart { get; set; }
+    public ILLabel? HandlerStart { get; set; }
 
     /// <summary>
-    /// Inclusive finally end instruction for Fault block.
+    /// Inclusive finally end ILLabel for Fault block.
     /// </summary>
-    public Instruction? HandlerEnd { get; set; }
+    public ILLabel? HandlerEnd { get; set; }
 }

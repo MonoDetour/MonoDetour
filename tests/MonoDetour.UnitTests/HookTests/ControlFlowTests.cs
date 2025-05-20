@@ -15,6 +15,7 @@ public static class ControlFlowTests
 
         SetStringToHello.ControlFlowPrefix(ControlFlowPrefixSkipOriginal, manager: m);
         SetStringToHello.Postfix(Postfix, manager: m);
+        // SetStringToHello.ILHook(ILHook_Print, new(priority: -4), manager: m);
 
         string? message = null;
         lib.SetStringToHello(ref message);
@@ -22,7 +23,6 @@ public static class ControlFlowTests
 
         SetStringToHello.ControlFlowPrefix(ControlFlowPrefixHardReturn, new(-1), manager: m);
         SetStringToHello.ControlFlowPrefix(ControlFlowPrefixNone, new(-3), manager: m);
-        // SetStringToHello.ILHook(ILHook_Print, new(priority: -3), manager: m);
 
         message = null;
         lib.SetStringToHello(ref message);
@@ -47,10 +47,10 @@ public static class ControlFlowTests
         return ReturnFlow.HardReturn;
     }
 
-    private static void ILHook_Print(ILManipulationInfo info)
-    {
-        Console.WriteLine(info.ManipulationContext);
-    }
+    // private static void ILHook_Print(ILManipulationInfo info)
+    // {
+    //     Console.WriteLine(info.ManipulationContext);
+    // }
 
     private static ReturnFlow ControlFlowPrefixSkipOriginal(ControlFlowLib self, ref string message)
     {

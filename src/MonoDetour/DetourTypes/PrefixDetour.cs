@@ -1,4 +1,10 @@
+using System;
+using System.Linq;
+using Mono.Cecil.Cil;
+using MonoDetour.Cil;
+using MonoDetour.Logging;
 using MonoMod.Cil;
+using MonoMod.Utils;
 
 namespace MonoDetour.DetourTypes;
 
@@ -11,5 +17,98 @@ public class PrefixDetour : IMonoDetourHookApplier
     public IReadOnlyMonoDetourHook Hook { get; set; } = null!;
 
     /// <inheritdoc/>
-    public void ApplierManipulator(ILContext il) => GeneralDetour.Manipulator(il, Hook);
+    public void ApplierManipulator(ILContext il)
+    {
+        HookedMethodInfo info = MethodHookRecords.GetFor(il, Hook.Target);
+        ILWeaver w = new(new(il, Hook.Target));
+        bool modifiesReturnValue = Hook.ModifiesControlFlow() && info.ReturnValue is not null;
+
+        w.HandlerCreateCatch(null, out var handler);
+        w.MarkLabelToFutureNextInsert(out var tryStart);
+        w.HandlerSetTryStart(tryStart, handler);
+
+        if (modifiesReturnValue)
+            w.EmitParamsAndReturnValueBeforeCurrent(
+                info.ReturnValue!,
+                Hook,
+                grabReturnValueFirst: false
+            );
+        else
+            w.EmitParamsBeforeCurrent(Hook);
+
+        w.InsertBeforeCurrent(w.Create(OpCodes.Call, Hook.Manipulator));
+
+        if (Hook.ModifiesControlFlow())
+            w.InsertBeforeCurrent(w.Create(OpCodes.Stloc, info.PrefixInfo.TemporaryControlFlow));
+
+        w.HandlerSetTryEnd(w.Previous, handler);
+
+        w.EmitReferenceBeforeCurrent(Hook, out _);
+        w.InsertBeforeCurrent(w.CreateCall(GeneralDetour.DisposeBadHooks));
+
+        w.HandlerSetHandlerEnd(w.Previous, handler);
+
+        if (Hook.ModifiesControlFlow())
+        {
+            // Evaluate temporary control flow value.
+            var setControlFlowSwitch = w.Create(OpCodes.Switch, new object());
+            w.InsertBeforeCurrent(
+                w.Create(OpCodes.Ldloc, info.PrefixInfo.TemporaryControlFlow),
+                setControlFlowSwitch
+            );
+
+            w.MarkLabelToFutureNextInsert(out var hardReturn);
+            if (info.ReturnValue is not null)
+                w.InsertBeforeCurrent(w.Create(OpCodes.Ldloc, info.ReturnValue));
+            w.InsertBeforeCurrent(w.Create(OpCodes.Ret), w.Create(OpCodes.Ret));
+
+            w.MarkLabelToFutureNextInsert(out var softReturn);
+            w.InsertBeforeCurrent(
+                w.Create(OpCodes.Ldc_I4_1),
+                w.Create(OpCodes.Stloc, info.PrefixInfo.ControlFlow)
+            );
+
+            w.MarkLabelToCurrentOrFutureNextInsert(out var none);
+
+            setControlFlowSwitch.Operand = new ILLabel[] { none, softReturn, hardReturn };
+        }
+
+        if (!info.PrefixInfo.ControlImplemented)
+        {
+            // Evaluate actual control flow value.
+            info.PrefixInfo.ControlImplemented = true;
+
+            w.MarkLabelToCurrent(out var none);
+
+            w.InsertBeforeCurrent(
+                w.Create(OpCodes.Ldloc, info.PrefixInfo.ControlFlow),
+                w.Create(OpCodes.Brfalse, none)
+            );
+
+            var firstPostfix = info.PostfixInfo.FirstPostfixInstructions.FirstOrDefault();
+            if (info.ReturnValue is not null)
+                w.InsertBeforeCurrent(w.Create(OpCodes.Ldloc, info.ReturnValue));
+            if (firstPostfix is not null)
+                w.InsertBeforeCurrent(w.Create(OpCodes.Br, firstPostfix));
+            else
+                w.InsertBeforeCurrent(w.Create(OpCodes.Ret));
+        }
+
+        w.HandlerApply(handler);
+
+        if (Hook.Owner.PrintIL)
+        {
+            // w.Method.RecalculateILOffsets();
+            Console.WriteLine($"Manipulated by Prefix: {Hook.Manipulator.Name}: {il}");
+        }
+
+        MonoDetourLogger.Log(
+            MonoDetourLogger.LogChannel.IL,
+            () =>
+            {
+                w.Method.RecalculateILOffsets();
+                return $"Manipulated by Prefix: {Hook.Manipulator.Name}: {il}";
+            }
+        );
+    }
 }

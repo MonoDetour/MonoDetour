@@ -33,6 +33,9 @@ public class ILWeaver(ILManipulationInfo il)
     /// <inheritdoc cref="ILContext.Body"/>
     public MethodBody Body => Context.Body;
 
+    /// <inheritdoc cref="ILContext.Method"/>
+    public MethodDefinition Method => Context.Method;
+
     /// <inheritdoc cref="ILContext.Instrs"/>
     public InstrList Instructions => Context.Instrs;
 
@@ -49,6 +52,20 @@ public class ILWeaver(ILManipulationInfo il)
         get => current;
         set => CurrentTo(value);
     }
+
+    /// <summary>
+    /// The instruction before what this weaver currently points to.
+    /// </summary>
+    public Instruction Previous => Current.Previous;
+
+    /// <summary>
+    /// The instruction after what this weaver currently points to.
+    /// </summary>
+    /// <remarks>
+    /// This is not equivalent to <see cref="ILCursor.Next"/>.
+    /// The equivalent would be <see cref="Current"/>.
+    /// </remarks>
+    public Instruction Next => Current.Next;
 
     /// <summary>
     /// Gets the first instruction in the method body.
@@ -150,6 +167,17 @@ public class ILWeaver(ILManipulationInfo il)
     }
 
     /// <summary>
+    /// Defines a new <see cref="ILLabel"/> to be targeted.
+    /// </summary>
+    /// <param name="label">The new label.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver DefineLabel(out ILLabel label)
+    {
+        label = Context.DefineLabel();
+        return this;
+    }
+
+    /// <summary>
     /// Sets the target of a label to the provided <see cref="Instruction"/>.
     /// </summary>
     /// <param name="target">The target for the label.</param>
@@ -175,6 +203,18 @@ public class ILWeaver(ILManipulationInfo il)
     }
 
     /// <summary>
+    /// Sets the target of a label to the future next inserted instruction.
+    /// </summary>
+    /// <param name="label">The label to mark.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver MarkLabelToFutureNextInsert(ILLabel label)
+    {
+        Helpers.ThrowIfNull(label);
+        pendingFutureNextInsertLabels.Add(label);
+        return this;
+    }
+
+    /// <summary>
     /// Creates a new label targetting the future next inserted instruction.
     /// </summary>
     /// <param name="futureMarkedLabel">The marked label.</param>
@@ -182,6 +222,43 @@ public class ILWeaver(ILManipulationInfo il)
     public ILWeaver MarkLabelToFutureNextInsert(out ILLabel futureMarkedLabel)
     {
         futureMarkedLabel = Context.DefineLabel();
+        pendingFutureNextInsertLabels.Add(futureMarkedLabel);
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the target of a label to the future next inserted instruction.<br/>
+    /// Targets <see cref="Current"/> as a placeholder.
+    /// </summary>
+    /// <remarks>
+    /// Prefer <see cref="MarkLabelToFutureNextInsert(ILLabel)"/> if the label
+    /// will always be redirected to an inserted instruction. Using this
+    /// method will then show that there branches where a next instruction isn't inserted.
+    /// </remarks>
+    /// <param name="label">The label to mark.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver MarkLabelToCurrentOrFutureNextInsert(ILLabel label)
+    {
+        Helpers.ThrowIfNull(label);
+        label.InteropSetTarget(Current);
+        pendingFutureNextInsertLabels.Add(label);
+        return this;
+    }
+
+    /// <summary>
+    /// Creates a new label targetting the future next inserted instruction.<br/>
+    /// Targets <see cref="Current"/> as a placeholder.
+    /// </summary>
+    /// <remarks>
+    /// Prefer <see cref="MarkLabelToFutureNextInsert(out ILLabel)"/> if the label
+    /// will always be redirected to an inserted instruction. Using this
+    /// method will then show that there branches where a next instruction isn't inserted.
+    /// </remarks>
+    /// <param name="futureMarkedLabel">The marked label.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver MarkLabelToCurrentOrFutureNextInsert(out ILLabel futureMarkedLabel)
+    {
+        futureMarkedLabel = Context.DefineLabel(Current);
         pendingFutureNextInsertLabels.Add(futureMarkedLabel);
         return this;
     }
@@ -337,7 +414,7 @@ public class ILWeaver(ILManipulationInfo il)
     /// <returns>The new exception handler instance.</returns>
     public ILWeaver HandlerCreateCatch(Type? catchType, out WeaverExceptionCatchHandler handler)
     {
-        handler = new(IL.Import(catchType ?? typeof(object)));
+        handler = new(IL.Import(catchType ?? typeof(Exception)));
         return this;
     }
 
@@ -347,7 +424,7 @@ public class ILWeaver(ILManipulationInfo il)
     /// <inheritdoc cref="HandlerCreateCatch(Type?, out WeaverExceptionCatchHandler)"/>
     public ILWeaver HandlerCreateFilter(Type? catchType, out WeaverExceptionFilterHandler handler)
     {
-        handler = new(IL.Import(catchType ?? typeof(object)));
+        handler = new(IL.Import(catchType ?? typeof(Exception)));
         return this;
     }
 
@@ -377,12 +454,19 @@ public class ILWeaver(ILManipulationInfo il)
     /// <remarks>
     /// This range is inclusive.
     /// </remarks>
-    /// <param name="tryStart">The first instruction in the try block.</param>
+    /// <param name="tryStart">The first ILLabel in the try block.</param>
     /// <param name="handler">The <see cref="IWeaverExceptionHandler"/> to configure.</param>
     /// <returns>This <see cref="ILWeaver"/>.</returns>
-    public ILWeaver HandlerSetTryStart(Instruction tryStart, IWeaverExceptionHandler handler)
+    public ILWeaver HandlerSetTryStart(ILLabel tryStart, IWeaverExceptionHandler handler)
     {
         handler.TryStart = tryStart;
+        return this;
+    }
+
+    /// <inheritdoc cref="HandlerSetTryStart(ILLabel, IWeaverExceptionHandler)"/>
+    public ILWeaver HandlerSetTryStart(Instruction tryStart, IWeaverExceptionHandler handler)
+    {
+        handler.TryStart = Context.DefineLabel(tryStart);
         return this;
     }
 
@@ -390,46 +474,77 @@ public class ILWeaver(ILManipulationInfo il)
     /// Set the TryEnd property of the <see cref="IWeaverExceptionHandler"/>.
     /// </summary>
     /// <param name="tryEnd">The last instruction in the try block.</param>
-    /// <inheritdoc cref="HandlerSetTryStart(Instruction, IWeaverExceptionHandler)"/>
-    public ILWeaver HandlerSetTryEnd(Instruction tryEnd, IWeaverExceptionHandler handler)
+    /// <inheritdoc cref="HandlerSetTryStart(ILLabel, IWeaverExceptionHandler)"/>
+    public ILWeaver HandlerSetTryEnd(ILLabel tryEnd, IWeaverExceptionHandler handler)
     {
         handler.TryEnd = tryEnd;
+        return this;
+    }
+
+    /// <inheritdoc cref="HandlerSetTryEnd(ILLabel, IWeaverExceptionHandler)"/>
+    public ILWeaver HandlerSetTryEnd(Instruction tryEnd, IWeaverExceptionHandler handler)
+    {
+        handler.TryEnd = Context.DefineLabel(tryEnd);
         return this;
     }
 
     /// <summary>
     /// Set the FilterStart property of the <see cref="WeaverExceptionFilterHandler"/>.
     /// </summary>
-    /// <param name="filterStart">The first instruction in the filter block.</param>
-    /// <inheritdoc cref="HandlerSetTryStart(Instruction, IWeaverExceptionHandler)"/>
-    public ILWeaver HandlerSetFilterStart(
+    /// <param name="filterStart">The first ILLabel in the filter block.</param>
+    /// <inheritdoc cref="HandlerSetTryStart(ILLabel, IWeaverExceptionHandler)"/>
+    public ILWeaver HandlerSetFilterStart(ILLabel filterStart, WeaverExceptionFilterHandler handler)
+    {
+        handler.FilterStart = filterStart;
+        return this;
+    }
+
+    /// <inheritdoc cref="HandlerSetFilterStart(ILLabel, WeaverExceptionFilterHandler)"/>
+    public ILWeaver FilterSetFilterStart(
         Instruction filterStart,
         WeaverExceptionFilterHandler handler
     )
     {
-        handler.FilterStart = filterStart;
+        handler.FilterStart = Context.DefineLabel(filterStart);
         return this;
     }
 
     /// <summary>
     /// Set the HandlerStart property of the <see cref="IWeaverExceptionHandler"/>.
     /// </summary>
-    /// <param name="catchStart">The first instruction in the catch block.</param>
-    /// <inheritdoc cref="HandlerSetTryStart(Instruction, IWeaverExceptionHandler)"/>
-    public ILWeaver HandlerSetHandlerStart(Instruction catchStart, IWeaverExceptionHandler handler)
+    /// <param name="handlerStart">The first ILLabel in the catch block.</param>
+    /// <inheritdoc cref="HandlerSetTryStart(ILLabel, IWeaverExceptionHandler)"/>
+    public ILWeaver HandlerSetHandlerStart(ILLabel handlerStart, IWeaverExceptionHandler handler)
     {
-        handler.HandlerStart = catchStart;
+        handler.HandlerStart = handlerStart;
+        return this;
+    }
+
+    /// <inheritdoc cref="HandlerSetHandlerStart(ILLabel, IWeaverExceptionHandler)"/>
+    public ILWeaver HandlerSetHandlerStart(
+        Instruction handlerStart,
+        IWeaverExceptionHandler handler
+    )
+    {
+        handler.HandlerStart = Context.DefineLabel(handlerStart);
         return this;
     }
 
     /// <summary>
     /// Set the HandlerEnd property of the <see cref="IWeaverExceptionHandler"/>.
     /// </summary>
-    /// <param name="catchEnd">The last instruction in the catch block.</param>
-    /// <inheritdoc cref="HandlerSetTryStart(Instruction, IWeaverExceptionHandler)"/>
-    public ILWeaver HandlerSetHandlerEnd(Instruction catchEnd, IWeaverExceptionHandler handler)
+    /// <param name="handlerEnd">The last ILLabel in the catch block.</param>
+    /// <inheritdoc cref="HandlerSetTryStart(ILLabel, IWeaverExceptionHandler)"/>
+    public ILWeaver HandlerSetHandlerEnd(ILLabel handlerEnd, IWeaverExceptionHandler handler)
     {
-        handler.HandlerEnd = catchEnd;
+        handler.HandlerEnd = handlerEnd;
+        return this;
+    }
+
+    /// <inheritdoc cref="HandlerSetHandlerEnd(ILLabel, IWeaverExceptionHandler)"/>
+    public ILWeaver HandlerSetHandlerEnd(Instruction handlerEnd, IWeaverExceptionHandler handler)
+    {
+        handler.HandlerEnd = Context.DefineLabel(handlerEnd);
         return this;
     }
 
@@ -454,6 +569,11 @@ public class ILWeaver(ILManipulationInfo il)
         if (handler.HandlerEnd is null)
             throw new NullReferenceException("HandlerEnd was not set!");
 
+        if (handler.TryStart.InteropGetTarget() is null)
+            throw new NullReferenceException("TryStart target was not set!");
+        if (handler.HandlerEnd.InteropGetTarget() is null)
+            throw new NullReferenceException("HandlerEnd target was not set!");
+
         ExceptionHandler cecilHandler = new(
             handler switch
             {
@@ -466,11 +586,13 @@ public class ILWeaver(ILManipulationInfo il)
         )
         {
             CatchType = (handler as WeaverExceptionCatchHandler)?.CatchType,
-            TryStart = handler.TryStart,
-            TryEnd = handler.TryEnd,
-            FilterStart = (handler as WeaverExceptionFilterHandler)?.FilterStart,
-            HandlerStart = handler.HandlerStart,
-            HandlerEnd = handler.HandlerEnd,
+            TryStart = handler.TryStart.InteropGetTarget(),
+            TryEnd = handler.TryEnd?.InteropGetTarget(),
+            FilterStart = (
+                handler as WeaverExceptionFilterHandler
+            )?.FilterStart?.InteropGetTarget(),
+            HandlerStart = handler.HandlerStart?.InteropGetTarget()!,
+            HandlerEnd = handler.HandlerEnd.InteropGetTarget()!,
         };
 
         bool isFilter = cecilHandler.HandlerType == ExceptionHandlerType.Filter;
@@ -537,13 +659,12 @@ public class ILWeaver(ILManipulationInfo il)
 
         // Now we can start inserting all our instructions.
         ILLabel leaveDestination = Context.DefineLabel(cecilHandler.HandlerEnd);
-        Instruction leave = Create(OpCodes.Leave, leaveDestination);
 
         // And emit the actual leave instructions.
         // Try should have a normal leave instruction or nothing if it throws.
         if (cecilHandler.TryEnd.Previous.OpCode != OpCodes.Throw)
         {
-            InsertBefore(cecilHandler.TryEnd, leave);
+            InsertBefore(cecilHandler.TryEnd, Create(OpCodes.Leave, leaveDestination));
         }
 
         // If we have a filter, aka: catch (Exception ex) when (/* statement */)
@@ -565,14 +686,17 @@ public class ILWeaver(ILManipulationInfo il)
         else
         {
             // For anything other than finally, use a normal leave instruction.
-            InsertBefore(cecilHandler.HandlerEnd, leave);
+            InsertBefore(cecilHandler.HandlerEnd, Create(OpCodes.Leave, leaveDestination));
         }
 
         // Body.Method.RecalculateILOffsets();
-        // Console.WriteLine("handler.TryStart:     " + handler.TryStart);
-        // Console.WriteLine("handler.TryEnd:       " + handler.TryEnd);
-        // Console.WriteLine("handler.HandlerStart: " + handler.HandlerStart);
-        // Console.WriteLine("handler.HandlerEnd:   " + handler.HandlerEnd);
+        // Console.WriteLine("handler.TryStart:     " + cecilHandler.TryStart);
+        // Console.WriteLine("handler.TryEnd:       " + cecilHandler.TryEnd);
+        // Console.WriteLine("handler.HandlerStart: " + cecilHandler.HandlerStart);
+        // Console.WriteLine("handler.HandlerEnd:   " + cecilHandler.HandlerEnd);
+        // Console.WriteLine("handler.CatchType:    " + cecilHandler.CatchType?.ToString());
+        // Console.WriteLine("handler.HandlerType:  " + cecilHandler.HandlerType.ToString());
+        // Console.WriteLine(Context);
 
         Context.Body.ExceptionHandlers.Add(cecilHandler);
         return this;
@@ -1054,6 +1178,19 @@ public class ILWeaver(ILManipulationInfo il)
 
         return this;
     }
+
+    /// <summary>
+    /// Store an object in the reference store, and emit the IL to retrieve it and place it on the stack.
+    /// </summary>
+    public ILWeaver EmitReferenceBefore<T>(Instruction target, in T? value, out int id)
+    {
+        id = InteropILCursor.InteropEmitReferenceBefore(Context, target, value);
+        return this;
+    }
+
+    /// <inheritdoc cref="EmitReferenceBefore{T}(Instruction, in T, out int)"/>
+    public ILWeaver EmitReferenceBeforeCurrent<T>(in T? value, out int id) =>
+        EmitReferenceBefore(Current, value, out id);
 
 #pragma warning disable CS1572 // XML comment has a param tag, but there is no parameter by that name
     /// <summary>

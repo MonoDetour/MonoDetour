@@ -2,6 +2,7 @@ using Xunit.Sdk;
 using Xunit.v3;
 
 [assembly: TestPipelineStartup(typeof(PipelineStartup))]
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 class PipelineStartup : ITestPipelineStartup
 {
