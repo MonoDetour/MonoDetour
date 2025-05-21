@@ -18,18 +18,10 @@ internal static class MonoDetourUtils
     public static void EmitParamsAndReturnValueBeforeCurrent(
         this ILWeaver w,
         VariableDefinition returnValue,
-        IReadOnlyMonoDetourHook hook,
-        bool grabReturnValueFirst = true
+        IReadOnlyMonoDetourHook hook
     )
     {
         Helpers.ThrowIfNull(returnValue);
-
-        if (grabReturnValueFirst)
-        {
-            // Store the original return value
-            // for use after emitting params.
-            w.InsertBeforeCurrent(w.Create(OpCodes.Stloc, returnValue));
-        }
 
         w.EmitParamsBeforeCurrent(hook);
 

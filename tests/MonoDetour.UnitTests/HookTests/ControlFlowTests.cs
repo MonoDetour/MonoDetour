@@ -32,7 +32,7 @@ public static class ControlFlowTests
 
         message = null;
         lib.SetStringToHello(ref message);
-        Assert.Equal("none foo bar", message);
+        Assert.Equal("none foo baz", message);
     }
 
     private static ReturnFlow ControlFlowPrefixNone(ControlFlowLib self, ref string message)

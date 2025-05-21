@@ -652,7 +652,7 @@ public class ILWeaver(ILManipulationInfo il)
 
         if (cecilHandler.HandlerEnd.Next is null)
         {
-            InsertAfter(cecilHandler.HandlerEnd, Create(OpCodes.Nop));
+            GhostInsertAfter(cecilHandler.HandlerEnd, Create(OpCodes.Nop));
         }
         // inclusive range → exclusive
         cecilHandler.HandlerEnd = cecilHandler.HandlerEnd.Next!;
@@ -664,7 +664,7 @@ public class ILWeaver(ILManipulationInfo il)
         // Try should have a normal leave instruction or nothing if it throws.
         if (cecilHandler.TryEnd.Previous.OpCode != OpCodes.Throw)
         {
-            InsertBefore(cecilHandler.TryEnd, Create(OpCodes.Leave, leaveDestination));
+            GhostInsertBefore(cecilHandler.TryEnd, Create(OpCodes.Leave, leaveDestination));
         }
 
         // If we have a filter, aka: catch (Exception ex) when (/* statement */)
@@ -675,18 +675,18 @@ public class ILWeaver(ILManipulationInfo il)
                 throw new NullReferenceException("FilterStart was not set!");
 
             // FilterEnd doesn't exist, it's implicitly before HandlerStart.
-            InsertBefore(cecilHandler.HandlerStart, Create(OpCodes.Endfilter));
+            GhostInsertBefore(cecilHandler.HandlerStart, Create(OpCodes.Endfilter));
         }
 
         // Finally also has a special instruction.
         if (cecilHandler.HandlerType == ExceptionHandlerType.Finally)
         {
-            InsertBefore(cecilHandler.HandlerEnd, Create(OpCodes.Endfinally));
+            GhostInsertBefore(cecilHandler.HandlerEnd, Create(OpCodes.Endfinally));
         }
         else
         {
             // For anything other than finally, use a normal leave instruction.
-            InsertBefore(cecilHandler.HandlerEnd, Create(OpCodes.Leave, leaveDestination));
+            GhostInsertBefore(cecilHandler.HandlerEnd, Create(OpCodes.Leave, leaveDestination));
         }
 
         // Body.Method.RecalculateILOffsets();
@@ -1080,6 +1080,24 @@ public class ILWeaver(ILManipulationInfo il)
         pendingFutureNextInsertLabels.Clear();
 
         Instructions.Insert(index, instruction);
+        return this;
+    }
+
+    /// <summary>
+    /// Insert instructions without attracting <see cref="pendingFutureNextInsertLabels"/>.
+    /// </summary>
+    ILWeaver GhostInsertBefore(Instruction target, Instruction instruction)
+    {
+        Instructions.Insert(Context.IndexOf(target), instruction);
+        return this;
+    }
+
+    /// <summary>
+    /// Insert instructions without attracting <see cref="pendingFutureNextInsertLabels"/>.
+    /// </summary>
+    ILWeaver GhostInsertAfter(Instruction target, Instruction instruction)
+    {
+        Instructions.Insert(Context.IndexOf(target) + 1, instruction);
         return this;
     }
 

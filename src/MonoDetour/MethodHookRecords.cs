@@ -10,7 +10,7 @@ namespace MonoDetour;
 
 internal static class MethodHookRecords
 {
-    static readonly ConditionalWeakTable<ILContext, HookedMethodInfo> s_MethodToInfo = new();
+    static readonly ConditionalWeakTable<MethodDefinition, HookedMethodInfo> s_MethodToInfo = new();
     static readonly object s_Lock = new();
 
     /// <summary>
@@ -23,8 +23,12 @@ internal static class MethodHookRecords
     {
         lock (s_Lock)
         {
-            if (s_MethodToInfo.TryGetValue(il, out HookedMethodInfo? info))
+            if (s_MethodToInfo.TryGetValue(il.Method, out HookedMethodInfo? info))
             {
+                // Console.WriteLine("Got existing info for method: " + methodBase.Name);
+                // foreach (var postfix in info.PostfixInfo.FirstPostfixInstructions)
+                //     Console.WriteLine(postfix);
+
                 return info;
             }
 
@@ -32,6 +36,8 @@ internal static class MethodHookRecords
             {
                 throw new InvalidCastException("MethodBase is not MethodInfo!");
             }
+
+            // Console.WriteLine("Creating new info for method: " + method.Name);
 
             VariableDefinition? returnValue = null;
             if (method.ReturnType != typeof(void))
@@ -42,8 +48,8 @@ internal static class MethodHookRecords
 
             var controlFlow = il.DeclareVariable(typeof(int));
             var tempControlFlow = il.DeclareVariable(typeof(int));
-            info = new(new(controlFlow, tempControlFlow), new([]), returnValue);
-            s_MethodToInfo.Add(il, info);
+            info = new(new(controlFlow, tempControlFlow), new(), returnValue);
+            s_MethodToInfo.Add(il.Method, info);
             return info;
         }
     }
@@ -63,7 +69,10 @@ internal record PrefixControlFlowInfo(
     public bool ControlImplemented { get; set; }
 }
 
-internal record PostfixControlFlowInfo(List<Instruction> FirstPostfixInstructions);
+internal record PostfixControlFlowInfo()
+{
+    public List<Instruction> FirstPostfixInstructions { get; } = [];
+}
 
 
 // local: ControlFlow -> None

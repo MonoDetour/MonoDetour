@@ -23,16 +23,14 @@ public class PrefixDetour : IMonoDetourHookApplier
         ILWeaver w = new(new(il, Hook.Target));
         bool modifiesReturnValue = Hook.ModifiesControlFlow() && info.ReturnValue is not null;
 
+        w.InsertBeforeCurrent(w.Create(OpCodes.Nop));
+
         w.HandlerCreateCatch(null, out var handler);
         w.MarkLabelToFutureNextInsert(out var tryStart);
         w.HandlerSetTryStart(tryStart, handler);
 
         if (modifiesReturnValue)
-            w.EmitParamsAndReturnValueBeforeCurrent(
-                info.ReturnValue!,
-                Hook,
-                grabReturnValueFirst: false
-            );
+            w.EmitParamsAndReturnValueBeforeCurrent(info.ReturnValue!, Hook);
         else
             w.EmitParamsBeforeCurrent(Hook);
 
@@ -85,9 +83,10 @@ public class PrefixDetour : IMonoDetourHookApplier
                 w.Create(OpCodes.Brfalse, none)
             );
 
-            var firstPostfix = info.PostfixInfo.FirstPostfixInstructions.FirstOrDefault();
             if (info.ReturnValue is not null)
                 w.InsertBeforeCurrent(w.Create(OpCodes.Ldloc, info.ReturnValue));
+
+            var firstPostfix = info.PostfixInfo.FirstPostfixInstructions.FirstOrDefault();
             if (firstPostfix is not null)
                 w.InsertBeforeCurrent(w.Create(OpCodes.Br, firstPostfix));
             else
