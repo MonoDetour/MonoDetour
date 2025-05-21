@@ -6,13 +6,14 @@ namespace MonoDetour.DetourTypes;
 public enum ReturnFlow
 {
     /// <summary>
-    /// Signifies that this return doesn't affect control flow.
+    /// Signifies that this return value doesn't affect control flow.
     /// </summary>
     None = 0,
 
     /// <summary>
-    /// Skips the original method body and prefixes,
-    /// but doesn't skip postfixes.
+    /// Skips the original method body,
+    /// but doesn't skip prefixes and postfixes written to it.<br/>
+    /// This is essentially the same as prefix return false in HarmonyX.
     /// </summary>
     SkipOriginal = 1,
 
