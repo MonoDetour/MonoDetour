@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
@@ -7,6 +8,7 @@ using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoDetour.Interop.MonoModUtils;
+using MonoDetour.Logging;
 using MonoMod.Cil;
 using MonoMod.SourceGen.Internal;
 using MonoMod.Utils;
@@ -19,7 +21,7 @@ namespace MonoDetour.Cil;
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 #pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
 
-public class ILWeaver(ILManipulationInfo il)
+public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
 {
     /// <inheritdoc cref="ILManipulationInfo"/>
     public ILManipulationInfo ManipulationInfo { get; } = il;
@@ -90,6 +92,10 @@ public class ILWeaver(ILManipulationInfo il)
         get => Context.IndexOf(Current);
         set => CurrentTo(value);
     }
+
+    /// <inheritdoc/>
+    public MonoDetourLogger.LogChannel LogFilter { get; set; } =
+        MonoDetourLogger.LogChannel.Warn | MonoDetourLogger.LogChannel.Error;
 
     Instruction current = il.Context.Instrs[0];
 
@@ -359,12 +365,21 @@ public class ILWeaver(ILManipulationInfo il)
 
     public ILWeaver RemoveAt(int index, int instructions, out IEnumerable<ILLabel> orphanedLabels)
     {
-        if (index + instructions < Instructions.Count)
+        int endIndex = index + instructions - 1;
+        int currentIndex = Index;
+
+        if (instructions < 0)
+            throw new IndexOutOfRangeException("Can not remove a negative amount of instructions.");
+
+        if (endIndex > Instructions.Count)
             throw new IndexOutOfRangeException(
                 "Attempted to remove more instructions than there are available."
             );
 
-        Instruction? newTarget = Instructions[index + instructions];
+        if (currentIndex >= index && currentIndex <= endIndex)
+        {
+            Current = Instructions[endIndex + 1];
+        }
 
         List<ILLabel> labels = [];
 
@@ -376,7 +391,6 @@ public class ILWeaver(ILManipulationInfo il)
             Instructions.RemoveAt(index);
         }
 
-        Current = newTarget;
         orphanedLabels = labels;
         return this;
     }
@@ -393,7 +407,9 @@ public class ILWeaver(ILManipulationInfo il)
 
     public ILWeaver RemoveCurrent(out ILLabel? orphanedLabel)
     {
+        var next = Next;
         Remove(Current, out orphanedLabel);
+        CurrentTo(next);
         return this;
     }
 
@@ -758,6 +774,12 @@ public class ILWeaver(ILManipulationInfo il)
     /// <returns>true</returns>
     public bool SetCurrentTo(Instruction instruction)
     {
+        // We might match 'original' instructions that don't exist anymore.
+        if (!Instructions.Contains(instruction))
+        {
+            return false;
+        }
+
         CurrentTo(instruction);
         return true;
     }
@@ -773,6 +795,13 @@ public class ILWeaver(ILManipulationInfo il)
     {
         Helpers.ThrowIfNull(target);
         toBeSet = target;
+
+        // We might match 'original' instructions that don't exist anymore.
+        if (!Instructions.Contains(target))
+        {
+            return false;
+        }
+
         return true;
     }
 
@@ -946,6 +975,7 @@ public class ILWeaver(ILManipulationInfo il)
 
                 if (secondPassResult.IsValid)
                 {
+                    LogFailure(GetResult().FailureMessage!);
                     return new ILWeaverResult(this, null);
                 }
             }
@@ -968,6 +998,7 @@ public class ILWeaver(ILManipulationInfo il)
 
                 if (secondPassResult.IsValid)
                 {
+                    LogFailure(GetResult().FailureMessage!);
                     return new ILWeaverResult(this, null);
                 }
                 else
@@ -977,56 +1008,59 @@ public class ILWeaver(ILManipulationInfo il)
             }
         }
 
-        CodeBuilder err = new(new StringBuilder(), 2);
-        if (matchedIndexes.Count > 0)
+        void LogFailure(string failureMessage)
         {
-            string GetMatchedTooManyError()
-            {
-                err.WriteLine(
-                        $"- {nameof(ILWeaver)}.{nameof(Match)} matched all predicates more than once in the target method."
-                    )
-                    .IncreaseIndent()
-                    .Write("- Total matches: ")
-                    .WriteLine(matchedIndexes.Count)
-                    .IncreaseIndent();
-
-                foreach (var match in matchedIndexes)
-                    err.Write("- at indexes: ")
-                        .Write(match - predicates.Length + 1)
-                        .Write(" to ")
-                        .WriteLine(match);
-
-                err.DecreaseIndent()
-                    .WriteLine("- HELP: Add more predicates to find a unique match.")
-                    .IncreaseIndent()
-                    .WriteLine($"- Documentation: {gotoMatchingDocsLink}")
-                    .DecreaseIndent()
-                    .WriteLine(
-                        $"- INFO: Use {nameof(ILWeaver)}.GotoMatchMultiple if you intend to match multiple instances."
-                    )
-                    .WriteLine(
-                        $"- INFO: Use {nameof(ILWeaver)}.GotoNext if you intend to only match the first valid instance."
-                    );
-
-                return err.ToString();
-            }
-
-            return new ILWeaverResult(this, GetMatchedTooManyError);
+            this.Log(
+                MonoDetourLogger.LogChannel.Warn,
+                "Match succeeded against 'original' instructions as a fallback "
+                    + "but failed against current ones. This ILHook still probably works.\n"
+                    + "Here's what went wrong when matching against current instructions:\n"
+                    + failureMessage
+            );
         }
 
-        // - ILWeaver.Find couldn't match all predicates.
-        //   - Matched predicates required: 3
-        //   - Best attempts: predicates matched: 2 (see: [Detailed Info])
-        //   - HELP: Instruction matching predicates should match a valid pattern in the target method's instructions.
-        //     - HELP: See [Detailed Info] for what went wrong.
-        //     - NOTE: Other ILHooks have modified the target method's instructions. <<CONDITIONAL>>
-        //     - HELP: Documentation: https://hamunii.github.io/monodetour/ilweaver/matching-instructions
-        //
-        // [Detailed Info]
-        // Best attempts are listed here.
-        // The following attempts matched the number of predicates: 2
+        string GetMatchedTooManyError()
+        {
+            CodeBuilder err = new(new StringBuilder(), 2);
+
+            err.WriteLine(
+                    $"- {nameof(ILWeaver)}.{nameof(Match)} matched all predicates more than once in the target method."
+                )
+                .IncreaseIndent()
+                .Write("- Total matches: ")
+                .WriteLine(matchedIndexes.Count)
+                .IncreaseIndent();
+
+            foreach (var match in matchedIndexes)
+                err.Write("- at indexes: ")
+                    .Write(match - predicates.Length + 1)
+                    .Write(" to ")
+                    .WriteLine(match);
+
+            err.DecreaseIndent()
+                .WriteLine("- HELP: Add more predicates to find a unique match.")
+                .IncreaseIndent()
+                .WriteLine($"- Documentation: {gotoMatchingDocsLink}")
+                .DecreaseIndent()
+                .WriteLine(
+                    $"- INFO: Use {nameof(ILWeaver)}.GotoMatchMultiple if you intend to match multiple instances."
+                )
+                .WriteLine(
+                    $"- INFO: Use {nameof(ILWeaver)}.GotoNext if you intend to only match the first valid instance."
+                );
+
+            err.RemoveIndent()
+                .WriteLine()
+                .WriteLine("This message originates from:")
+                .WriteLine(new StackTrace().ToString());
+
+            return err.ToString();
+        }
+
         string GetNotMatchedAllError()
         {
+            CodeBuilder err = new(new StringBuilder(), 2);
+
             err.Write(
                     $"{nameof(ILWeaver)}.{nameof(Match)} couldn't match all predicates for method: "
                 )
@@ -1076,10 +1110,25 @@ public class ILWeaver(ILManipulationInfo il)
                 }
             }
 
+            err.RemoveIndent()
+                .WriteLine()
+                .WriteLine("This message originates from:")
+                .WriteLine(new StackTrace().ToString());
+
             return err.ToString();
         }
 
-        return new ILWeaverResult(this, GetNotMatchedAllError);
+        ILWeaverResult GetResult()
+        {
+            if (matchedIndexes.Count > 0)
+            {
+                return new ILWeaverResult(this, GetMatchedTooManyError);
+            }
+
+            return new ILWeaverResult(this, GetNotMatchedAllError);
+        }
+
+        return GetResult();
     }
 
     ILWeaver InsertAtInternal(int index, Instruction instruction, bool insertAfterIndex)

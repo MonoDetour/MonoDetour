@@ -17,7 +17,7 @@ namespace MonoDetour;
 /// This ID should be unique per mod, such as the assembly name, but
 /// a single mod can use the same ID for all its <see cref="MonoDetourManager"/>s.
 /// </param>
-public class MonoDetourManager(string id) : IDisposable
+public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
 {
     /// <summary>
     /// Identifier for a <see cref="MonoDetourManager"/>.
@@ -27,9 +27,7 @@ public class MonoDetourManager(string id) : IDisposable
     /// </summary>
     public string Id { get; } = Helpers.ThrowIfNull(id);
 
-    /// <summary>
-    /// Filter for which channels this <see cref="MonoDetourManager"/> logs to.
-    /// </summary>
+    /// <inheritdoc/>
     public MonoDetourLogger.LogChannel LogFilter { get; set; } =
         MonoDetourLogger.LogChannel.Warn | MonoDetourLogger.LogChannel.Error;
 
