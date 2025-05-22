@@ -69,11 +69,3 @@ internal record PostfixControlFlowInfo()
 {
     public List<Instruction> FirstPostfixInstructions { get; } = [];
 }
-
-
-// local: ControlFlow -> None
-
-// Skip original -> ControlFlow = SkipOriginal
-// None -> (none)
-// Implementation: ControlFlow switch
-//      SkipOriginal => goto
