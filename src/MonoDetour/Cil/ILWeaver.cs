@@ -810,7 +810,12 @@ public class ILWeaver(ILManipulationInfo il)
     /// <returns>An <see cref="ILWeaverResult"/> which can be used
     /// for checking if the match was a success or a failure.</returns>
     public ILWeaverResult Match(params Predicate<Instruction>[] predicates) =>
-        MatchInternal(allowMultipleMatches: false, null, predicates);
+        MatchInternal(
+            allowMultipleMatches: false,
+            null,
+            secondPassMatchOriginalInstructions: false,
+            predicates
+        );
 
     /// <summary>
     /// Attempts to match a set of predicates multiple times to find specific
@@ -847,11 +852,18 @@ public class ILWeaver(ILManipulationInfo il)
     public ILWeaverResult MatchMultiple(
         Action<ILWeaver> onMatch,
         params Predicate<Instruction>[] predicates
-    ) => MatchInternal(allowMultipleMatches: true, onMatch, predicates);
+    ) =>
+        MatchInternal(
+            allowMultipleMatches: true,
+            onMatch,
+            secondPassMatchOriginalInstructions: false,
+            predicates
+        );
 
     ILWeaverResult MatchInternal(
         bool allowMultipleMatches,
         Action<ILWeaver>? onMatched,
+        bool secondPassMatchOriginalInstructions,
         params Predicate<Instruction>[] predicates
     )
     {
@@ -865,10 +877,14 @@ public class ILWeaver(ILManipulationInfo il)
         List<int> matchedIndexes = [];
         List<(int count, int indexBeforeFailed)> bestAttempts = [(0, 0)];
 
+        IList<Instruction> instructions = secondPassMatchOriginalInstructions
+            ? ManipulationInfo.OriginalInstructions
+            : Instructions;
+
         int predicatesMatched = 0;
-        for (int i = 0; i < Instructions.Count; i++)
+        for (int i = 0; i < instructions.Count; i++)
         {
-            if (!predicates[predicatesMatched](Instructions[i]))
+            if (!predicates[predicatesMatched](instructions[i]))
             {
                 if (predicatesMatched > 0)
                 {
@@ -918,6 +934,21 @@ public class ILWeaver(ILManipulationInfo il)
             {
                 return new ILWeaverResult(this, null);
             }
+
+            if (!secondPassMatchOriginalInstructions)
+            {
+                var secondPassResult = MatchInternal(
+                    allowMultipleMatches,
+                    onMatched,
+                    secondPassMatchOriginalInstructions: true,
+                    predicates
+                );
+
+                if (secondPassResult.IsValid)
+                {
+                    return new ILWeaverResult(this, null);
+                }
+            }
         }
         else
         {
@@ -926,8 +957,24 @@ public class ILWeaver(ILManipulationInfo il)
                 return new ILWeaverResult(this, null);
             }
 
-            // When failing a single match, reset to original.
-            CurrentTo(originalCurrent);
+            if (!secondPassMatchOriginalInstructions)
+            {
+                var secondPassResult = MatchInternal(
+                    allowMultipleMatches,
+                    onMatched,
+                    secondPassMatchOriginalInstructions: true,
+                    predicates
+                );
+
+                if (secondPassResult.IsValid)
+                {
+                    return new ILWeaverResult(this, null);
+                }
+                else
+                {
+                    CurrentTo(originalCurrent);
+                }
+            }
         }
 
         CodeBuilder err = new(new StringBuilder(), 2);
@@ -994,7 +1041,7 @@ public class ILWeaver(ILManipulationInfo il)
 
             if (bestAttempts[0].count == 0)
             {
-                err.WriteLine().WriteLine("<no meaningful data for 0 predicates matched>");
+                err.WriteLine().WriteLine("(first predicate was never matched)");
             }
             else
             {
