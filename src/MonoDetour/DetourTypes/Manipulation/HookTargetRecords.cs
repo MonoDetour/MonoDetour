@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Mono.Cecil;
@@ -15,6 +16,40 @@ public static class HookTargetRecords
 {
     static readonly ConditionalWeakTable<MethodDefinition, HookTargetInfo> s_MethodToInfo = new();
 
+    internal static MethodBase GetOriginalMethod(MethodDefinition method)
+    {
+        if (
+            ILHookGetDMDBeforeManipulation.s_MethodDefinitionToOriginalMethod.TryGetValue(
+                method,
+                out var originalMethod
+            )
+        )
+        {
+            return originalMethod;
+        }
+
+        throw new Exception(
+            "Tried to get original method for a method which MonoDetour does not know about."
+        );
+    }
+
+    internal static ReadOnlyCollection<Instruction> GetOriginalInstructions(MethodDefinition method)
+    {
+        if (
+            ILHookGetDMDBeforeManipulation.s_MethodDefinitionToOriginalInstructions.TryGetValue(
+                method,
+                out var instructions
+            )
+        )
+        {
+            return instructions;
+        }
+
+        throw new Exception(
+            "Tried to get original instructions for a method which MonoDetour does not know about."
+        );
+    }
+
     /// <summary>
     /// Gets a <see cref="HookTargetInfo"/> for a target <see cref="ILContext"/>.
     /// </summary>
@@ -25,10 +60,6 @@ public static class HookTargetRecords
     {
         if (s_MethodToInfo.TryGetValue(il.Method, out HookTargetInfo? info))
         {
-            // Console.WriteLine("Got existing info for method: " + methodBase.Name);
-            // foreach (var postfix in info.PostfixInfo.FirstPostfixInstructions)
-            //     Console.WriteLine(postfix);
-
             return info;
         }
 
@@ -36,8 +67,6 @@ public static class HookTargetRecords
         {
             throw new InvalidCastException("MethodBase is not MethodInfo!");
         }
-
-        // Console.WriteLine("Creating new info for method: " + method.Name);
 
         VariableDefinition? returnValue = null;
         if (method.ReturnType != typeof(void))

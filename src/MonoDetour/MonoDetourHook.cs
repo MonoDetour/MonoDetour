@@ -38,6 +38,11 @@ public class MonoDetourHook<TApplier> : IMonoDetourHook<TApplier>
 
     bool isDisposed = false;
 
+    static MonoDetourHook()
+    {
+        ILHookGetDMDBeforeManipulation.InitHook();
+    }
+
     /// <summary>
     /// Constructs a <see cref="MonoDetourHook{TApplier}"/> with <see cref="Applier"/> defined by
     /// <typeparamref name="TApplier"/>.

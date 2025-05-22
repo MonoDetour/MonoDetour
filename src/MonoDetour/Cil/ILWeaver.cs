@@ -25,7 +25,7 @@ public class ILWeaver(ILManipulationInfo il)
     public ILManipulationInfo ManipulationInfo { get; } = il;
 
     /// <inheritdoc cref="ILContext"/>
-    public ILContext Context { get; } = il.ManipulationContext;
+    public ILContext Context { get; } = il.Context;
 
     /// <inheritdoc cref="ILContext.IL"/>
     public ILProcessor IL => Context.IL;
@@ -91,7 +91,7 @@ public class ILWeaver(ILManipulationInfo il)
         set => CurrentTo(value);
     }
 
-    Instruction current = il.ManipulationContext.Instrs[0];
+    Instruction current = il.Context.Instrs[0];
 
     readonly List<ILLabel> pendingFutureNextInsertLabels = [];
 

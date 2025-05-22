@@ -21,7 +21,7 @@ public class PrefixDetour : IMonoDetourHookApplier
     public void ApplierManipulator(ILContext il)
     {
         HookTargetRecords.HookTargetInfo info = HookTargetRecords.GetFor(il, Hook.Target);
-        ILWeaver w = new(new(il, Hook.Target));
+        ILWeaver w = new(new(il));
         bool modifiesReturnValue = Hook.ModifiesControlFlow() && info.ReturnValue is not null;
 
         w.InsertBeforeCurrent(w.Create(OpCodes.Nop));

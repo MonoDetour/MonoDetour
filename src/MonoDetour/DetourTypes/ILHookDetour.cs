@@ -1,7 +1,5 @@
 using System;
-using System.IO;
 using System.Reflection;
-using Mono.Cecil;
 using MonoDetour.Cil;
 using MonoMod.Cil;
 
@@ -31,5 +29,5 @@ public class ILHookDetour : IMonoDetourHookApplier
     ILManipulationInfo.Manipulator invoker = null!;
 
     /// <inheritdoc/>
-    public void ApplierManipulator(ILContext il) => invoker(new(il, Hook.Target));
+    public void ApplierManipulator(ILContext il) => invoker(new(il));
 }

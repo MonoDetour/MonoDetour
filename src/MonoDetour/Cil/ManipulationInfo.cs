@@ -1,4 +1,8 @@
+using System.Collections.ObjectModel;
 using System.Reflection;
+using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
+using MonoDetour.DetourTypes.Manipulation;
 using MonoMod.Cil;
 using MonoMod.Utils;
 
@@ -10,8 +14,7 @@ namespace MonoDetour.Cil;
 /// state, including the original method as a <see cref="MethodBase"/>.
 /// </summary>
 /// <param name="il">The main <see cref="ILContext"/> for manipulation.</param>
-/// <param name="original">The original method.</param>
-public class ILManipulationInfo(ILContext il, MethodBase original)
+public class ILManipulationInfo(ILContext il)
 {
     /// <summary>
     /// An IL manipulator method accepting a <see cref="ILManipulationInfo"/>.
@@ -27,13 +30,26 @@ public class ILManipulationInfo(ILContext il, MethodBase original)
     /// <summary>
     /// The original method.
     /// </summary>
-    public MethodBase Original { get; } = original;
-
-    /// <inheritdoc cref="ILContext"/>
-    public ILContext ManipulationContext { get; } = il;
+    public MethodBase Original { get; } = HookTargetRecords.GetOriginalMethod(il.Method);
 
     /// <summary>
-    /// Similar to <see cref="ManipulationContext"/> except this is untouched and won't
+    /// The <see cref="ILContext"/> used for manipulating the target method.
+    /// </summary>
+    public ILContext Context { get; } = il;
+
+    /// <summary>
+    /// A list of the original instructions before the method was manipulated.
+    /// </summary>
+    /// <remarks>
+    /// This list has the same instruction instances as the current <see cref="Context"/>,
+    /// meaning some may have been modified. For unmanipulated instructions, see
+    /// <see cref="UnmanipulatedContext"/>.
+    /// </remarks>
+    public ReadOnlyCollection<Instruction> OriginalInstructions { get; } =
+        HookTargetRecords.GetOriginalInstructions(il.Method);
+
+    /// <summary>
+    /// Similar to <see cref="Context"/> except this is untouched and won't
     /// be used for anything as it is just the original method before anyone manipulated it.
     /// This is purely for observing the unmanipulated state of the original method.<br/>
     /// <br/>
