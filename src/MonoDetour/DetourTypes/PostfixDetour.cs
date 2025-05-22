@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Mono.Cecil.Cil;
 using MonoDetour.Cil;
+using MonoDetour.DetourTypes.Manipulation;
 using MonoDetour.Interop.MonoModUtils;
 using MonoDetour.Logging;
 using MonoMod.Cil;
@@ -57,7 +58,7 @@ public class PostfixDetour : IMonoDetourHookApplier
 
         // w.InsertBeforeCurrent(w.Create(OpCodes.Pop));
         w.EmitReferenceBeforeCurrent(Hook, out _);
-        w.InsertBeforeCurrent(w.CreateCall(GeneralDetour.DisposeBadHooks));
+        w.InsertBeforeCurrent(w.CreateCall(Utils.DisposeBadHooks));
 
         w.HandlerSetHandlerEnd(w.Previous, handler);
 
@@ -88,7 +89,7 @@ public class PostfixDetour : IMonoDetourHookApplier
             Console.WriteLine($"Manipulated by Postfix: {Hook.Manipulator.Name}: {il}");
         }
 
-        MonoDetourLogger.Log(
+        Hook.Owner.Log(
             MonoDetourLogger.LogChannel.IL,
             () =>
             {

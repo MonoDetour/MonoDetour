@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Mono.Cecil.Cil;
 using MonoDetour.Cil;
+using MonoDetour.DetourTypes.Manipulation;
 using MonoDetour.Logging;
 using MonoMod.Cil;
 using MonoMod.Utils;
@@ -42,7 +43,7 @@ public class PrefixDetour : IMonoDetourHookApplier
         w.HandlerSetTryEnd(w.Previous, handler);
 
         w.EmitReferenceBeforeCurrent(Hook, out _);
-        w.InsertBeforeCurrent(w.CreateCall(GeneralDetour.DisposeBadHooks));
+        w.InsertBeforeCurrent(w.CreateCall(Utils.DisposeBadHooks));
 
         w.HandlerSetHandlerEnd(w.Previous, handler);
 
@@ -101,7 +102,7 @@ public class PrefixDetour : IMonoDetourHookApplier
             Console.WriteLine($"Manipulated by Prefix: {Hook.Manipulator.Name}: {il}");
         }
 
-        MonoDetourLogger.Log(
+        Hook.Owner.Log(
             MonoDetourLogger.LogChannel.IL,
             () =>
             {

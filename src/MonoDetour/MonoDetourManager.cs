@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using MonoDetour.Cil;
 using MonoDetour.DetourTypes;
-using MonoMod.Cil;
+using MonoDetour.Logging;
 
 namespace MonoDetour;
 
@@ -26,6 +26,12 @@ public class MonoDetourManager(string id) : IDisposable
     /// a single mod can use the same ID for all its <see cref="MonoDetourManager"/>s.
     /// </summary>
     public string Id { get; } = Helpers.ThrowIfNull(id);
+
+    /// <summary>
+    /// Filter for which channels this <see cref="MonoDetourManager"/> logs to.
+    /// </summary>
+    public MonoDetourLogger.LogChannel LogFilter { get; set; } =
+        MonoDetourLogger.LogChannel.Warn | MonoDetourLogger.LogChannel.Error;
 
     /// <summary>
     /// The hooks applied by this MonoDetourManager.

@@ -4,121 +4,12 @@ using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using MonoDetour.Cil;
-using MonoDetour.DetourTypes;
 using MonoMod.Cil;
 
 namespace MonoDetour;
 
 internal static class MonoDetourUtils
 {
-    public static bool ModifiesControlFlow(this IReadOnlyMonoDetourHook hook) =>
-        hook.Manipulator is MethodInfo mi && mi.ReturnType == typeof(ReturnFlow);
-
-    public static void EmitParamsAndReturnValueBeforeCurrent(
-        this ILWeaver w,
-        VariableDefinition returnValue,
-        IReadOnlyMonoDetourHook hook
-    )
-    {
-        Helpers.ThrowIfNull(returnValue);
-
-        w.EmitParamsBeforeCurrent(hook);
-
-        // Push return value address to the stack
-        // so it can be manipulated by a hook.
-        w.InsertBeforeCurrent(w.Create(OpCodes.Ldloca, returnValue));
-    }
-
-    public static void EmitParamsBeforeCurrent(this ILWeaver w, IReadOnlyMonoDetourHook hook)
-    {
-        bool isStatic = hook.Target.IsStatic;
-
-        foreach (var origParam in w.Method.Parameters)
-        {
-            bool isThis = !isStatic && origParam.Index == 0;
-
-            // 'this', and reference types must not be passed by reference.
-            if (isThis || origParam.ParameterType.IsByReference)
-            {
-                w.InsertBeforeCurrent(w.Create(OpCodes.Ldarg, origParam.Index));
-            }
-            else
-            {
-                w.InsertBeforeCurrent(w.Create(OpCodes.Ldarga, origParam.Index));
-            }
-        }
-    }
-
-    public static int? EmitParams(
-        this ILCursor c,
-        IReadOnlyMonoDetourHook hook,
-        out Instruction? storedReturnValue
-    )
-    {
-        var manipParams = hook.Manipulator.GetParameters();
-
-        int? retTypeIdx = null;
-
-        if (hook.Target is MethodInfo methodInfo)
-        {
-            if (methodInfo.ReturnType != typeof(void))
-            {
-                c.Context.DeclareVariable(methodInfo.ReturnType);
-                retTypeIdx = c.Body.Variables.Count - 1;
-            }
-        }
-
-        ParameterInfo? retField = null;
-        if (retTypeIdx is not null && hook is MonoDetourHook<PostfixDetour>)
-        {
-            retField = manipParams.LastOrDefault();
-        }
-
-        storedReturnValue = null;
-        if (retField is not null && retTypeIdx is not null)
-        {
-            // Store the original return value
-            // for use after emitting params.
-            c.Emit(OpCodes.Stloc, retTypeIdx);
-            storedReturnValue = c.Previous;
-        }
-
-        bool isStatic = hook.Target.IsStatic;
-
-        foreach (var origParam in c.Method.Parameters)
-        {
-            if (!isStatic && origParam.Index == 0 || origParam.ParameterType.IsByReference)
-            {
-                // 'this', and reference types must not be passed by reference.
-                c.Emit(OpCodes.Ldarg, origParam.Index);
-            }
-            else
-            {
-                c.Emit(OpCodes.Ldarga, origParam.Index);
-            }
-        }
-
-        if (retField is not null && retTypeIdx is not null)
-        {
-            // Push return value address to the stack
-            // so it can be manipulated by a hook.
-            c.Emit(OpCodes.Ldloca, retTypeIdx);
-        }
-
-        return retTypeIdx;
-    }
-
-    public static void ApplyReturnValue(
-        this ILCursor c,
-        IReadOnlyMonoDetourHook hook,
-        int retTypeIdx
-    )
-    {
-        // We push the possibly manipulated return value to stack here.
-        c.Emit(OpCodes.Ldloc, retTypeIdx);
-    }
-
     public static bool TryGetCustomAttribute<T>(
         MemberInfo member,
         [NotNullWhen(true)] out T? attribute
@@ -168,27 +59,5 @@ internal static class MonoDetourUtils
         {
             return [.. ex.Types.Where(type => type is not null)!];
         }
-    }
-
-    public static bool TryGetMonoDetourParameter(
-        MethodBase method,
-        [NotNullWhen(true)] out ParameterInfo? parameterInfo,
-        [NotNullWhen(true)] out Type? parameterType
-    )
-    {
-        parameterInfo = null;
-        parameterType = null;
-
-        var parameters = method.GetParameters();
-        if (parameters.Length != 1)
-            return false;
-
-        parameterInfo = parameters[0];
-        parameterType = parameterInfo.ParameterType;
-
-        if (parameterType.IsByRef)
-            parameterType = parameterType.GetElementType()!;
-
-        return true;
     }
 }

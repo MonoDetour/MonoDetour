@@ -77,27 +77,34 @@ public static class MonoDetourLogger
             _ => throw new NotSupportedException(),
         };
 
-    /// <summary>
-    /// Filter for which channels should be listened to.
-    /// If the channel is in the filter, all log messages from that
-    /// channel get propagated into <see cref="MessageReceived"/> event.
-    /// </summary>
-    public static LogChannel ChannelFilter { get; set; } = LogChannel.Error;
+    // TODO: Maybe some kind of global override could be good?
+    // /// <summary>
+    // /// Filter for which channels should be listened to.
+    // /// If the channel is in the filter, all log messages from that
+    // /// channel get propagated into <see cref="MessageReceived"/> event.
+    // /// </summary>
+    // public static LogChannel GlobalFilter { get; set; } = LogChannel.Error;
 
     /// <summary>
     /// Event fired on any incoming message that passes the channel filter.
     /// </summary>
     public static event EventHandler<LogEventArgs>? MessageReceived;
 
-    internal static bool IsEnabledFor(LogChannel channel)
+    internal static bool IsEnabledFor(LogChannel caller, LogChannel channel)
     {
-        return (channel & ChannelFilter) != LogChannel.None;
+        return (caller & channel) != LogChannel.None;
     }
 
-    internal static void Log(LogChannel channel, Func<string> message)
+    internal static void Log(
+        this MonoDetourManager caller,
+        LogChannel channel,
+        Func<string> message
+    )
     {
-        if (!IsEnabledFor(channel))
+        if (!IsEnabledFor(caller.LogFilter, channel))
+        {
             return;
+        }
 
         if (MessageReceived is null)
         {
@@ -108,9 +115,9 @@ public static class MonoDetourLogger
         MessageReceived?.Invoke(null, new LogEventArgs(channel, message()));
     }
 
-    internal static void LogText(LogChannel channel, string message)
+    internal static void LogText(this MonoDetourManager caller, LogChannel channel, string message)
     {
-        if (!IsEnabledFor(channel))
+        if (!IsEnabledFor(caller.LogFilter, channel))
             return;
 
         if (MessageReceived is null)
@@ -124,6 +131,21 @@ public static class MonoDetourLogger
 
     static void DefaultLog(LogChannel channel, string message)
     {
-        Console.WriteLine($"[{LogChannelToString(channel)}: MonoDetour] {message}");
+        ConsoleColor color = channel switch
+        {
+            LogChannel.Warn => ConsoleColor.Yellow,
+            LogChannel.Error => ConsoleColor.Red,
+            _ => Console.ForegroundColor,
+        };
+
+        LogWithColor($"[{LogChannelToString(channel)}: MonoDetour] {message}", color);
+    }
+
+    static void LogWithColor(string message, ConsoleColor color)
+    {
+        var originalColor = Console.ForegroundColor;
+        Console.ForegroundColor = color;
+        Console.Error.WriteLine(message);
+        Console.ForegroundColor = originalColor;
     }
 }

@@ -9,7 +9,6 @@ class PipelineStartup : ITestPipelineStartup
     public async ValueTask StartAsync(IMessageSink diagnosticMessageSink)
     {
         await Task.CompletedTask;
-        MonoDetourLogger.ChannelFilter = MonoDetourLogger.LogChannel.None;
     }
 
     public async ValueTask StopAsync()

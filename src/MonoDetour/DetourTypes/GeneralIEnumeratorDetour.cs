@@ -45,7 +45,7 @@ internal class GeneralIEnumeratorDetour
             }
         }
 
-        MonoDetourLogger.Log(
+        hook.Owner.Log(
             MonoDetourLogger.LogChannel.IL,
             () =>
             {

@@ -6,6 +6,8 @@ public static partial class DisposeBadHookTests
     public static void CanDisposeBadHook()
     {
         var m = DefaultMonoDetourManager.New();
+        m.LogFilter = MonoDetourLogger.LogChannel.None;
+
         m.Hook<PostfixDetour>(Return1, Postfix_Return10);
         m.Hook<PostfixDetour>(ReturnFoo, Postfix_ReturnBar);
 
