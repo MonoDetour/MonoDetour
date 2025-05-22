@@ -54,33 +54,48 @@ public static class HookTargetRecords
     /// <summary>
     /// Information about a hook target method.
     /// </summary>
-    public record HookTargetInfo(ILContext Context, VariableDefinition? ReturnValue)
+    public class HookTargetInfo
     {
+        internal HookTargetInfo(ILContext Context, VariableDefinition? returnValue)
+        {
+            PrefixInfo = new(Context);
+            ReturnValue = returnValue;
+        }
+
         /// <inheritdoc cref="TargetPrefixInfo"/>
-        public TargetPrefixInfo PrefixInfo { get; } = new(Context);
+        public TargetPrefixInfo PrefixInfo { get; }
 
         /// <inheritdoc cref="TargetPostfixInfo"/>
         public TargetPostfixInfo PostfixInfo { get; } = new();
+
+        /// <summary>
+        /// The local variable containing the return value of the method.
+        /// </summary>
+        public VariableDefinition? ReturnValue { get; }
     }
 
     /// <summary>
     /// Information relevant to Prefix hooks.
     /// </summary>
-    /// <param name="Context">The <see cref="ILContext"/> of the method.</param>
-    public record TargetPrefixInfo(ILContext Context)
+    public class TargetPrefixInfo
     {
+        internal TargetPrefixInfo(ILContext Context)
+        {
+            ControlFlow = Context.DeclareVariable(typeof(int));
+            TemporaryControlFlow = Context.DeclareVariable(typeof(int));
+        }
+
         /// <summary>
         /// The local int used for determining the control flow of the method.<br/>
         /// See <see cref="DetourTypes.ReturnFlow"/>.
         /// </summary>
-        public VariableDefinition ControlFlow { get; } = Context.DeclareVariable(typeof(int));
+        public VariableDefinition ControlFlow { get; }
 
         /// <summary>
         /// The temporary local int used for setting the
         /// <see cref="ControlFlow"/> int.
         /// </summary>
-        public VariableDefinition TemporaryControlFlow { get; } =
-            Context.DeclareVariable(typeof(int));
+        public VariableDefinition TemporaryControlFlow { get; }
 
         /// <summary>
         /// Whether or not Prefix control flow has been implemented in the method.
@@ -96,8 +111,10 @@ public static class HookTargetRecords
     /// <summary>
     /// Information relevant to Postfix hooks.
     /// </summary>
-    public record TargetPostfixInfo()
+    public class TargetPostfixInfo
     {
+        internal TargetPostfixInfo() { }
+
         /// <summary>
         /// The first instruction for each postfix.
         /// </summary>
