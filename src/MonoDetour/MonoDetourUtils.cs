@@ -34,13 +34,6 @@ internal static class MonoDetourUtils
         return false;
     }
 
-    public static VariableDefinition DeclareVariable(this ILContext il, Type type)
-    {
-        var varDef = new VariableDefinition(il.Import(type));
-        il.Body.Variables.Add(varDef);
-        return varDef;
-    }
-
     public static Type[] GetTypesFromAssembly(Assembly assembly)
     {
         try
