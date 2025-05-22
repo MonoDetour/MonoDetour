@@ -20,7 +20,7 @@ public class PrefixDetour : IMonoDetourHookApplier
     /// <inheritdoc/>
     public void ApplierManipulator(ILContext il)
     {
-        HookedMethodInfo info = MethodHookRecords.GetFor(il, Hook.Target);
+        HookTargetRecords.HookTargetInfo info = HookTargetRecords.GetFor(il, Hook.Target);
         ILWeaver w = new(new(il, Hook.Target));
         bool modifiesReturnValue = Hook.ModifiesControlFlow() && info.ReturnValue is not null;
 
@@ -72,10 +72,10 @@ public class PrefixDetour : IMonoDetourHookApplier
             setControlFlowSwitch.Operand = new ILLabel[] { none, softReturn, hardReturn };
         }
 
-        if (!info.PrefixInfo.ControlImplemented)
+        if (!info.PrefixInfo.ControlFlowImplemented)
         {
             // Evaluate actual control flow value.
-            info.PrefixInfo.ControlImplemented = true;
+            info.PrefixInfo.SetControlFlowImplemented();
 
             w.MarkLabelToCurrent(out var none);
 

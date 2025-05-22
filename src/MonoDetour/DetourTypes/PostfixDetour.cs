@@ -27,7 +27,7 @@ public class PostfixDetour : IMonoDetourHookApplier
             throw new NotSupportedException("A PostfixDetour may not modify control flow.");
         }
 
-        HookedMethodInfo info = MethodHookRecords.GetFor(il, Hook.Target);
+        HookTargetRecords.HookTargetInfo info = HookTargetRecords.GetFor(il, Hook.Target);
         ILWeaver w = new(new(il, Hook.Target));
         w.CurrentTo(w.Last);
 
