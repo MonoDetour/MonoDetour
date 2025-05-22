@@ -6,7 +6,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 
-namespace MonoDetour;
+namespace MonoDetour.DetourTypes.Manipulation;
 
 /// <summary>
 /// An API for hooks to share information for target methods.
@@ -87,7 +87,7 @@ public static class HookTargetRecords
 
         /// <summary>
         /// The local int used for determining the control flow of the method.<br/>
-        /// See <see cref="DetourTypes.ReturnFlow"/>.
+        /// See <see cref="ReturnFlow"/>.
         /// </summary>
         public VariableDefinition ControlFlow { get; }
 
