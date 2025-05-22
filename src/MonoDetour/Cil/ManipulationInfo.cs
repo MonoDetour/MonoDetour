@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Reflection;
 using Mono.Cecil.Cil;
-using Mono.Cecil.Rocks;
 using MonoDetour.DetourTypes.Manipulation;
 using MonoMod.Cil;
 using MonoMod.Utils;
@@ -14,7 +13,8 @@ namespace MonoDetour.Cil;
 /// state, including the original method as a <see cref="MethodBase"/>.
 /// </summary>
 /// <param name="il">The main <see cref="ILContext"/> for manipulation.</param>
-public class ILManipulationInfo(ILContext il)
+/// <param name="original">The original method.</param>
+public class ILManipulationInfo(ILContext il, MethodBase original)
 {
     /// <summary>
     /// An IL manipulator method accepting a <see cref="ILManipulationInfo"/>.
@@ -30,7 +30,7 @@ public class ILManipulationInfo(ILContext il)
     /// <summary>
     /// The original method.
     /// </summary>
-    public MethodBase Original { get; } = HookTargetRecords.GetOriginalMethod(il.Method);
+    public MethodBase Original { get; } = original;
 
     /// <summary>
     /// The <see cref="ILContext"/> used for manipulating the target method.

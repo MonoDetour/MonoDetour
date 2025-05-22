@@ -29,5 +29,5 @@ public class ILHookDetour : IMonoDetourHookApplier
     ILManipulationInfo.Manipulator invoker = null!;
 
     /// <inheritdoc/>
-    public void ApplierManipulator(ILContext il) => invoker(new(il));
+    public void ApplierManipulator(ILContext il) => invoker(new(il, Hook.Target));
 }
