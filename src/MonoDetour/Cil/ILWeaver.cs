@@ -748,7 +748,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// Set <see cref="Current"/> to a target instruction.
     /// See also <see cref="CurrentTo(int)"/><br/>
     /// <br/>
-    /// For use in <see cref="Match(Predicate{Instruction}[])"/> and other variations,
+    /// For use in <see cref="MatchRelaxed(Predicate{Instruction}[])"/> and other variations,
     /// use <see cref="SetCurrentTo"/> as that method returns true.
     /// </summary>
     /// <returns>this <see cref="ILWeaver"/></returns>
@@ -768,7 +768,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// <summary>
     /// Set <see cref="Current"/> to a target instruction just like
     /// <see cref="CurrentTo(Instruction)"/>, except this returns true
-    /// for use in <see cref="Match(Predicate{Instruction}[])"/> and other variations.
+    /// for use in <see cref="MatchRelaxed(Predicate{Instruction}[])"/> and other variations.
     /// </summary>
     /// <param name="instruction">The instruction to set as current.</param>
     /// <returns>true</returns>
@@ -786,7 +786,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
 
     /// <summary>
     /// Set instruction to a target instruction and returns true
-    /// for use in <see cref="Match(Predicate{Instruction}[])"/> and other variations.
+    /// for use in <see cref="MatchRelaxed(Predicate{Instruction}[])"/> and other variations.
     /// </summary>
     /// <param name="toBeSet">The instruction to be set.</param>
     /// <param name="target">The instruction toBeSet will be set to.</param>
@@ -814,8 +814,13 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// location in the instructions. This method searches the entire target method
     /// to ensure the match predicates are matching exactly what was attempted to match.<br/>
     /// <br/>
+    /// If the match fails, the match is attempted again against the "original" instructions
+    /// of the method before it was manipulated. As such, you must NEVER offset
+    /// <see cref="Current"/> to another predicate by index, as there may be instructions
+    /// in between, or that instruction may not even exist in the current method body.<br/>
+    /// <br/>
     /// If you want to match multiple locations, use
-    /// <see cref="MatchMultiple(Action{ILWeaver}, Predicate{Instruction}[])"/><br/>
+    /// <see cref="MatchMultipleRelaxed(Action{ILWeaver}, Predicate{Instruction}[])"/><br/>
     /// <br/>
     /// <example>
     /// In the following example we match two instructions, setting
@@ -824,7 +829,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// <code>
     /// <![CDATA[
     /// weaver
-    ///     .Match(
+    ///     .MatchRelaxed(
     ///         x => x.MatchLdloc(1),
     ///         x => x.MatchBrtrue(out _) && weaver.SetCurrentTo(x)
     ///     )
@@ -834,14 +839,54 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// </code>
     /// </example>
     /// </summary>
-    /// if the match is successful.
     /// <param name="predicates">The predicates to match against.</param>
     /// <returns>An <see cref="ILWeaverResult"/> which can be used
     /// for checking if the match was a success or a failure.</returns>
-    public ILWeaverResult Match(params Predicate<Instruction>[] predicates) =>
+    public ILWeaverResult MatchRelaxed(params Predicate<Instruction>[] predicates) =>
         MatchInternal(
             allowMultipleMatches: false,
             null,
+            allowSecondPass: true,
+            secondPassMatchOriginalInstructions: false,
+            predicates
+        );
+
+    /// <summary>
+    /// Attempts to match a set of predicates to find one specific
+    /// location in the instructions. This method searches the entire target method
+    /// to ensure the match predicates are matching exactly what was attempted to match.<br/>
+    /// <br/>
+    /// Only a 1:1 match of the current method instructions matching predicates in order
+    /// are accepted unlike with <see cref="MatchRelaxed"/>. As such you should use that
+    /// method instead to keep your match more compatible with other mods, unless if you
+    /// really know what you are doing.<br/>
+    /// <br/>
+    /// If you want to match multiple locations, use
+    /// <see cref="MatchMultipleStrict(Action{ILWeaver}, Predicate{Instruction}[])"/><br/>
+    /// <br/>
+    /// <example>
+    /// In the following example we match two instructions, setting
+    /// <see cref="Current"/> to the brtrue instruction which remains as the
+    /// <see cref="Current"/> if the match is successful.
+    /// <code>
+    /// <![CDATA[
+    /// weaver
+    ///     .MatchStrict(
+    ///         x => x.MatchLdloc(1),
+    ///         x => x.MatchBrtrue(out _) && weaver.SetCurrentTo(x)
+    ///     )
+    ///     .ThrowIfFailure()
+    ///     .EmitBeforeCurrent(weaver.Create(OpCodes.Call, GetCustomNumber));
+    /// ]]>
+    /// </code>
+    /// </example>
+    /// </summary>
+    /// <inheritdoc cref="MatchRelaxed"/>
+    public ILWeaverResult MatchStrict(params Predicate<Instruction>[] predicates) =>
+        MatchInternal(
+            allowMultipleMatches: false,
+            null,
+            allowSecondPass: false,
             secondPassMatchOriginalInstructions: false,
             predicates
         );
@@ -849,6 +894,11 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// <summary>
     /// Attempts to match a set of predicates multiple times to find specific
     /// locations in the instructions.<br/>
+    /// <br/>
+    /// If the match fails, the match is attempted again against the "original" instructions
+    /// of the method before it was manipulated. As such, you must NEVER offset
+    /// <see cref="Current"/> to another predicate by index, as there may be instructions
+    /// in between, or that instruction may not even exist in the current method body.<br/>
     /// <br/>
     /// <example>
     /// In the following example we match two instructions, setting
@@ -859,7 +909,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// <code>
     /// <![CDATA[
     /// weaver
-    ///     .MatchMultiple(
+    ///     .MatchMultipleRelaxed(
     ///         onMatch: matchWeaver =>
     ///         {
     ///             matchWeaver.EmitBeforeCurrent(
@@ -877,14 +927,61 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// <param name="onMatch">A delegate which runs for each match, passing a copy of the
     /// original <see cref="ILWeaver"/> with the <see cref="Current"/> pointing to the one
     /// at the time of the match.</param>
-    /// <inheritdoc cref="Match"/>
-    public ILWeaverResult MatchMultiple(
+    /// <inheritdoc cref="MatchRelaxed"/>
+    public ILWeaverResult MatchMultipleRelaxed(
         Action<ILWeaver> onMatch,
         params Predicate<Instruction>[] predicates
     ) =>
         MatchInternal(
             allowMultipleMatches: true,
             onMatch,
+            allowSecondPass: true,
+            secondPassMatchOriginalInstructions: false,
+            predicates
+        );
+
+    /// <summary>
+    /// Attempts to match a set of predicates multiple times to find specific
+    /// locations in the instructions.<br/>
+    /// <br/>
+    /// Only a 1:1 match of the current method instructions matching predicates in order
+    /// are accepted unlike with <see cref="MatchMultipleRelaxed"/>. As such you should use that
+    /// method instead to keep your match more compatible with other mods, unless if you
+    /// really know what you are doing.<br/>
+    /// <br/>
+    /// <example>
+    /// In the following example we match two instructions, setting
+    /// <see cref="Current"/> to the brtrue instruction which only applies to
+    /// the <see cref="ILWeaver"/> clones which are passed to the `onMatch` delegate's argument.
+    /// This means that the <see cref="ILWeaver"/> you run this method on will keep its original
+    /// <see cref="Current"/> even if it's set in the predicates.
+    /// <code>
+    /// <![CDATA[
+    /// weaver
+    ///     .MatchMultipleStrict(
+    ///         onMatch: matchWeaver =>
+    ///         {
+    ///             matchWeaver.EmitBeforeCurrent(
+    ///                 matchWeaver.Create(OpCodes.Call, GetCustomNumber)
+    ///             );
+    ///         },
+    ///         x => x.MatchLdloc(1),
+    ///         x => x.MatchBrtrue(out _) && weaver.SetCurrentTo(x)
+    ///     )
+    ///     .ThrowIfFailure();
+    /// ]]>
+    /// </code>
+    /// </example>
+    /// </summary>
+    /// <inheritdoc cref="MatchMultipleRelaxed(Action{ILWeaver}, Predicate{Instruction}[])"/>
+    public ILWeaverResult MatchMultipleStrict(
+        Action<ILWeaver> onMatch,
+        params Predicate<Instruction>[] predicates
+    ) =>
+        MatchInternal(
+            allowMultipleMatches: true,
+            onMatch,
+            allowSecondPass: false,
             secondPassMatchOriginalInstructions: false,
             predicates
         );
@@ -892,6 +989,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     ILWeaverResult MatchInternal(
         bool allowMultipleMatches,
         Action<ILWeaver>? onMatched,
+        bool allowSecondPass,
         bool secondPassMatchOriginalInstructions,
         params Predicate<Instruction>[] predicates
     )
@@ -964,11 +1062,12 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
                 return new ILWeaverResult(this, null);
             }
 
-            if (!secondPassMatchOriginalInstructions)
+            if (allowSecondPass && !secondPassMatchOriginalInstructions)
             {
                 var secondPassResult = MatchInternal(
                     allowMultipleMatches,
                     onMatched,
+                    allowSecondPass,
                     secondPassMatchOriginalInstructions: true,
                     predicates
                 );
@@ -987,11 +1086,12 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
                 return new ILWeaverResult(this, null);
             }
 
-            if (!secondPassMatchOriginalInstructions)
+            if (allowSecondPass && !secondPassMatchOriginalInstructions)
             {
                 var secondPassResult = MatchInternal(
                     allowMultipleMatches,
                     onMatched,
+                    allowSecondPass,
                     secondPassMatchOriginalInstructions: true,
                     predicates
                 );
@@ -1024,7 +1124,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
             CodeBuilder err = new(new StringBuilder(), 2);
 
             err.WriteLine(
-                    $"- {nameof(ILWeaver)}.{nameof(Match)} matched all predicates more than once in the target method."
+                    $"- {nameof(ILWeaver)}.{nameof(MatchRelaxed)} matched all predicates more than once in the target method."
                 )
                 .IncreaseIndent()
                 .Write("- Total matches: ")
@@ -1062,7 +1162,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
             CodeBuilder err = new(new StringBuilder(), 2);
 
             err.Write(
-                    $"{nameof(ILWeaver)}.{nameof(Match)} couldn't match all predicates for method: "
+                    $"{nameof(ILWeaver)}.{nameof(MatchRelaxed)} couldn't match all predicates for method: "
                 )
                 .WriteLine(Context.Method.FullName)
                 // .WriteLine("HELP: Instruction matching predicates must match a valid pattern in the target method's instructions.")

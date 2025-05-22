@@ -53,7 +53,7 @@ public static partial class ILWeaverTryCatchTests
     {
         ILWeaver w = new(info);
 
-        w.Match(x => x.MatchLdcI4(0) && w.SetCurrentTo(x));
+        w.MatchRelaxed(x => x.MatchLdcI4(0) && w.SetCurrentTo(x));
         w.InsertAfterCurrent(w.Create(OpCodes.Pop), w.Create(OpCodes.Ldc_I4_1));
     }
 

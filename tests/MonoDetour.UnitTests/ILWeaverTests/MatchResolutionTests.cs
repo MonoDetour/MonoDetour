@@ -32,7 +32,7 @@ public static class MatchResolutionTests
     static void ILHook_IncrementNumber(ILManipulationInfo info)
     {
         ILWeaver w = new(info) { LogFilter = MonoDetourLogger.LogChannel.None };
-        w.Match(
+        w.MatchRelaxed(
                 x => x.MatchLdcI4(0),
                 x => x.MatchCall(((Delegate)Stub).Method) && w.SetCurrentTo(x)
             )
@@ -46,7 +46,7 @@ public static class MatchResolutionTests
 
         w.InsertBeforeCurrent(w.Create(OpCodes.Ldstr, "removed stub"), w.Create(OpCodes.Pop));
 
-        w.Match(x => x.MatchCall(((Delegate)Stub).Method) && w.SetCurrentTo(x))
+        w.MatchRelaxed(x => x.MatchCall(((Delegate)Stub).Method) && w.SetCurrentTo(x))
             .ThrowIfFailure()
             .ReplaceCurrent(w.CreateCall(ReplacementStub));
     }
@@ -57,12 +57,12 @@ public static class MatchResolutionTests
 
         // We need to make sure we evaluate this test
         // when the stub call has actually been removed.
-        if (!w.Match(x => x.MatchLdstr("removed stub")).IsValid)
+        if (!w.MatchRelaxed(x => x.MatchLdstr("removed stub")).IsValid)
         {
             return;
         }
 
-        w.Match(
+        w.MatchRelaxed(
                 x => x.MatchLdcI4(0),
                 x => x.MatchCall(((Delegate)Stub).Method) && w.SetCurrentTo(x)
             )
