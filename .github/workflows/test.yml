@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,5 +29,5 @@ jobs:
       - name: Build
         run: dotnet build -c Release --no-restore
 
-      - name: Build and Run Tests
+      - name: Run Tests
         run: dotnet run -c Release --no-build --project ./tests/MonoDetour.UnitTests/
