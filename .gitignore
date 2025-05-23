@@ -10,11 +10,19 @@ obj/
 !/src/
 !/tests/
 
+# Config files
+!/.config/
+/.config/*
+!/.config/dotnet-tools.json
+
+!/.github/
+
 # Add root level files
-!.gitignore
-!CONTRIBUTING.md
-!Directory.Build.props
-!Directory.Build.targets
-!LICENSE
-!MonoDetour.sln
-!README.md
+!/.csharpierignore
+!/.gitignore
+!/CONTRIBUTING.md
+!/Directory.Build.props
+!/Directory.Build.targets
+!/LICENSE
+!/MonoDetour.sln
+!/README.md

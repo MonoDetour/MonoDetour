@@ -1,0 +1,10 @@
+# Ignore everything on root level
+/*
+
+# Add source files
+!/src/
+!/tests/
+
+# Add root level source files
+!/Directory.Build.props
+!/Directory.Build.targets
