@@ -10,12 +10,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           filter: tree:0
 
-      - uses: ./.github/actions/build
+      - name: Restore and Build
+        uses: ./.github/actions/build
 
       - name: Run Tests
         run: dotnet run -c Release --no-build --project ./tests/MonoDetour.UnitTests/
