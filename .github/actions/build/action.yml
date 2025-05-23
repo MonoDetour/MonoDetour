@@ -1,5 +1,5 @@
-name: Build Project
-description: Checks out, restores and builds the project.
+name: Restore and Build Project
+description: Restores and builds the project.
 
 inputs:
   additional-build-args:
@@ -9,11 +9,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        filter: tree:0
-
     - uses: actions/setup-dotnet@v4
       with:
         dotnet-version: "9.x"
