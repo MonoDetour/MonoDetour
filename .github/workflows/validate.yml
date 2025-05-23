@@ -1,0 +1,33 @@
+name: Validate Build and Formatting
+
+on:
+  push:
+    branches: [ main ]
+  # Trigger the workflow on any pull request
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: tree:0
+
+      - name: Setup Dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.x"
+
+      - name: Restore
+        run: |
+          dotnet restore --locked-mode
+          dotnet tool restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore -WarnAsError
+
+      - name: Check Formatting
+        run: dotnet csharpier check .

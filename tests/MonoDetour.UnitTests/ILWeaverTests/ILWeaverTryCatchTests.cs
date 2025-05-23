@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using MonoDetour.Cil;
 
 namespace MonoDetour.UnitTests.ILWeaverTests;
@@ -70,8 +71,14 @@ public static partial class ILWeaverTryCatchTests
 
     static bool HasTryCatchAndReturnFalse()
     {
-        try { }
-        catch { }
+        try
+        {
+            _ = "doing stuff";
+        }
+        catch
+        {
+            _ = "catching stuff";
+        }
         return false;
     }
 }
