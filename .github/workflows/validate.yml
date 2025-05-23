@@ -10,24 +10,9 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: ./.github/actions/build
         with:
-          fetch-depth: 0
-          filter: tree:0
-
-      - name: Setup Dotnet
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "9.x"
-
-      - name: Restore
-        run: |
-          dotnet restore --locked-mode
-          dotnet tool restore
-
-      - name: Build
-        run: dotnet build -c Release --no-restore -WarnAsError
+          additional-build-args: -WarnAsError
 
       - name: Check Formatting
         run: dotnet csharpier check .
