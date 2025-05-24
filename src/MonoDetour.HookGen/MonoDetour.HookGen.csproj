@@ -54,7 +54,7 @@
       Visible="false"
     />
   </ItemGroup>
-  <!-- Get rid of waring NU5128 -->
+  <!-- Get rid of warning NU5128 -->
   <Target Name="CreateFiles">
     <WriteLinesToFile File="$(IntermediateOutputPath)lib/_._" Overwrite="true" />
     <ItemGroup>
