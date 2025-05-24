@@ -38,11 +38,6 @@
       ReferenceOutputAssembly="false"
       ExcludeAssets="all"
     />
-    <PackageReference
-      Include="MonoMod.RuntimeDetour"
-      Version="$(RuntimeDetourVersion)"
-      ReferenceOutputAssembly="false"
-    />
     <PackageReference Include="MonoDetour" Version="0.1.0-dev" ReferenceOutputAssembly="false" />
     <ProjectReference
       Include="../MonoDetour.Analyzers/MonoDetour.Analyzers.csproj"
