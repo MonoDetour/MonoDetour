@@ -1,3 +1,5 @@
+using MonoMod.RuntimeDetour;
+
 namespace MonoDetour.Bindings.Reorg;
 
 internal static class MonoModVersion
@@ -6,12 +8,11 @@ internal static class MonoModVersion
 
     static MonoModVersion()
     {
-        try
+        if (typeof(Hook).Assembly.GetName().Version.Major >= 25)
         {
-            _ = MonoMod.Utils.ArchitectureKind.Unknown;
             IsReorg = true;
         }
-        catch
+        else
         {
             IsReorg = false;
         }

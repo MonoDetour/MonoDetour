@@ -30,9 +30,11 @@ static class ProxyILHookConstructor
 
     private static void ILHook_DetourContextGetCurrent(ILContext il)
     {
-        var getter = typeof(DetourContext)
-            .GetProperty("Current", BindingFlags.Static | BindingFlags.NonPublic)
-            .GetGetMethod();
+        var getter =
+            typeof(DetourContext)
+                .GetProperty("Current", BindingFlags.Static | BindingFlags.NonPublic)
+                .GetGetMethod(nonPublic: true)
+            ?? throw new NullReferenceException("Couldn't find 'DetourContext.get_Current'.");
 
         ILCursor c = new(il);
         c.Body.Instructions.Clear();
