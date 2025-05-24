@@ -202,25 +202,16 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
         return new MonoDetourHook<T>(target, manipulator, this, config, applyByDefault);
     }
 
-    void Dispose(bool disposing)
+    /// <inheritdoc/>
+    public void Dispose()
     {
         if (isDisposed)
         {
             return;
         }
 
-        if (disposing)
-        {
-            DisposeHooks();
-        }
+        DisposeHooks();
 
         isDisposed = true;
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
     }
 }

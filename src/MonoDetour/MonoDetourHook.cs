@@ -85,35 +85,18 @@ public class MonoDetourHook<TApplier> : IMonoDetourHook<TApplier>
     /// <inheritdoc/>
     public void Undo() => Applier.Undo();
 
-    void Dispose(bool disposing)
+    /// <summary>
+    /// Disposes the <see cref="Applier"/> hook, disposing this <see cref="MonoDetourHook{TApplier}"/>.
+    /// </summary>
+    public void Dispose()
     {
         if (isDisposed)
         {
             return;
         }
 
-        if (disposing)
-        {
-            Applier.Dispose();
-        }
+        Applier.Dispose();
 
         isDisposed = true;
-    }
-
-    /// <summary>
-    /// Cleans up and undoes the hook, if needed.
-    /// </summary>
-    ~MonoDetourHook()
-    {
-        Dispose(disposing: false);
-    }
-
-    /// <summary>
-    /// Disposes the <see cref="Applier"/> hook, disposing this <see cref="MonoDetourHook{TApplier}"/>.
-    /// </summary>
-    public void Dispose()
-    {
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }
