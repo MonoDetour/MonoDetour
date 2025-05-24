@@ -1,9 +1,17 @@
 # MonoDetour
 
-A `MonoMod.RuntimeDetour.ILHook` wrapper optimized for convenience, based around HookGen with C# source generators.
+A `MonoMod.RuntimeDetour` wrapper optimized for convenience, based around HookGen with C# source generators.
 
-> [!NOTE]
-> Also see related project [MonoDetour.ILWeaver](./src/MonoDetour.ILWeaver/README.md), a redesigned ILCursor with a focus on hand-holding.
+> [!WARNING]
+> This library is not fully released, and things *will* change.
+>
+> - Bugs and missing functionality is expected
+> - Documentation may not reflect reality
+>
+> Major things missing for you may be:
+>
+> - Currently there is no HarmonyX interoperability
+>   - Hooks that change control flow (HarmonyX prefix return false) will ignore MonoDetour/HarmonyX
 
 ## Documentation
 
@@ -47,10 +55,6 @@ MonoDetour entirely relies on `ILHook`s for hooking similar to HarmonyX. But ins
 
 <https://monodetour.github.io/getting-started/why-monodetour/>
 
-## How Do I Use It?
-
-Right now, you don't. While it works, it's way early for use and the API will change.
-
 ## How Does the HookGen Work?
 
 <https://monodetour.github.io/getting-started/hookgen/>
@@ -58,4 +62,4 @@ Right now, you don't. While it works, it's way early for use and the API will ch
 ## Credits
 
 The HookGen source generator is *heavily* based on [MonoMod.HookGen.V2](<https://github.com/MonoMod/MonoMod/tree/hookgenv2>).
-Without it, the source generator would have been a nightmare to implement myself, as I essentially have zero experience with them.
+Without it, this project probably wouldn't exist.
