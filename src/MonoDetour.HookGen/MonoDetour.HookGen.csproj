@@ -2,7 +2,10 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>com.github.MonoDetour.HookGen</AssemblyName>
-    <Version>0.1.0</Version>
+    <!-- This package doesn't need to be updated often. -->
+    <ImplicitMinVer>false</ImplicitMinVer>
+    <VersionPrefix>$(HookGenAndAnalyzersVersionPrefix)</VersionPrefix>
+    <VersionSuffix>$(HookGenAndAnalyzersVersionSuffix)</VersionSuffix>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

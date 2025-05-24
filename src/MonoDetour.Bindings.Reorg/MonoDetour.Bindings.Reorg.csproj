@@ -2,7 +2,6 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>com.github.MonoDetour.Bindings.Reorg</AssemblyName>
-    <Version>0.1.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MonoMod.RuntimeDetour" Version="25.2.3" PrivateAssets="all" />
