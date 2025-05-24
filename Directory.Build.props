@@ -28,7 +28,7 @@
     <SolutionRoot>$(MSBuildThisFileDirectory)</SolutionRoot>
     <!-- Release version for HookGen and Analyzers packages -->
     <HookGenAndAnalyzersVersionPrefix>0.1.0</HookGenAndAnalyzersVersionPrefix>
-    <HookGenAndAnalyzersVersionSuffix>dev.0</HookGenAndAnalyzersVersionSuffix>
+    <HookGenAndAnalyzersVersionSuffix>dev.1</HookGenAndAnalyzersVersionSuffix>
   </PropertyGroup>
   <!-- MinVer -->
   <PropertyGroup>
