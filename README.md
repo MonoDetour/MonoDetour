@@ -1,5 +1,9 @@
 # MonoDetour
 
+| MonoDetour | MonoDetour.HookGen |
+|--|--|
+| [![MonoDetour](https://img.shields.io/nuget/v/MonoDetour?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/MonoDetour) | [![MonoDetour.HookGen](https://img.shields.io/nuget/v/MonoDetour.HookGen?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/MonoDetour.HookGen) |
+
 A `MonoMod.RuntimeDetour` wrapper optimized for convenience, based around HookGen with C# source generators.
 
 > [!WARNING]
