@@ -2,11 +2,22 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>com.github.MonoDetour.HookGen</AssemblyName>
-    <Version>1.0.0</Version>
+    <Version>0.1.0</Version>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);CreateFiles</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
+  <!-- NuGet props -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MonoDetour.HookGen</PackageId>
+    <Description>Hook generation for MonoDetour via C# source generators: On.Namespace.Type.Method.Prefix(MyPrefix);</Description>
+    <PackageTags>MonoDetour;RuntimeDetour;detour;detours;patch;patching;hook;$(PackageTags)</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="./README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference
       Include="Microsoft.CodeAnalysis.Analyzers"
@@ -28,11 +39,30 @@
       Include="MonoMod.RuntimeDetour"
       Version="$(RuntimeDetourVersion)"
       ReferenceOutputAssembly="false"
-      ExcludeAssets="all"
+    />
+    <ProjectReference
+      Include="../MonoDetour.Analyzers/MonoDetour.Analyzers.csproj"
+      ReferenceOutputAssembly="false"
     />
   </ItemGroup>
   <!-- This ensures the library will be packaged as a source generator when we use `dotnet pack` -->
   <ItemGroup>
     <None Include="$(TargetPath)" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None
+      Include="$(TargetDir)../../MonoDetour.Analyzers/release/com.github.MonoDetour.Analyzers.dll"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+      Visible="false"
+    />
   </ItemGroup>
+  <!-- Get rid of waring NU5128 -->
+  <Target Name="CreateFiles">
+    <WriteLinesToFile File="$(IntermediateOutputPath)lib/_._" Overwrite="true" />
+    <ItemGroup>
+      <TfmSpecificPackageFile
+        Include="$(IntermediateOutputPath)lib/_._"
+        PackagePath="lib/$(TargetFramework)"
+      />
+    </ItemGroup>
+  </Target>
 </Project>
