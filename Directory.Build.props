@@ -5,6 +5,7 @@
     <Authors>Hamunii</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/MonoDetour/MonoDetour</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <!-- Main configuration -->
   <PropertyGroup>
