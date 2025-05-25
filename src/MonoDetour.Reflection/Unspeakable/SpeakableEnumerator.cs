@@ -4,12 +4,17 @@ using System.Runtime.CompilerServices;
 namespace MonoDetour.Reflection.Unspeakable;
 
 /// <summary>
+/// Wraps an <see cref="IEnumerator{T}"/> object.
+/// </summary>
+public interface ISpeakableEnumerator;
+
+/// <summary>
 /// A class that wraps an <see cref="IEnumerator{T}"/> object.
 /// Allows access to basic fields of the IEnumerator.
 /// </summary>
 /// <typeparam name="TCurrent">The type of Current.</typeparam>
 /// <typeparam name="TThis">The declaring type.</typeparam>
-public sealed class SpeakableEnumerator<TCurrent, TThis>
+public sealed class SpeakableEnumerator<TCurrent, TThis> : ISpeakableEnumerator
 {
     /// <summary>
     /// Gets the instance of the class that constructed this enumerator.
@@ -74,7 +79,7 @@ public sealed class SpeakableEnumerator<TCurrent, TThis>
 }
 
 /// <inheritdoc cref="SpeakableEnumerator{TCurrent, TThis}"/>
-public sealed class SpeakableEnumerator<TCurrent>
+public sealed class SpeakableEnumerator<TCurrent> : ISpeakableEnumerator
 {
     /// <summary>
     /// Gets the instance of this IEnumerator. Note that this is

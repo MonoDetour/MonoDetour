@@ -981,20 +981,44 @@ namespace MonoDetour.HookGen
                 }
             }
 
-            if (member.Signature.IteratorStateMachine is not null)
+            if (member.Signature.IteratorStateMachine is { } iterator)
             {
-                cb.WriteLine(
-                    "public delegate void PrefixMoveNextSignature(global::System.Collections.IEnumerator self);\n"
-                );
+                var genericEnumerator =
+                    "global::MonoDetour.Reflection.Unspeakable.SpeakableEnumerator";
+
+                cb.Write("public delegate void PrefixMoveNextSignature(")
+                    .Write(genericEnumerator)
+                    .Write('<')
+                    .Write(iterator.EnumeratorType.FqName);
+                if (iterator.ThisField)
+                {
+                    cb.Write(", ").Write(type.Type.InnermostType.FqName);
+                }
+                cb.WriteLine("> self);").WriteLine();
+
                 if (member.GenerateControlFlowVariants)
                 {
-                    cb.WriteLine(
-                        "public delegate global::MonoDetour.DetourTypes.ReturnFlow ControlFlowPrefixMoveNextSignature(global::System.Collections.IEnumerator self);\n"
-                    );
+                    cb.Write(
+                            "public delegate global::MonoDetour.DetourTypes.ReturnFlow ControlFlowPrefixMoveNextSignature("
+                        )
+                        .Write(genericEnumerator)
+                        .Write('<')
+                        .Write(iterator.EnumeratorType.FqName);
+                    if (iterator.ThisField)
+                    {
+                        cb.Write(", ").Write(type.Type.InnermostType.FqName);
+                    }
+                    cb.WriteLine("> self);").WriteLine();
                 }
-                cb.WriteLine(
-                    "public delegate void PostfixMoveNextSignature(global::System.Collections.IEnumerator self, ref bool continueEnumeration);\n"
-                );
+                cb.Write("public delegate void PostfixMoveNextSignature(")
+                    .Write(genericEnumerator)
+                    .Write('<')
+                    .Write(iterator.EnumeratorType.FqName);
+                if (iterator.ThisField)
+                {
+                    cb.Write(", ").Write(type.Type.InnermostType.FqName);
+                }
+                cb.WriteLine("> self, ref bool continueEnumeration);").WriteLine();
             }
 
             void PrintIEnumeratorWarning(string correspondingIEnumeratorHook)
@@ -1634,7 +1658,11 @@ namespace MonoDetour.HookGen
             IteratorStateMachineTarget? IteratorStateMachine = null
         );
 
-        private sealed record IteratorStateMachineTarget(TypeRef TargetType);
+        private sealed record IteratorStateMachineTarget(
+            TypeRef TargetType,
+            TypeRef EnumeratorType,
+            bool ThisField
+        );
 
         private sealed record GeneratableMemberModel(
             string Name,
@@ -1903,7 +1931,26 @@ namespace MonoDetour.HookGen
                 {
                     continue;
                 }
-                iteratorStateMachine = new(GenHelpers.CreateRef(targetType));
+                var enumeratorType = targetType.Interfaces.First(x =>
+                    x.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                        .StartsWith("global::System.Collections.Generic.IEnumerator<")
+                );
+                var typeArgs = enumeratorType.TypeArguments;
+                if (typeArgs.Length != 1)
+                {
+                    throw new Exception($"enumerator Type has {typeArgs.Length} type arguments!");
+                }
+
+                bool hasThisField = targetType
+                    .GetMembers()
+                    .OfType<IFieldSymbol>()
+                    .Any(f => f.Name.Equals("<>4__this"));
+
+                iteratorStateMachine = new(
+                    GenHelpers.CreateRef(targetType),
+                    GenHelpers.CreateRef(typeArgs[0]),
+                    hasThisField
+                );
             }
 
             var sig = new MethodSignature(
