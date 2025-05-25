@@ -23,6 +23,7 @@ obj/
 !/CONTRIBUTING.md
 !/Directory.Build.props
 !/Directory.Build.targets
+!/icon.png
 !/LICENSE
 !/MonoDetour.sln
 !/README.md
