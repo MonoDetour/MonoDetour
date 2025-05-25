@@ -8,4 +8,9 @@ class ControlFlowLib
     {
         message = "hello";
     }
+
+    public string ReturnHello()
+    {
+        return "hello";
+    }
 }
