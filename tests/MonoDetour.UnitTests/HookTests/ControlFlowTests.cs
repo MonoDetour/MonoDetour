@@ -1,4 +1,3 @@
-using MonoDetour.Cil;
 using On.MonoDetour.UnitTests.TestLib.ControlFlowLib;
 
 namespace MonoDetour.UnitTests.HookTests;
@@ -10,7 +9,6 @@ public static class ControlFlowTests
     public static void CanChangeControlFlow()
     {
         using var m = DefaultMonoDetourManager.New();
-
         var lib = new ControlFlowLib();
 
         SetStringToHello.ControlFlowPrefix(ControlFlowPrefixSkipOriginal, manager: m);
@@ -33,6 +31,24 @@ public static class ControlFlowTests
         message = null;
         lib.SetStringToHello(ref message);
         Assert.Equal("none foo baz", message);
+    }
+
+    [Fact]
+    public static void CanChangeControlFlowReturnValue()
+    {
+        using var m = DefaultMonoDetourManager.New();
+        var lib = new ControlFlowLib();
+
+        ReturnHello.ControlFlowPrefix(ReturnHookedRunOriginal);
+
+        // A control flow prefix hook which does not change control flow
+        // cannot override the return value if the control flow remains normal.
+        Assert.Equal("hello", lib.ReturnHello());
+
+        ReturnHello.ControlFlowPrefix(ReturnSkipOriginal, new(-1));
+
+        // But here the changes will show since control flow is modified.
+        Assert.Equal("skipped hooked", lib.ReturnHello());
     }
 
     private static ReturnFlow ControlFlowPrefixNone(ControlFlowLib self, ref string message)
@@ -61,5 +77,17 @@ public static class ControlFlowTests
     private static void Postfix(ControlFlowLib self, ref string message)
     {
         message += "bar";
+    }
+
+    private static ReturnFlow ReturnHookedRunOriginal(ControlFlowLib self, ref string returnValue)
+    {
+        returnValue += "hooked";
+        return ReturnFlow.None;
+    }
+
+    private static ReturnFlow ReturnSkipOriginal(ControlFlowLib self, ref string returnValue)
+    {
+        returnValue += "skipped ";
+        return ReturnFlow.SkipOriginal;
     }
 }

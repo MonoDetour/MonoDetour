@@ -954,24 +954,32 @@ namespace MonoDetour.HookGen
                     )
                     .IncreaseIndent();
                 WriteDelegateTypes();
+                WriteReturnValueIfExists();
                 cb.WriteLine(");").DecreaseIndent();
             }
 
             cb.Write("public delegate void PostfixSignature(").IncreaseIndent();
             WriteDelegateTypes();
-            if (member.Signature.ReturnType.FqName != "void")
-            {
-                if (parameters.Length != 0 || sig.ThisType is not null)
-                {
-                    _ = cb.WriteLine(",");
-                }
-                cb.Write("ref ")
-                    .Write(
-                        SanitizeUnspeakableFqName(RemoveRefness(member.Signature.ReturnType.FqName))
-                    )
-                    .Write(" returnValue");
-            }
+            WriteReturnValueIfExists();
             cb.WriteLine(");").DecreaseIndent().WriteLine();
+
+            void WriteReturnValueIfExists()
+            {
+                if (member.Signature.ReturnType.FqName != "void")
+                {
+                    if (parameters.Length != 0 || sig.ThisType is not null)
+                    {
+                        _ = cb.WriteLine(",");
+                    }
+                    cb.Write("ref ")
+                        .Write(
+                            SanitizeUnspeakableFqName(
+                                RemoveRefness(member.Signature.ReturnType.FqName)
+                            )
+                        )
+                        .Write(" returnValue");
+                }
+            }
 
             if (member.Signature.IteratorStateMachine is not null)
             {
