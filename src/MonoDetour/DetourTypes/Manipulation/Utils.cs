@@ -1,13 +1,37 @@
 using System;
+using System.Linq;
 using System.Reflection;
 using Mono.Cecil.Cil;
 using MonoDetour.Cil;
 using MonoDetour.Logging;
+using MonoDetour.Reflection.Unspeakable;
+using MonoMod.Utils;
 
 namespace MonoDetour.DetourTypes.Manipulation;
 
 static class Utils
 {
+    static void WriteSpeakableEnumerator(ILWeaver w, Type firstArg)
+    {
+        MethodBase method = null!;
+        var genericArgs = firstArg.GetGenericArguments();
+
+        if (genericArgs.Length == 0)
+        {
+            method = typeof(SpeakableEnumerator<>)
+                .MakeGenericType(genericArgs[0])
+                .GetMethod("GetOrCreate");
+        }
+        else
+        {
+            method = typeof(SpeakableEnumerator<,>)
+                .MakeGenericType(genericArgs[0], genericArgs[1])
+                .GetMethod("GetOrCreate");
+        }
+
+        w.InsertBeforeCurrent(w.Create(OpCodes.Call, method));
+    }
+
     public static bool ModifiesControlFlow(this IReadOnlyMonoDetourHook hook) =>
         hook.Manipulator is MethodInfo mi && mi.ReturnType == typeof(ReturnFlow);
 
@@ -34,8 +58,22 @@ static class Utils
         {
             bool isThis = !isStatic && origParam.Index == 0;
 
+            if (isThis)
+            {
+                // Having this logic here is kinda dirty.
+                var firstArg = hook.Manipulator.GetParameters().First().ParameterType;
+                if (typeof(ISpeakableEnumerator).IsAssignableFrom(firstArg))
+                {
+                    w.InsertBeforeCurrent(w.Create(OpCodes.Ldarg, origParam.Index));
+                    WriteSpeakableEnumerator(w, firstArg);
+                }
+                else
+                {
+                    w.InsertBeforeCurrent(w.Create(OpCodes.Ldarg, origParam.Index));
+                }
+            }
             // 'this', and reference types must not be passed by reference.
-            if (isThis || origParam.ParameterType.IsByReference)
+            else if (origParam.ParameterType.IsByReference)
             {
                 w.InsertBeforeCurrent(w.Create(OpCodes.Ldarg, origParam.Index));
             }

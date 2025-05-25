@@ -33,23 +33,25 @@ public static partial class IEnumeratorTests
         Assert.Equal([0, 2, 4, 6, 8], order);
     }
 
-    private static void Hook_MoveNextPrefix(IEnumerator self)
+    private static void Hook_MoveNextPrefix(SpeakableEnumerator<object, LibraryMethods> self)
     {
-        if (stateRef(self) != 0)
+        if (self.State != 0 && stateRef(self.This) != 0)
         {
             return;
         }
         order.Enqueue(0);
     }
 
-    private static void Hook_MoveNextPostfix(IEnumerator self, ref bool continueEnumeration)
+    private static void Hook_MoveNextPostfix(
+        SpeakableEnumerator<object, LibraryMethods> self,
+        ref bool continueEnumeration
+    )
     {
         if (!continueEnumeration)
         {
             return;
         }
-        ref var current = ref currentRef(self);
-        current = (int)current * 2;
+        self.Current = (int)currentRef(self.This) * 2;
 
         order.Enqueue((int)self.Current);
     }
