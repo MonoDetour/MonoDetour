@@ -72,6 +72,9 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     /// <summary>
     /// Invokes hook initializers for the assembly that calls this method.
     /// </summary>
+    /// <remarks>
+    /// If a hook initializer throws, this method throws.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void InvokeHookInitializers() =>
         InvokeHookInitializers(Assembly.GetCallingAssembly());
@@ -80,6 +83,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     /// Invokes hook initializers for the specified assembly.
     /// </summary>
     /// <param name="assembly">The assembly whose hook initializers to invoke.</param>
+    /// <inheritdoc cref="InvokeHookInitializers()"/>
     public static void InvokeHookInitializers(Assembly assembly)
     {
         foreach (Type type in MonoDetourUtils.GetTypesFromAssembly(assembly))
@@ -95,6 +99,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     /// Invokes hook initializers for the specified type.
     /// </summary>
     /// <param name="type">The type whose hook initializers to invoke.</param>
+    /// <inheritdoc cref="InvokeHookInitializers()"/>
     public static void InvokeHookInitializers(Type type)
     {
         MethodInfo[] methods = type.GetMethods((BindingFlags)~0);
