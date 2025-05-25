@@ -54,7 +54,13 @@ public sealed class SpeakableEnumerator<TCurrent, TThis>
         thisRef = type.EnumeratorFastFieldReferenceThis<TThis>();
     }
 
-    internal static SpeakableEnumerator<TCurrent, TThis> Get(IEnumerator<TCurrent> instance)
+    /// <summary>
+    /// Gets or creates a <see cref="SpeakableEnumerator{TCurrent, TThis}"/> for the
+    /// specified instance.
+    /// </summary>
+    /// <param name="instance">An enumerator instance.</param>
+    /// <returns>A new or existing <see cref="SpeakableEnumerator{TCurrent, TThis}"/>.</returns>
+    public static SpeakableEnumerator<TCurrent, TThis> GetOrCreate(IEnumerator<TCurrent> instance)
     {
         if (s_EnumeratorToSpeakable.TryGetValue(instance, out var value))
         {
@@ -113,7 +119,13 @@ public sealed class SpeakableEnumerator<TCurrent>
         stateRef = type.EnumeratorFastFieldReferenceState();
     }
 
-    internal static SpeakableEnumerator<TCurrent> Get(IEnumerator<TCurrent> instance)
+    /// <summary>
+    /// Gets or creates a <see cref="SpeakableEnumerator{TCurrent}"/> for the
+    /// specified instance.
+    /// </summary>
+    /// <param name="instance">An enumerator instance.</param>
+    /// <returns>A new or existing <see cref="SpeakableEnumerator{TCurrent}"/>.</returns>
+    public static SpeakableEnumerator<TCurrent> GetOrCreate(IEnumerator<TCurrent> instance)
     {
         if (s_EnumeratorToSpeakable.TryGetValue(instance, out var value))
         {
