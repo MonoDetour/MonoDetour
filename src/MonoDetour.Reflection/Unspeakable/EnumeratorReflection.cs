@@ -1,135 +1,220 @@
 using System;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Reflection.Emit;
 using MonoMod.Utils;
 
 namespace MonoDetour.Reflection.Unspeakable;
 
+file static class EnumeratorExtensionsCache<T>
+{
+    /// <summary>
+    /// Cache for fields whose id corresponds to a constant field name.
+    /// </summary>
+    internal static readonly ConcurrentDictionary<(Type, int), ReferenceField<T>> s_FieldToRef = [];
+
+    /// <summary>
+    /// Cache for field id 3 whose names are unknown.
+    /// </summary>
+    internal static readonly ConcurrentDictionary<(Type, string), ReferenceField<T>> s_3ToRef = [];
+}
+
 /// <summary>
 /// Enumerator related reflection helper methods.
 /// </summary>
 public static class EnumeratorReflection
 {
-    /// <summary>
-    /// Builds and sets a fast field reference getter method for the <c>&lt;&gt;4__this</c>
-    /// field on an IEnumerator to <paramref name="enumeratorFieldReference"/>.
-    /// </summary>
-    /// <param name="enumeratorFieldReference">The field to set.</param>
     /// <returns></returns>
     /// <inheritdoc cref="EnumeratorFastFieldReferenceThis{T}(MethodInfo)"/>
-    /// <param name="methodInfo"></param>
     public static void EnumeratorFastFieldReferenceThis<T>(
         this MethodInfo methodInfo,
-        ref FieldReference<T> enumeratorFieldReference
+        ref ReferenceField<T> enumeratorFieldReference
     ) => enumeratorFieldReference = methodInfo.EnumeratorFastFieldReferenceThis<T>();
 
+    /// <inheritdoc cref="EnumeratorFastFieldReferenceThis{T}(Type)"/>
+    public static ReferenceField<T> EnumeratorFastFieldReferenceThis<T>(
+        this MethodInfo methodInfo
+    ) => methodInfo.DeclaringType.EnumeratorFastFieldReferenceThis<T>();
+
+    /// <returns></returns>
+    /// <inheritdoc cref="EnumeratorFastFieldReferenceThis{T}(Type)"/>
+    public static void EnumeratorFastFieldReferenceThis<T>(
+        this Type enumeratorType,
+        ref ReferenceField<T> enumeratorFieldReference
+    ) => enumeratorFieldReference = enumeratorType.EnumeratorFastFieldReferenceThis<T>();
+
     /// <summary>
-    /// Builds and returns a fast field reference getter method for the <c>&lt;&gt;4__this</c>
+    /// Builds or gets a fast field reference getter method for the <c>&lt;&gt;4__this</c>
     /// field on an IEnumerator.
     /// </summary>
-    /// <typeparam name="T">The field type.</typeparam>
-    /// <param name="methodInfo">A method of the enumerator.</param>
-    /// <returns>A fast field field reference getter method.</returns>
-    /// <exception cref="NullReferenceException"></exception>
-    /// <exception cref="InvalidCastException"></exception>
-    public static FieldReference<T> EnumeratorFastFieldReferenceThis<T>(this MethodInfo methodInfo)
-    {
-        FieldInfo? thisField =
-            methodInfo.DeclaringType.GetField("<>4__this")
-            ?? throw new NullReferenceException(
-                $"'<>4__this' field not found on type {methodInfo.DeclaringType}."
-            );
+    /// <inheritdoc cref="EnumeratorFastFieldReference{T}(Type, string)"/>
+    public static ReferenceField<T> EnumeratorFastFieldReferenceThis<T>(this Type enumeratorType) =>
+        EnumeratorFastFieldReference<T>(enumeratorType, 4);
 
-        if (!typeof(T).IsAssignableFrom(thisField.FieldType))
-        {
-            throw new InvalidCastException(
-                $"{typeof(T)} is not assignable from '<>4__this' field type {thisField.FieldType}"
-            );
-        }
-
-        return CreateFastFieldReference<T>(thisField);
-    }
-
-    /// <summary>
-    /// Builds and sets a fast field reference getter method for the <c>&lt;&gt;2__current</c>
-    /// field on an IEnumerator to <paramref name="enumeratorFieldReference"/>.
-    /// </summary>
-    /// <param name="enumeratorFieldReference">The field to set.</param>
     /// <returns></returns>
     /// <inheritdoc cref="EnumeratorFastFieldReferenceCurrent{T}(MethodInfo)"/>
-    /// <param name="methodInfo"></param>
     public static void EnumeratorFastFieldReferenceCurrent<T>(
         this MethodInfo methodInfo,
-        ref FieldReference<T> enumeratorFieldReference
+        ref ReferenceField<T> enumeratorFieldReference
     ) => enumeratorFieldReference = methodInfo.EnumeratorFastFieldReferenceCurrent<T>();
 
+    /// <inheritdoc cref="EnumeratorFastFieldReferenceCurrent{T}(Type)"/>
+    public static ReferenceField<T> EnumeratorFastFieldReferenceCurrent<T>(
+        this MethodInfo methodInfo
+    ) => methodInfo.DeclaringType.EnumeratorFastFieldReferenceCurrent<T>();
+
+    /// <returns></returns>
+    /// <inheritdoc cref="EnumeratorFastFieldReferenceCurrent{T}(Type)"/>
+    public static void EnumeratorFastFieldReferenceCurrent<T>(
+        this Type enumeratorType,
+        ref ReferenceField<T> enumeratorFieldReference
+    ) => enumeratorFieldReference = enumeratorType.EnumeratorFastFieldReferenceCurrent<T>();
+
     /// <summary>
-    /// Builds and returns a fast field reference getter method for the <c>&lt;&gt;2__current</c>
+    /// Builds or gets and returns a fast field reference getter method for the <c>&lt;&gt;2__current</c>
     /// field on an IEnumerator.
     /// </summary>
-    /// <typeparam name="T">The field type.</typeparam>
-    /// <param name="methodInfo">A method of the enumerator.</param>
-    /// <returns>A fast field Reference method.</returns>
-    /// <exception cref="NullReferenceException"></exception>
-    /// <exception cref="InvalidCastException"></exception>
-    public static FieldReference<T> EnumeratorFastFieldReferenceCurrent<T>(
+    /// <inheritdoc cref="EnumeratorFastFieldReference{T}(Type, string)"/>
+    public static ReferenceField<T> EnumeratorFastFieldReferenceCurrent<T>(
+        this Type enumeratorType
+    ) => EnumeratorFastFieldReference<T>(enumeratorType, 2);
+
+    /// <returns></returns>
+    /// <inheritdoc cref="EnumeratorFastFieldReferenceState(MethodInfo)"/>
+    public static void EnumeratorFastFieldReferenceState(
+        this MethodInfo methodInfo,
+        ref ReferenceField<int> enumeratorFieldReference
+    ) => enumeratorFieldReference = methodInfo.EnumeratorFastFieldReferenceState();
+
+    /// <inheritdoc cref="EnumeratorFastFieldReferenceState(Type)"/>
+    public static ReferenceField<int> EnumeratorFastFieldReferenceState(
         this MethodInfo methodInfo
-    )
+    ) => methodInfo.DeclaringType.EnumeratorFastFieldReferenceState();
+
+    /// <returns></returns>
+    /// <inheritdoc cref="EnumeratorFastFieldReferenceState(Type)"/>
+    public static void EnumeratorFastFieldReferenceState(
+        this Type enumeratorType,
+        ref ReferenceField<int> enumeratorFieldReference
+    ) => enumeratorFieldReference = enumeratorType.EnumeratorFastFieldReferenceState();
+
+    /// <summary>
+    /// Builds or gets a fast field reference getter method for the <c>&lt;&gt;1__state</c>
+    /// field on an IEnumerator.
+    /// </summary>
+    /// <inheritdoc cref="EnumeratorFastFieldReference{T}(Type, string)"/>
+    public static ReferenceField<int> EnumeratorFastFieldReferenceState(this Type enumeratorType) =>
+        EnumeratorFastFieldReference<int>(enumeratorType, 1);
+
+    /// <returns></returns>
+    /// <inheritdoc cref="EnumeratorFastFieldReference{T}(MethodInfo, string)"/>
+    public static void EnumeratorFastFieldReference<T>(
+        this MethodInfo methodInfo,
+        string fieldName,
+        ref ReferenceField<T> enumeratorFieldReference
+    ) => enumeratorFieldReference = methodInfo.EnumeratorFastFieldReference<T>(fieldName);
+
+    /// <inheritdoc cref="EnumeratorFastFieldReference{T}(Type, string)"/>
+    public static ReferenceField<T> EnumeratorFastFieldReference<T>(
+        this MethodInfo methodInfo,
+        string fieldName
+    ) => methodInfo.DeclaringType.EnumeratorFastFieldReference<T>(fieldName);
+
+    /// <returns></returns>
+    /// <inheritdoc cref="EnumeratorFastFieldReference{T}(Type, string)"/>
+    public static void EnumeratorFastFieldReference<T>(
+        this Type enumeratorType,
+        string fieldName,
+        ref ReferenceField<T> enumeratorFieldReference
+    ) => enumeratorFieldReference = enumeratorType.EnumeratorFastFieldReference<T>(fieldName);
+
+    static ReferenceField<T> EnumeratorFastFieldReference<T>(this Type enumeratorType, int fieldId)
     {
-        FieldInfo? currentField =
-            methodInfo.DeclaringType.GetField(
-                "<>2__current",
-                BindingFlags.Instance | BindingFlags.NonPublic
+        if (
+            EnumeratorExtensionsCache<T>.s_FieldToRef.TryGetValue(
+                (enumeratorType, fieldId),
+                out var fieldRef
             )
+        )
+        {
+            return fieldRef;
+        }
+
+        var name = fieldId switch
+        {
+            1 => "<>1__state",
+            2 => "<>2__current",
+            3 => throw new ArgumentException("field id 3 is not constant."),
+            4 => "<>4__this",
+            _ => throw new ArgumentOutOfRangeException(),
+        };
+
+        FieldInfo? field =
+            enumeratorType.GetField(name, (BindingFlags)~0)
             ?? throw new NullReferenceException(
-                $"'<>2__current' field not found on type {methodInfo.DeclaringType}."
+                $"'{name}' field not found on type {enumeratorType}."
             );
 
-        if (!typeof(T).IsAssignableFrom(currentField.FieldType))
+        if (!typeof(T).IsAssignableFrom(field.FieldType))
         {
             throw new InvalidCastException(
-                $"{typeof(T)} is not assignable from '<>2__current' field type {currentField.FieldType}"
+                $"{typeof(T)} is not assignable from '{name}' field type {field.FieldType}"
             );
         }
 
-        return CreateFastFieldReference<T>(currentField);
+        fieldRef = CreateFastFieldReference<T>(field);
+        EnumeratorExtensionsCache<T>.s_FieldToRef.TryAdd((enumeratorType, fieldId), fieldRef);
+        return fieldRef;
     }
 
+#pragma warning disable CS1572 // XML comment has a param tag, but there is no parameter by that name
     /// <summary>
-    /// Builds and sets a fast field reference getter method for the <c>&lt;&gt;1__state</c>
-    /// field on an IEnumerator to <paramref name="enumeratorFieldReference"/>.
+    /// Builds or gets a fast field reference getter method for a field with the specified
+    /// name on an IEnumerator.
     /// </summary>
-    /// <param name="enumeratorFieldReference">The field to set.</param>
-    /// <returns></returns>
-    /// <inheritdoc cref="EnumeratorFastFieldReferenceState(MethodInfo)"/>
-    /// <param name="methodInfo"></param>
-    public static void EnumeratorFastFieldReferenceState(
-        this MethodInfo methodInfo,
-        ref FieldReference<int> enumeratorFieldReference
-    ) => enumeratorFieldReference = methodInfo.EnumeratorFastFieldReferenceState();
-
-    /// <summary>
-    /// Builds and returns a fast field reference getter method for the <c>&lt;&gt;1__state</c>
-    /// field on an IEnumerator.
-    /// </summary>
+    /// <typeparam name="T">The field type.</typeparam>
+    /// <param name="enumeratorType">The type of the enumerator.</param>
     /// <param name="methodInfo">A method of the enumerator.</param>
+    /// <param name="fieldName">The exact name of the field.</param>
+    /// <param name="enumeratorFieldReference">The field to set.</param>
     /// <returns>A fast field field reference getter method.</returns>
     /// <exception cref="NullReferenceException"></exception>
-    public static FieldReference<int> EnumeratorFastFieldReferenceState(this MethodInfo methodInfo)
+    /// <exception cref="InvalidCastException"></exception>
+#pragma warning restore CS1572 // XML comment has a param tag, but there is no parameter by that name
+    public static ReferenceField<T> EnumeratorFastFieldReference<T>(
+        this Type enumeratorType,
+        string fieldName
+    )
     {
-        FieldInfo? stateField =
-            methodInfo.DeclaringType.GetField(
-                "<>1__state",
-                BindingFlags.Instance | BindingFlags.NonPublic
+        if (
+            EnumeratorExtensionsCache<T>.s_3ToRef.TryGetValue(
+                (enumeratorType, fieldName),
+                out var fieldRef
             )
+        )
+        {
+            return fieldRef;
+        }
+
+        FieldInfo? field =
+            enumeratorType.GetField(fieldName, (BindingFlags)~0)
             ?? throw new NullReferenceException(
-                $"'<>1__state' field not found on type {methodInfo.DeclaringType}."
+                $"'{fieldName}' field not found on type {enumeratorType}."
             );
 
-        return CreateFastFieldReference<int>(stateField);
+        if (!typeof(T).IsAssignableFrom(field.FieldType))
+        {
+            throw new InvalidCastException(
+                $"{typeof(T)} is not assignable from '{fieldName}' field type {field.FieldType}"
+            );
+        }
+
+        fieldRef = CreateFastFieldReference<T>(field);
+        EnumeratorExtensionsCache<T>.s_3ToRef.TryAdd((enumeratorType, fieldName), fieldRef);
+        return fieldRef;
     }
 
-    static FieldReference<T> CreateFastFieldReference<T>(FieldInfo fieldInfo)
+    static ReferenceField<T> CreateFastFieldReference<T>(FieldInfo fieldInfo)
     {
         var dmd = new DynamicMethodDefinition(
             "FastFieldReference",
@@ -140,7 +225,7 @@ public static class EnumeratorReflection
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Ldflda, fieldInfo);
         il.Emit(OpCodes.Ret);
-        var referenceGetter = dmd.Generate().CreateDelegate<FieldReference<T>>();
+        var referenceGetter = dmd.Generate().CreateDelegate<ReferenceField<T>>();
         return referenceGetter;
     }
 }
