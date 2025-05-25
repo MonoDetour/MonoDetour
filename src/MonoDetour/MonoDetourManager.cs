@@ -9,7 +9,7 @@ using MonoDetour.Logging;
 namespace MonoDetour;
 
 /// <summary>
-/// A manager for your MonoDetour hooks.
+/// A manager for <see cref="MonoDetourHook{TApplier}"/>s.
 /// </summary>
 /// <param name="id">
 /// The identifier for this manager. This will be used as
