@@ -9,6 +9,7 @@ obj/
 # Add source files
 !/src/
 !/tests/
+!/packaging/
 
 # Config files
 !/.config/

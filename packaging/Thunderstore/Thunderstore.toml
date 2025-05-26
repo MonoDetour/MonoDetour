@@ -1,0 +1,49 @@
+[config]
+schemaVersion = "0.0.1"
+
+[general]
+repository = "https://thunderstore.io"
+
+[package]
+namespace = "MonoDetour"
+name = "MonoDetour"
+description = "Easy and convenient .NET detouring library, powered by MonoMod.RuntimeDetour."
+websiteUrl = "https://github.com/MonoDetour/MonoDetour"
+containsNsfwContent = false
+[package.dependencies]
+BepInEx-BepInExPack = "5.4.2100"
+
+[build]
+icon = "../../icon.png"
+readme = "./README.md"
+outdir = "../../artifacts/thunderstore/"
+
+[[build.copy]]
+source = "../../artifacts/bin/MonoDetour/release/com.github.MonoDetour.dll"
+target = "core/"
+
+[[build.copy]]
+source = "../../artifacts/bin/MonoDetour/release/com.github.MonoDetour.Reflection.dll"
+target = "core/"
+
+[[build.copy]]
+source = "../../artifacts/bin/MonoDetour/release/com.github.MonoDetour.Bindings.Reorg.dll"
+target = "core/"
+
+# TODO: Maybe add changelog?
+# [[build.copy]]
+# source = "../../CHANGELOG.md"
+# target = "/"
+
+[[build.copy]]
+source = "../../LICENSE"
+target = "/"
+
+[publish]
+# https://thunderstore.io/api/experimental/community/
+communities = [ "lethal-company", "repo", ]
+
+[publish.categories]
+# https://thunderstore.io/api/experimental/community/lethal-company/category/
+lethal-company = [ "libraries", ]
+repo = [ "libraries", ]
