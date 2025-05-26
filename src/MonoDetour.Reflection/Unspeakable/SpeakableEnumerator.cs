@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
@@ -19,7 +20,7 @@ public sealed class SpeakableEnumerator<TCurrent, TThis> : ISpeakableEnumerator
     /// <summary>
     /// Gets the instance of the class that constructed this enumerator.
     /// </summary>
-    public TThis DeclaringThis => thisRef(instance);
+    public TThis DeclaringThis => getThisRef(instance);
 
     /// <inheritdoc cref="SpeakableEnumerator{TCurrent}.This"/>
     public IEnumerator<TCurrent> This => instance;
@@ -27,20 +28,20 @@ public sealed class SpeakableEnumerator<TCurrent, TThis> : ISpeakableEnumerator
     /// <inheritdoc cref="SpeakableEnumerator{TCurrent}.Current"/>
     public TCurrent Current
     {
-        get => currentRef(instance);
-        set => currentRef(instance) = value;
+        get => getCurrentRef(instance);
+        set => getCurrentRef(instance) = value;
     }
 
     /// <inheritdoc cref="SpeakableEnumerator{TCurrent}.State"/>
     public int State
     {
-        get => stateRef(instance);
-        set => stateRef(instance) = value;
+        get => getStateRef(instance);
+        set => getStateRef(instance) = value;
     }
 
-    readonly ReferenceField<TThis> thisRef;
-    readonly ReferenceField<TCurrent> currentRef;
-    readonly ReferenceField<int> stateRef;
+    readonly FieldReferenceGetter<TThis> getThisRef;
+    readonly FieldReferenceGetter<TCurrent> getCurrentRef;
+    readonly FieldReferenceGetter<int> getStateRef;
     readonly IEnumerator<TCurrent> instance;
 
     static readonly ConditionalWeakTable<
@@ -54,9 +55,16 @@ public sealed class SpeakableEnumerator<TCurrent, TThis> : ISpeakableEnumerator
     {
         var type = instance.GetType();
         this.instance = instance;
-        currentRef = type.EnumeratorFastFieldReferenceCurrent<TCurrent>();
-        stateRef = type.EnumeratorFastFieldReferenceState();
-        thisRef = type.EnumeratorFastFieldReferenceThis<TThis>();
+        getCurrentRef = type.EnumeratorFastFieldReferenceCurrent<TCurrent>();
+        getStateRef = type.EnumeratorFastFieldReferenceState();
+        getThisRef = type.EnumeratorFastFieldReferenceThis<TThis>();
+    }
+
+    /// <inheritdoc cref="SpeakableEnumerator{TCurrent}.PreBuildFieldReferenceGetters(Type)"/>
+    public static void PreBuildFieldReferenceGetters(Type type)
+    {
+        SpeakableEnumerator<TCurrent>.PreBuildFieldReferenceGetters(type);
+        type.EnumeratorFastFieldReferenceThis<TThis>();
     }
 
     /// <summary>
@@ -92,8 +100,8 @@ public sealed class SpeakableEnumerator<TCurrent> : ISpeakableEnumerator
     /// </summary>
     public TCurrent Current
     {
-        get => currentRef(instance);
-        set => currentRef(instance) = value;
+        get => getCurrentRef(instance);
+        set => getCurrentRef(instance) = value;
     }
 
     /// <summary>
@@ -101,12 +109,12 @@ public sealed class SpeakableEnumerator<TCurrent> : ISpeakableEnumerator
     /// </summary>
     public int State
     {
-        get => stateRef(instance);
-        set => stateRef(instance) = value;
+        get => getStateRef(instance);
+        set => getStateRef(instance) = value;
     }
 
-    readonly ReferenceField<TCurrent> currentRef;
-    readonly ReferenceField<int> stateRef;
+    readonly FieldReferenceGetter<TCurrent> getCurrentRef;
+    readonly FieldReferenceGetter<int> getStateRef;
     readonly IEnumerator<TCurrent> instance;
 
     static readonly ConditionalWeakTable<
@@ -120,8 +128,24 @@ public sealed class SpeakableEnumerator<TCurrent> : ISpeakableEnumerator
     {
         var type = instance.GetType();
         this.instance = instance;
-        currentRef = type.EnumeratorFastFieldReferenceCurrent<TCurrent>();
-        stateRef = type.EnumeratorFastFieldReferenceState();
+        getCurrentRef = type.EnumeratorFastFieldReferenceCurrent<TCurrent>();
+        getStateRef = type.EnumeratorFastFieldReferenceState();
+    }
+
+    /// <summary>
+    /// Can be used for builds field reference getter methods ahead of time
+    /// to prevent freezes after hook initialization.
+    /// </summary>
+    /// <remarks>
+    /// MonoDetour already uses this where it uses SpeakableEnumerator types.
+    /// </remarks>
+    /// <param name="type">The type of Enumerator to build field reference getters for.</param>
+    /// <exception cref="NullReferenceException"></exception>
+    /// <exception cref="InvalidCastException"></exception>
+    public static void PreBuildFieldReferenceGetters(Type type)
+    {
+        type.EnumeratorFastFieldReferenceCurrent<TCurrent>();
+        type.EnumeratorFastFieldReferenceState();
     }
 
     /// <summary>

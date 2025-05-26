@@ -5,28 +5,34 @@ using Mono.Cecil.Cil;
 using MonoDetour.Cil;
 using MonoDetour.Logging;
 using MonoDetour.Reflection.Unspeakable;
-using MonoMod.Utils;
 
 namespace MonoDetour.DetourTypes.Manipulation;
 
 static class Utils
 {
-    static void WriteSpeakableEnumerator(ILWeaver w, Type firstArg)
+    static void WriteSpeakableEnumerator(
+        ILWeaver w,
+        Type speakableEnumeratorType,
+        Type enumeratorType
+    )
     {
-        MethodBase method = null!;
-        var genericArgs = firstArg.GetGenericArguments();
+        var genericArgs = speakableEnumeratorType.GetGenericArguments();
 
+        MethodBase method;
         if (genericArgs.Length == 0)
         {
-            method = typeof(SpeakableEnumerator<>)
-                .MakeGenericType(genericArgs[0])
-                .GetMethod("GetOrCreate");
+            var type = typeof(SpeakableEnumerator<>).MakeGenericType(genericArgs[0]);
+            method = type.GetMethod("GetOrCreate");
+            type.GetMethod("PreBuildFieldReferenceGetters").Invoke(null, [enumeratorType]);
         }
         else
         {
-            method = typeof(SpeakableEnumerator<,>)
-                .MakeGenericType(genericArgs[0], genericArgs[1])
-                .GetMethod("GetOrCreate");
+            var type = typeof(SpeakableEnumerator<,>).MakeGenericType(
+                genericArgs[0],
+                genericArgs[1]
+            );
+            method = type.GetMethod("GetOrCreate");
+            type.GetMethod("PreBuildFieldReferenceGetters").Invoke(null, [enumeratorType]);
         }
 
         w.InsertBeforeCurrent(w.Create(OpCodes.Call, method));
@@ -65,7 +71,7 @@ static class Utils
                 if (typeof(ISpeakableEnumerator).IsAssignableFrom(firstArg))
                 {
                     w.InsertBeforeCurrent(w.Create(OpCodes.Ldarg, origParam.Index));
-                    WriteSpeakableEnumerator(w, firstArg);
+                    WriteSpeakableEnumerator(w, firstArg, hook.Target.DeclaringType);
                 }
                 else
                 {

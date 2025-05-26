@@ -6,7 +6,7 @@ public class IEnumeratorReflectionTests
 {
     public int Number { get; set; } = 0;
 
-    static ReferenceField<IEnumeratorReflectionTests> instanceRef = null!;
+    static FieldReferenceGetter<IEnumeratorReflectionTests> instanceRef = null!;
 
     [Fact]
     void CanGetThisField()
