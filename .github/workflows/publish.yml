@@ -25,3 +25,8 @@ jobs:
 
       - name: Publish NuGet
         run: dotnet nuget push ./artifacts/package/release/*.nupkg --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+
+      - name: Publish Thunderstore
+        env:
+          TCLI_AUTH_TOKEN: ${{ secrets.THUNDERSTORE_API_TOKEN }}
+        run: dotnet build ./packaging/Thunderstore/ -target:PublishThunderstore
