@@ -25,7 +25,6 @@
       Include="../MonoDetour.Bindings.Reorg/MonoDetour.Bindings.Reorg.csproj"
       PrivateAssets="all"
     />
-    <!-- This reference is not needed, but included so it's included in the NuGet package. -->
     <ProjectReference
       Include="../MonoDetour.Reflection/MonoDetour.Reflection.csproj"
       PrivateAssets="all"
