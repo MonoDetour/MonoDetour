@@ -22,7 +22,7 @@ public class SpeakableEnumeratorTests
     static void Prefix(IEnumerator<int> enumerator)
     {
         var self = SpeakableEnumerator<int, SpeakableEnumeratorTests>.GetOrCreate(enumerator);
-        self.DeclaringThis.Number++;
+        self.This.Number++;
     }
 
     public IEnumerator<int> GetEnumerator()

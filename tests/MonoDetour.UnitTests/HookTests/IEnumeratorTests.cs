@@ -35,7 +35,7 @@ public static partial class IEnumeratorTests
 
     private static void Hook_MoveNextPrefix(SpeakableEnumerator<object, LibraryMethods> self)
     {
-        if (self.State != 0 && stateRef(self.This) != 0)
+        if (self.State != 0 && stateRef(self.Enumerator) != 0)
         {
             return;
         }
@@ -51,7 +51,7 @@ public static partial class IEnumeratorTests
         {
             return;
         }
-        self.Current = (int)currentRef(self.This) * 2;
+        self.Current = (int)currentRef(self.Enumerator) * 2;
 
         order.Enqueue((int)self.Current);
     }

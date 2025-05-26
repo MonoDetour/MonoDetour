@@ -18,12 +18,17 @@ public interface ISpeakableEnumerator;
 public sealed class SpeakableEnumerator<TCurrent, TThis> : ISpeakableEnumerator
 {
     /// <summary>
-    /// Gets the instance of the class that constructed this enumerator.
+    /// Gets the instance of the class that constructed this enumerator.<br/>
+    /// This corresponds to the <c>&lt;&gt;4__this</c> field.
     /// </summary>
-    public TThis DeclaringThis => getThisRef(instance);
+    /// <remarks>
+    /// Use <see cref="Enumerator"/> for getting the instance of the
+    /// enumerator this class wraps.
+    /// </remarks>
+    public TThis This => getThisRef(instance);
 
-    /// <inheritdoc cref="SpeakableEnumerator{TCurrent}.This"/>
-    public IEnumerator<TCurrent> This => instance;
+    /// <inheritdoc cref="SpeakableEnumerator{TCurrent}.Enumerator"/>
+    public IEnumerator<TCurrent> Enumerator => instance;
 
     /// <inheritdoc cref="SpeakableEnumerator{TCurrent}.Current"/>
     public TCurrent Current
@@ -90,13 +95,15 @@ public sealed class SpeakableEnumerator<TCurrent, TThis> : ISpeakableEnumerator
 public sealed class SpeakableEnumerator<TCurrent> : ISpeakableEnumerator
 {
     /// <summary>
-    /// Gets the instance of this IEnumerator. Note that this is
-    /// not the instance of the class that constructed this enumerator.
+    /// Gets the instance of the IEnumerator wrapped by this class.
+    /// Note that this is not the instance of the class that constructed
+    /// this enumerator.
     /// </summary>
-    public IEnumerator<TCurrent> This => instance;
+    public IEnumerator<TCurrent> Enumerator => instance;
 
     /// <summary>
-    /// Gets the current value of this enumerator.
+    /// The <c>Current</c> value of this enumerator.<br/>
+    /// This corresponds to the <c>&lt;&gt;2__current</c> field.
     /// </summary>
     public TCurrent Current
     {
@@ -105,7 +112,8 @@ public sealed class SpeakableEnumerator<TCurrent> : ISpeakableEnumerator
     }
 
     /// <summary>
-    /// Gets the state value of this enumerator.
+    /// The state value of this enumerator.<br/>
+    /// This corresponds to the <c>&lt;&gt;1__state</c> field.
     /// </summary>
     public int State
     {
@@ -133,8 +141,8 @@ public sealed class SpeakableEnumerator<TCurrent> : ISpeakableEnumerator
     }
 
     /// <summary>
-    /// Can be used for builds field reference getter methods ahead of time
-    /// to prevent freezes after hook initialization.
+    /// Can be used for building field reference getter methods ahead-of-time
+    /// to prevent a freeze that would happen when building them just-in-time.
     /// </summary>
     /// <remarks>
     /// MonoDetour already uses this where it uses SpeakableEnumerator types.
