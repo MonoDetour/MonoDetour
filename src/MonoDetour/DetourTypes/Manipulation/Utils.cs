@@ -16,25 +16,10 @@ static class Utils
         Type enumeratorType
     )
     {
-        var genericArgs = speakableEnumeratorType.GetGenericArguments();
+        var preBuildMethod = speakableEnumeratorType.GetMethod("PreBuildFieldReferenceGetters");
+        preBuildMethod.Invoke(null, [enumeratorType]);
 
-        MethodBase method;
-        if (genericArgs.Length == 0)
-        {
-            var type = typeof(SpeakableEnumerator<>).MakeGenericType(genericArgs[0]);
-            method = type.GetMethod("GetOrCreate");
-            type.GetMethod("PreBuildFieldReferenceGetters").Invoke(null, [enumeratorType]);
-        }
-        else
-        {
-            var type = typeof(SpeakableEnumerator<,>).MakeGenericType(
-                genericArgs[0],
-                genericArgs[1]
-            );
-            method = type.GetMethod("GetOrCreate");
-            type.GetMethod("PreBuildFieldReferenceGetters").Invoke(null, [enumeratorType]);
-        }
-
+        MethodInfo method = speakableEnumeratorType.GetMethod("GetOrCreate");
         w.InsertBeforeCurrent(w.Create(OpCodes.Call, method));
     }
 
