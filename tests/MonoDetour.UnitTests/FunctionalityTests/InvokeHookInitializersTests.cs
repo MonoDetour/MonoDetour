@@ -21,13 +21,13 @@ public static partial class InvokeHookInitializersTests
     [MonoDetourTargets]
     private class HookInits
     {
-        [MonoDetourHookInit]
+        [MonoDetourHookInitialize]
         static void Init()
         {
             count++;
         }
 
-        [MonoDetourHookInit]
+        [MonoDetourHookInitialize]
         static void Init2()
         {
             count++;
@@ -36,7 +36,7 @@ public static partial class InvokeHookInitializersTests
 
     private class HookDoNotInitWithoutDirectReference
     {
-        [MonoDetourHookInit]
+        [MonoDetourHookInitialize]
         static void Init()
         {
             count++;

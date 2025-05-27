@@ -8,5 +8,5 @@ global using MonoMod.RuntimeDetour;
 global using MonoMod.Utils;
 global using On.MonoDetour.UnitTests.TestLib.LibraryMethods;
 
-[assembly: MonoDetour.MonoDetourTargets(typeof(LibraryMethods))]
-[assembly: MonoDetour.MonoDetourTargets(typeof(SomeType))]
+[assembly: MonoDetourTargets(typeof(LibraryMethods))]
+[assembly: MonoDetourTargets(typeof(SomeType))]

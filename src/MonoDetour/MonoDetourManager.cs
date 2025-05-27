@@ -88,7 +88,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     {
         foreach (Type type in MonoDetourUtils.GetTypesFromAssembly(assembly))
         {
-            if (!MonoDetourUtils.TryGetCustomAttribute<MonoDetourTargetsAttribute>(type, out _))
+            if (!MonoDetourUtils.TryGetCustomAttribute<IMonoDetourTargets>(type, out _))
                 continue;
 
             InvokeHookInitializers(type);
@@ -105,7 +105,12 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
         MethodInfo[] methods = type.GetMethods((BindingFlags)~0);
         foreach (var method in methods)
         {
-            if (!MonoDetourUtils.TryGetCustomAttribute<MonoDetourHookInitAttribute>(method, out _))
+            if (
+                !MonoDetourUtils.TryGetCustomAttribute<MonoDetourHookInitializeAttribute>(
+                    method,
+                    out _
+                )
+            )
                 continue;
 
             method.Invoke(null, null);

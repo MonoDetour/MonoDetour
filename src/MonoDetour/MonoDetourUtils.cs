@@ -14,9 +14,8 @@ internal static class MonoDetourUtils
         MemberInfo member,
         [NotNullWhen(true)] out T? attribute
     )
-        where T : Attribute
     {
-        attribute = null;
+        attribute = default;
 
         // Console.WriteLine("+ " + member.ToString());
         var customAttributes = member.GetCustomAttributes();
