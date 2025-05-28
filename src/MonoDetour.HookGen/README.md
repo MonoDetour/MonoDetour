@@ -19,6 +19,18 @@ MonoDetour.HookGen will automatically bring in the oldest MonoDetour reference i
 
 Additionally MonoDetour automatically brings in the oldest MonoMod.RuntimeDetour version it supports, so also specify its version to the one you want (or don't if it's included by e.g. BepInEx references). MonoDetour should support MonoMod.RuntimeDetour versions 21.12.13.1 and 25.*, with possibly anything in between.
 
+Note that MonoDetour.HookGen will strip unused generated hooks when building with `Release` configuration by default when `MonoDetourHookGenStripUnusedHooks` is undefined (evaluates to empty string).
+
+You can configure this setting yourself however you wish, such as replicating the default behavior:
+
+```xml
+<PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <MonoDetourHookGenStripUnusedHooks>true</MonoDetourHookGenStripUnusedHooks>
+</PropertyGroup>
+```
+
+Having this setting enabled will be more expensive generation wise and intellisense may not keep up when writing hooks, e.g. Prefix, Postfix and ILHook methods may not immediately appear when typing `On.Namespace.Type.Method.` even if they have just been generated.
+
 ## Documentation
 
 See <https://monodetour.github.io/getting-started/hookgen/>
