@@ -48,6 +48,7 @@
   <!-- This ensures the library will be packaged as a source generator when we use `dotnet pack` -->
   <ItemGroup>
     <None Include="$(TargetPath)" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="MonoDetour.HookGen.props" Pack="true" PackagePath="build" Visible="false" />
     <None
       Include="$(TargetDir)../../MonoDetour.Analyzers/release/com.github.MonoDetour.Analyzers.dll"
       Pack="true"

@@ -154,7 +154,7 @@ namespace MonoDetour.HookGen
         );
         private static readonly ObjectPool<HashSet<TypeRef>> typeRefHashSetPool = new(() => new());
         private static readonly ObjectPool<
-            HashSet<(GeneratableMemberModel, GeneratableTypeModel)>
+            HashSet<ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>>
         > membersToGenerateForTypesPool = new(() => new());
 
         private static readonly ObjectPool<Queue<GeneratableTypeModel>> genTypeModelQueuePool = new(
@@ -511,12 +511,43 @@ namespace MonoDetour.HookGen
 
             var generatableTypes = generatableTypesWithoutSupport.Combine(support);
 
+            IncrementalValueProvider<bool> shouldStripUnusedHooks =
+                context.AnalyzerConfigOptionsProvider.Select(
+                    static (options, _) =>
+                    {
+                        var globalOptions = options.GlobalOptions;
+                        globalOptions.TryGetValue(
+                            "build_property.MonoDetourHookGenStripUnusedHooks",
+                            out var propertyStripUnusedHooks
+                        );
+
+                        bool stripUnusedHooks =
+                            propertyStripUnusedHooks?.Equals(
+                                "true",
+                                StringComparison.InvariantCultureIgnoreCase
+                            ) ?? false;
+
+                        return stripUnusedHooks;
+                    }
+                );
+
             // We only try to generate hook contents for hooks which are used.
             var memberNameToModel = generatableTypesWithoutSupport
                 .Collect()
+                .Combine(shouldStripUnusedHooks)
                 .Select(
-                    (types, ct) =>
+                    (items, ct) =>
                     {
+                        var (types, stripUnusedHooks) = items;
+
+                        if (!stripUnusedHooks)
+                        {
+                            return ImmutableDictionary.Create<
+                                string,
+                                ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>
+                            >();
+                        }
+
                         Dictionary<
                             string,
                             List<(GeneratableMemberModel, GeneratableTypeModel)>
@@ -526,13 +557,27 @@ namespace MonoDetour.HookGen
                         {
                             foreach (var member in type.Members)
                             {
-                                if (memberNameToModel.TryGetValue(member.Name, out var members))
+                                string memberName;
+                                if (member.HasOverloads)
+                                {
+                                    CodeBuilder cb = new(new(member.Name));
+                                    AppendSignatureIdentifier(cb, member.Signature);
+                                    // memberNameToModel.Add(cb.ToString(), (member, type));
+                                    memberName = cb.ToString();
+                                }
+                                else
+                                {
+                                    memberName = member.Name;
+                                    // memberNameToModel.Add(member.Name, (member, type));
+                                }
+
+                                if (memberNameToModel.TryGetValue(memberName, out var members))
                                 {
                                     members.Add((member, type));
                                 }
                                 else
                                 {
-                                    memberNameToModel.Add(member.Name, [(member, type)]);
+                                    memberNameToModel.Add(memberName, [(member, type)]);
                                 }
                             }
                         }
@@ -562,58 +607,42 @@ namespace MonoDetour.HookGen
                 }
             );
 
-            var membersToGenerateForTypes = methodsToAnalyze.Combine(memberNameToModel);
+            var membersToGenerateForTypes = memberNameToModel.Combine(methodsToAnalyze.Collect());
 
             var membersToGenerateHookContentsFor = membersToGenerateForTypes
                 .Select(
                     (items, ct) =>
                     {
-                        var (methodSymbol, memberNameToModel) = items;
+                        var (memberNameToModel, methodSymbols) = items;
 
-                        if (methodSymbol is null)
-                            return [];
-
-                        if (
-                            methodSymbol!.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax()
-                            is not MethodDeclarationSyntax methodSyntax
-                        )
+                        if (memberNameToModel.Count == 0)
                         {
                             return [];
                         }
 
-                        return GetReferencedHookGenHooks(memberNameToModel, methodSyntax);
-                    }
-                )
-                .Collect() // first, get all lists of used hook gen classes
-                .Select( // now we can deduplicate
-                    (arr, ct) =>
-                    {
-                        var set = membersToGenerateForTypesPool.Allocate();
+                        var usedClasses = membersToGenerateForTypesPool.Allocate();
 
-                        foreach (var modelArrays in arr)
+                        foreach (var methodSymbol in methodSymbols)
                         {
-                            foreach (var modelArray in modelArrays)
+                            if (methodSymbol is null)
+                                continue;
+
+                            if (
+                                methodSymbol!
+                                    .DeclaringSyntaxReferences.FirstOrDefault()
+                                    ?.GetSyntax()
+                                is not MethodDeclarationSyntax methodSyntax
+                            )
                             {
-                                foreach (var (method, type) in modelArray)
-                                {
-                                    set.Add((method, type));
-
-                                    // sb.Append("// added: ")
-                                    //     .Append(res ? "yes " : "NO ")
-                                    //     .Append(type.Type.FullContextName)
-                                    //     .Append(" ")
-                                    //     .Append(type.GetHashCode())
-                                    //     .Append(" : ")
-                                    //     .Append(method.Name)
-                                    //     .Append(" ")
-                                    //     .AppendLine(method.GetHashCode().ToString());
-                                }
+                                continue;
                             }
+
+                            AddReferencedHookGenHooks(usedClasses, memberNameToModel, methodSyntax);
                         }
 
-                        var result = set.ToImmutableArray();
-                        set.Clear();
-                        membersToGenerateForTypesPool.Free(set);
+                        var result = usedClasses.ToImmutableArray();
+                        usedClasses.Clear();
+                        membersToGenerateForTypesPool.Free(usedClasses);
                         return result;
                     }
                 )
@@ -624,12 +653,14 @@ namespace MonoDetour.HookGen
                 EmitHelperTypeWithContent
             );
 
-            context.RegisterSourceOutput(generatableTypes, EmitHelperTypeStub);
+            context.RegisterSourceOutput(
+                generatableTypes.Combine(shouldStripUnusedHooks),
+                EmitHelperTypeStub
+            );
         }
 
-        static ImmutableArray<
-            ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>
-        > GetReferencedHookGenHooks(
+        static void AddReferencedHookGenHooks(
+            HashSet<ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>> usedClasses,
             ImmutableDictionary<
                 string,
                 ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>
@@ -637,9 +668,6 @@ namespace MonoDetour.HookGen
             MethodDeclarationSyntax methodSyntax
         )
         {
-            var usedClasses =
-                new HashSet<ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>>();
-
             foreach (
                 var access in methodSyntax.DescendantNodes().OfType<MemberAccessExpressionSyntax>()
             )
@@ -696,65 +724,65 @@ namespace MonoDetour.HookGen
 
                 return string.Join(".", parts);
             }
-
-            return [.. usedClasses.ToImmutableArray()];
         }
 
         private void EmitHelperTypeWithContent(
             SourceProductionContext context,
-            ((GeneratableMemberModel, GeneratableTypeModel), ContextSupportOptions) input
+            (
+                ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>,
+                ContextSupportOptions
+            ) input
         )
         {
             var (items, ctx) = input;
-            var (model, type) = items;
 
             try
             {
-                var sb = new StringBuilder();
-                var cb = new CodeBuilder(sb);
-
-                // TODO: check if this works with overloads (it doesn't),
-                // then remove these commented out lines.
-
-                // foreach (var usedClassMemberModel in usedClassMemberModels)
-                // {
-                cb.WriteHeader();
-
-                WriteTrowHelperClassIfCan(cb, ctx);
-
-                // foreach (var (model, type) in usedClassMemberModels)
-                // {
-                cb.WriteLine("namespace On").OpenBlock();
-
-                type.Type.AppendEnterContext(cb);
-
-                EmitTypeMember(type, model, cb, il: false, ctx, generateContent: true);
-
-                type.Type.AppendExitContext(cb);
-
-                cb.CloseBlock().WriteLine();
-
-                StringBuilder nameSb = new();
-                CodeBuilder nameCb = new(nameSb);
-                nameCb
-                    .Write(type.AssemblyIdentity.Name)
-                    .Write('_')
-                    .Write(SanitizeMdName(type.Type.FullContextName).Replace(' ', '_'))
-                    .Write('.');
-
-                if (model.HasOverloads)
+                foreach (var item in items)
                 {
-                    AppendSignatureIdentifier(nameCb, model.Signature);
-                }
-                else
-                {
-                    nameCb.Write(SanitizeMdName(model.Name).Replace(' ', '_'));
-                }
+                    var (model, type) = item;
 
-                nameCb.Write(".g.cs");
+                    var sb = new StringBuilder();
+                    var cb = new CodeBuilder(sb);
 
-                context.AddSource(nameCb.ToString(), SourceText.From(cb.ToString(), Encoding.UTF8));
-                // }
+                    cb.WriteHeader();
+
+                    WriteTrowHelperClassIfCan(cb, ctx);
+
+                    cb.WriteLine("namespace On").OpenBlock();
+
+                    type.Type.AppendEnterContext(cb);
+
+                    EmitTypeMember(type, model, cb, il: false, ctx, generateContent: true);
+
+                    type.Type.AppendExitContext(cb);
+
+                    cb.CloseBlock().WriteLine();
+
+                    StringBuilder nameSb = new();
+                    CodeBuilder nameCb = new(nameSb);
+                    nameCb
+                        .Write(type.AssemblyIdentity.Name)
+                        .Write('_')
+                        .Write(SanitizeMdName(type.Type.FullContextName).Replace(' ', '_'))
+                        .Write('.');
+
+                    if (model.HasOverloads)
+                    {
+                        AppendSignatureIdentifier(nameCb, model.Signature);
+                    }
+                    else
+                    {
+                        nameCb.Write(SanitizeMdName(model.Name).Replace(' ', '_'));
+                    }
+
+                    nameCb.Write(".g.cs");
+
+                    context.AddSource(
+                        nameCb.ToString(),
+                        SourceText.From(cb.ToString(), Encoding.UTF8)
+                    );
+                }
             }
             catch (ArgumentException ex)
             {
@@ -764,17 +792,22 @@ namespace MonoDetour.HookGen
 
         private void EmitHelperTypeStub(
             SourceProductionContext context,
-            (GeneratableTypeModel, ContextSupportOptions) input
+            ((GeneratableTypeModel, ContextSupportOptions), bool) input
         )
         {
             try
             {
-                var (type, ctx) = input;
+                var ((type, ctx), stripUnusedHooks) = input;
 
                 var sb = new StringBuilder();
                 var cb = new CodeBuilder(sb);
 
                 cb.WriteHeader();
+
+                if (!stripUnusedHooks)
+                {
+                    WriteTrowHelperClassIfCan(cb, ctx);
+                }
 
                 if (type.HasHook)
                 {
@@ -782,7 +815,7 @@ namespace MonoDetour.HookGen
 
                     type.Type.AppendEnterContext(cb);
 
-                    EmitTypeMembers(type, cb, il: false, ctx, generateContent: false);
+                    EmitTypeMembers(type, cb, il: false, ctx, generateContent: !stripUnusedHooks);
 
                     type.Type.AppendExitContext(cb);
 
@@ -1401,18 +1434,13 @@ namespace MonoDetour.HookGen
         private static void AppendSignatureIdentifier(CodeBuilder cb, MethodSignature sig)
         {
             var parameters = sig.ParameterTypes.AsImmutableArray();
-            cb.Write("_")
-                .Write(SanitizeRefness(sig.ReturnType.Refness))
-                .Write(SanitizeMdName(sig.ReturnType.MdName))
-                .Write('_')
-                .Write(parameters.Length.ToString(CultureInfo.InvariantCulture));
 
-            if (sig.ThisType is { } thisType)
-            {
-                _ = cb.Write('_')
-                    .Write(SanitizeRefness(thisType.Refness))
-                    .Write(SanitizeMdName(thisType.MdName));
-            }
+            // if (sig.ThisType is { } thisType)
+            // {
+            //     _ = cb.Write('_')
+            //         .Write(SanitizeRefness(thisType.Refness))
+            //         .Write(SanitizeMdName(thisType.MdName));
+            // }
 
             for (var i = 0; i < parameters.Length; i++)
             {

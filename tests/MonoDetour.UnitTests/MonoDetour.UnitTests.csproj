@@ -9,6 +9,9 @@
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <ImplicitPolySharpReference>false</ImplicitPolySharpReference>
+    <MonoDetourHookGenStripUnusedHooks Condition="'$(Configuration)' == 'Release'"
+      >true</MonoDetourHookGenStripUnusedHooks
+    >
   </PropertyGroup>
   <ItemGroup>
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
@@ -43,4 +46,5 @@
       Publicize="true"
     />
   </ItemGroup>
+  <Import Project="$(SolutionRoot)src/MonoDetour.HookGen/MonoDetour.HookGen.props" />
 </Project>

@@ -54,6 +54,10 @@ public class LibraryMethods
     {
         return value ?? "hello";
     }
+
+    public void Overloaded() { }
+
+    public void Overloaded(int num) { }
 }
 #pragma warning restore CA1822 // Mark members as static
 #pragma warning restore IDE0079 // Remove unnecessary suppression
