@@ -25,14 +25,10 @@
   <ItemGroup>
     <PackageReference
       Include="Microsoft.CodeAnalysis.Analyzers"
-      Version="3.*"
+      Version="3.11.0"
       PrivateAssets="all"
     />
-    <PackageReference
-      Include="Microsoft.CodeAnalysis.CSharp"
-      Version="4.12.*"
-      PrivateAssets="all"
-    />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
     <PackageReference
       Include="BepInEx.AssemblyPublicizer.MSBuild"
       Version="0.4.*"

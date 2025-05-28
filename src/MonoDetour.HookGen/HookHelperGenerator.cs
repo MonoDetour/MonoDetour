@@ -540,7 +540,7 @@ namespace MonoDetour.HookGen
 
                         foreach (var kv in memberNameToModel)
                         {
-                            retMemberNameToModel.Add(kv.Key, [.. kv.Value]);
+                            retMemberNameToModel.Add(kv.Key, kv.Value.ToImmutableArray());
                         }
 
                         return retMemberNameToModel.ToImmutableDictionary();
@@ -580,7 +580,9 @@ namespace MonoDetour.HookGen
 
                         if (memberNameToModel.Count == 0)
                         {
-                            return [];
+                            return ImmutableArray.Create<
+                                ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>
+                            >();
                         }
 
                         var usedClasses = membersToGenerateForTypesPool.Allocate();
