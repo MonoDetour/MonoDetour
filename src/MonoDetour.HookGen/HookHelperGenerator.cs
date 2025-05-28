@@ -458,53 +458,6 @@ namespace MonoDetour.HookGen
 
             var generatableAssemblies = mappedAssemblies.Select(GetAllMembersToGenerate!);
 
-            var signaturesAndTypes = generatableAssemblies.Select(ExtractSignaturesAndTypes);
-
-            var neededSignaturesWithDupes = signaturesAndTypes.SelectMany(
-                (t, ct) => t.Item1.AsImmutableArray()
-            );
-
-            var neededSignaturesWithoutDupes = neededSignaturesWithDupes
-                .Collect()
-                .SelectMany(
-                    (arr, ct) =>
-                    {
-                        var set = methodSigHashSetPool.Allocate();
-
-                        foreach (var method in arr)
-                        {
-                            _ = set.Add(method);
-                        }
-
-                        var result = set.ToImmutableArray();
-                        set.Clear();
-                        methodSigHashSetPool.Free(set);
-                        return result;
-                    }
-                );
-
-            // context.RegisterSourceOutput(neededSignaturesWithoutDupes.Collect(), EmitDelegateTypes);
-
-            var typesWithoutDupes = signaturesAndTypes
-                .SelectMany((t, ct) => t.Item2.AsImmutableArray())
-                .Collect()
-                .SelectMany(
-                    (arr, ct) =>
-                    {
-                        var set = typeRefHashSetPool.Allocate();
-
-                        foreach (var type in arr)
-                        {
-                            _ = set.Add(type);
-                        }
-
-                        var result = set.ToImmutableArray();
-                        set.Clear();
-                        typeRefHashSetPool.Free(set);
-                        return result;
-                    }
-                );
-
             var generatableTypesWithoutSupport = generatableAssemblies.SelectMany(
                 (ass, ct) => ass.Types
             );
@@ -562,13 +515,11 @@ namespace MonoDetour.HookGen
                                 {
                                     CodeBuilder cb = new(new(member.Name));
                                     AppendSignatureIdentifier(cb, member.Signature);
-                                    // memberNameToModel.Add(cb.ToString(), (member, type));
                                     memberName = cb.ToString();
                                 }
                                 else
                                 {
                                     memberName = member.Name;
-                                    // memberNameToModel.Add(member.Name, (member, type));
                                 }
 
                                 if (memberNameToModel.TryGetValue(memberName, out var members))
@@ -1372,11 +1323,6 @@ namespace MonoDetour.HookGen
             }
         }
 
-        private static string GetOrigDelegateName(MethodSignature sig)
-        {
-            return "Orig" + GetHookDelegateName(sig);
-        }
-
         private static readonly ObjectPool<StringBuilder> stringBuilderPool = new(() => new());
 
         private static string SanitizeRefness(string v) => v.Replace(" ", "_");
@@ -1450,57 +1396,6 @@ namespace MonoDetour.HookGen
                     .Write(SanitizeRefness(param.Refness))
                     .Write(SanitizeMdName(param.MdName));
             }
-        }
-
-        private static (
-            EquatableArray<MethodSignature>,
-            EquatableArray<TypeRef>
-        ) ExtractSignaturesAndTypes(GeneratableAssembly assembly, CancellationToken token)
-        {
-            var sigSet = methodSigHashSetPool.Allocate();
-            var typeSet = typeRefHashSetPool.Allocate();
-            var queue = genTypeModelQueuePool.Allocate();
-
-            foreach (var type in assembly.Types)
-            {
-                queue.Enqueue(type);
-            }
-
-            while (queue.Count > 0)
-            {
-                var type = queue.Dequeue();
-
-                // add to the type set
-                _ = typeSet.Add(type.Type.InnermostType.WithRefness());
-
-                foreach (var method in type.Members)
-                {
-                    if (method.Kind != DetourKind.ILHook)
-                    {
-                        sigSet.Add(method.Signature);
-                    }
-
-                    _ = typeSet.Add(method.Signature.ReturnType.WithRefness());
-                    foreach (var p in method.Signature.ParameterTypes)
-                    {
-                        _ = typeSet.Add(p.WithRefness());
-                    }
-                }
-
-                foreach (var nested in type.NestedTypes)
-                {
-                    queue.Enqueue(nested);
-                }
-            }
-
-            var methodSigs = sigSet.ToImmutableArray();
-            var types = typeSet.ToImmutableArray();
-            sigSet.Clear();
-            typeSet.Clear();
-            methodSigHashSetPool.Free(sigSet);
-            typeRefHashSetPool.Free(typeSet);
-            genTypeModelQueuePool.Free(queue);
-            return (methodSigs, types);
         }
 
         private static bool MetadataReferenceEquals(MetadataReference a, MetadataReference b)
