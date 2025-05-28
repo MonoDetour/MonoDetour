@@ -36,13 +36,25 @@ static class ILHookGetDMDBeforeManipulation
         }
         initialized = true;
 
-        if (MonoModVersion.IsReorg)
+        try
         {
-            InitHookReorg();
+            if (MonoModVersion.IsReorg)
+            {
+                InitHookReorg();
+            }
+            else
+            {
+                InitHookLegacy();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            InitHookLegacy();
+            throw new NotSupportedException(
+                $"MonoDetour doesn't seem to support this MonoMod version, "
+                    + $"please report this issue: https://github.com/MonoDetour/MonoDetour: "
+                    + $"'{typeof(Hook).Assembly}'",
+                ex
+            );
         }
     }
 
