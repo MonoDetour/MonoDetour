@@ -1,12 +1,10 @@
-using MonoDetour.Reflection.Unspeakable;
-
 namespace MonoDetour.UnitTests.FunctionalityTests;
 
 public class IEnumeratorReflectionTests
 {
     public int Number { get; set; } = 0;
 
-    static FieldReferenceGetter<IEnumeratorReflectionTests> instanceRef = null!;
+    static EnumeratorFieldReferenceGetter<IEnumeratorReflectionTests> instanceRef = null!;
 
     [Fact]
     void CanGetThisField()
@@ -22,7 +20,7 @@ public class IEnumeratorReflectionTests
         Assert.Equal(2, Number);
     }
 
-    static void Prefix(object self)
+    static void Prefix(IEnumerator<int> self)
     {
         instanceRef(self).Number++;
     }

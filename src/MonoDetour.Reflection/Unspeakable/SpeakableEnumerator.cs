@@ -44,9 +44,9 @@ public sealed class SpeakableEnumerator<TCurrent, TThis> : ISpeakableEnumerator
         set => getStateRef(instance) = value;
     }
 
-    readonly FieldReferenceGetter<TThis> getThisRef;
-    readonly FieldReferenceGetter<TCurrent> getCurrentRef;
-    readonly FieldReferenceGetter<int> getStateRef;
+    readonly EnumeratorFieldReferenceGetter<TThis> getThisRef;
+    readonly EnumeratorFieldReferenceGetter<TCurrent> getCurrentRef;
+    readonly EnumeratorFieldReferenceGetter<int> getStateRef;
     readonly IEnumerator<TCurrent> instance;
 
     static readonly ConditionalWeakTable<
@@ -121,8 +121,8 @@ public sealed class SpeakableEnumerator<TCurrent> : ISpeakableEnumerator
         set => getStateRef(instance) = value;
     }
 
-    readonly FieldReferenceGetter<TCurrent> getCurrentRef;
-    readonly FieldReferenceGetter<int> getStateRef;
+    readonly EnumeratorFieldReferenceGetter<TCurrent> getCurrentRef;
+    readonly EnumeratorFieldReferenceGetter<int> getStateRef;
     readonly IEnumerator<TCurrent> instance;
 
     static readonly ConditionalWeakTable<

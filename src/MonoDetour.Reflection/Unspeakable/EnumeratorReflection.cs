@@ -13,7 +13,7 @@ file static class EnumeratorExtensionsCache<T>
     /// </summary>
     internal static readonly ConcurrentDictionary<
         (Type, int),
-        FieldReferenceGetter<T>
+        EnumeratorFieldReferenceGetter<T>
     > s_FieldToRef = [];
 
     /// <summary>
@@ -21,7 +21,7 @@ file static class EnumeratorExtensionsCache<T>
     /// </summary>
     internal static readonly ConcurrentDictionary<
         (Type, string),
-        FieldReferenceGetter<T>
+        EnumeratorFieldReferenceGetter<T>
     > s_3ToRef = [];
 }
 
@@ -34,11 +34,11 @@ public static class EnumeratorReflection
     /// <inheritdoc cref="EnumeratorFastFieldReferenceThis{T}(MethodInfo)"/>
     public static void EnumeratorFastFieldReferenceThis<T>(
         this MethodInfo methodInfo,
-        ref FieldReferenceGetter<T> enumeratorFieldReference
+        ref EnumeratorFieldReferenceGetter<T> enumeratorFieldReference
     ) => enumeratorFieldReference = methodInfo.EnumeratorFastFieldReferenceThis<T>();
 
     /// <inheritdoc cref="EnumeratorFastFieldReferenceThis{T}(Type)"/>
-    public static FieldReferenceGetter<T> EnumeratorFastFieldReferenceThis<T>(
+    public static EnumeratorFieldReferenceGetter<T> EnumeratorFastFieldReferenceThis<T>(
         this MethodInfo methodInfo
     ) => methodInfo.DeclaringType.EnumeratorFastFieldReferenceThis<T>();
 
@@ -46,7 +46,7 @@ public static class EnumeratorReflection
     /// <inheritdoc cref="EnumeratorFastFieldReferenceThis{T}(Type)"/>
     public static void EnumeratorFastFieldReferenceThis<T>(
         this Type enumeratorType,
-        ref FieldReferenceGetter<T> enumeratorFieldReference
+        ref EnumeratorFieldReferenceGetter<T> enumeratorFieldReference
     ) => enumeratorFieldReference = enumeratorType.EnumeratorFastFieldReferenceThis<T>();
 
     /// <summary>
@@ -54,7 +54,7 @@ public static class EnumeratorReflection
     /// field on an IEnumerator.
     /// </summary>
     /// <inheritdoc cref="EnumeratorFastFieldReference{T}(Type, string)"/>
-    public static FieldReferenceGetter<T> EnumeratorFastFieldReferenceThis<T>(
+    public static EnumeratorFieldReferenceGetter<T> EnumeratorFastFieldReferenceThis<T>(
         this Type enumeratorType
     ) => EnumeratorFastFieldReference<T>(enumeratorType, 4);
 
@@ -62,11 +62,11 @@ public static class EnumeratorReflection
     /// <inheritdoc cref="EnumeratorFastFieldReferenceCurrent{T}(MethodInfo)"/>
     public static void EnumeratorFastFieldReferenceCurrent<T>(
         this MethodInfo methodInfo,
-        ref FieldReferenceGetter<T> enumeratorFieldReference
+        ref EnumeratorFieldReferenceGetter<T> enumeratorFieldReference
     ) => enumeratorFieldReference = methodInfo.EnumeratorFastFieldReferenceCurrent<T>();
 
     /// <inheritdoc cref="EnumeratorFastFieldReferenceCurrent{T}(Type)"/>
-    public static FieldReferenceGetter<T> EnumeratorFastFieldReferenceCurrent<T>(
+    public static EnumeratorFieldReferenceGetter<T> EnumeratorFastFieldReferenceCurrent<T>(
         this MethodInfo methodInfo
     ) => methodInfo.DeclaringType.EnumeratorFastFieldReferenceCurrent<T>();
 
@@ -74,7 +74,7 @@ public static class EnumeratorReflection
     /// <inheritdoc cref="EnumeratorFastFieldReferenceCurrent{T}(Type)"/>
     public static void EnumeratorFastFieldReferenceCurrent<T>(
         this Type enumeratorType,
-        ref FieldReferenceGetter<T> enumeratorFieldReference
+        ref EnumeratorFieldReferenceGetter<T> enumeratorFieldReference
     ) => enumeratorFieldReference = enumeratorType.EnumeratorFastFieldReferenceCurrent<T>();
 
     /// <summary>
@@ -82,7 +82,7 @@ public static class EnumeratorReflection
     /// field on an IEnumerator.
     /// </summary>
     /// <inheritdoc cref="EnumeratorFastFieldReference{T}(Type, string)"/>
-    public static FieldReferenceGetter<T> EnumeratorFastFieldReferenceCurrent<T>(
+    public static EnumeratorFieldReferenceGetter<T> EnumeratorFastFieldReferenceCurrent<T>(
         this Type enumeratorType
     ) => EnumeratorFastFieldReference<T>(enumeratorType, 2);
 
@@ -90,11 +90,11 @@ public static class EnumeratorReflection
     /// <inheritdoc cref="EnumeratorFastFieldReferenceState(MethodInfo)"/>
     public static void EnumeratorFastFieldReferenceState(
         this MethodInfo methodInfo,
-        ref FieldReferenceGetter<int> enumeratorFieldReference
+        ref EnumeratorFieldReferenceGetter<int> enumeratorFieldReference
     ) => enumeratorFieldReference = methodInfo.EnumeratorFastFieldReferenceState();
 
     /// <inheritdoc cref="EnumeratorFastFieldReferenceState(Type)"/>
-    public static FieldReferenceGetter<int> EnumeratorFastFieldReferenceState(
+    public static EnumeratorFieldReferenceGetter<int> EnumeratorFastFieldReferenceState(
         this MethodInfo methodInfo
     ) => methodInfo.DeclaringType.EnumeratorFastFieldReferenceState();
 
@@ -102,7 +102,7 @@ public static class EnumeratorReflection
     /// <inheritdoc cref="EnumeratorFastFieldReferenceState(Type)"/>
     public static void EnumeratorFastFieldReferenceState(
         this Type enumeratorType,
-        ref FieldReferenceGetter<int> enumeratorFieldReference
+        ref EnumeratorFieldReferenceGetter<int> enumeratorFieldReference
     ) => enumeratorFieldReference = enumeratorType.EnumeratorFastFieldReferenceState();
 
     /// <summary>
@@ -110,7 +110,7 @@ public static class EnumeratorReflection
     /// field on an IEnumerator.
     /// </summary>
     /// <inheritdoc cref="EnumeratorFastFieldReference{T}(Type, string)"/>
-    public static FieldReferenceGetter<int> EnumeratorFastFieldReferenceState(
+    public static EnumeratorFieldReferenceGetter<int> EnumeratorFastFieldReferenceState(
         this Type enumeratorType
     ) => EnumeratorFastFieldReference<int>(enumeratorType, 1);
 
@@ -119,11 +119,11 @@ public static class EnumeratorReflection
     public static void EnumeratorFastFieldReference<T>(
         this MethodInfo methodInfo,
         string fieldName,
-        ref FieldReferenceGetter<T> enumeratorFieldReference
+        ref EnumeratorFieldReferenceGetter<T> enumeratorFieldReference
     ) => enumeratorFieldReference = methodInfo.EnumeratorFastFieldReference<T>(fieldName);
 
     /// <inheritdoc cref="EnumeratorFastFieldReference{T}(Type, string)"/>
-    public static FieldReferenceGetter<T> EnumeratorFastFieldReference<T>(
+    public static EnumeratorFieldReferenceGetter<T> EnumeratorFastFieldReference<T>(
         this MethodInfo methodInfo,
         string fieldName
     ) => methodInfo.DeclaringType.EnumeratorFastFieldReference<T>(fieldName);
@@ -133,10 +133,10 @@ public static class EnumeratorReflection
     public static void EnumeratorFastFieldReference<T>(
         this Type enumeratorType,
         string fieldName,
-        ref FieldReferenceGetter<T> enumeratorFieldReference
+        ref EnumeratorFieldReferenceGetter<T> enumeratorFieldReference
     ) => enumeratorFieldReference = enumeratorType.EnumeratorFastFieldReference<T>(fieldName);
 
-    static FieldReferenceGetter<T> EnumeratorFastFieldReference<T>(
+    static EnumeratorFieldReferenceGetter<T> EnumeratorFastFieldReference<T>(
         this Type enumeratorType,
         int fieldId
     )
@@ -192,7 +192,7 @@ public static class EnumeratorReflection
     /// <exception cref="NullReferenceException"></exception>
     /// <exception cref="InvalidCastException"></exception>
 #pragma warning restore CS1572 // XML comment has a param tag, but there is no parameter by that name
-    public static FieldReferenceGetter<T> EnumeratorFastFieldReference<T>(
+    public static EnumeratorFieldReferenceGetter<T> EnumeratorFastFieldReference<T>(
         this Type enumeratorType,
         string fieldName
     )
@@ -225,7 +225,7 @@ public static class EnumeratorReflection
         return fieldRef;
     }
 
-    static FieldReferenceGetter<T> CreateFastFieldReference<T>(FieldInfo fieldInfo)
+    static EnumeratorFieldReferenceGetter<T> CreateFastFieldReference<T>(FieldInfo fieldInfo)
     {
         var dmd = new DynamicMethodDefinition(
             "FastFieldReference",
@@ -236,7 +236,7 @@ public static class EnumeratorReflection
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Ldflda, fieldInfo);
         il.Emit(OpCodes.Ret);
-        var referenceGetter = dmd.Generate().CreateDelegate<FieldReferenceGetter<T>>();
+        var referenceGetter = dmd.Generate().CreateDelegate<EnumeratorFieldReferenceGetter<T>>();
         return referenceGetter;
     }
 }

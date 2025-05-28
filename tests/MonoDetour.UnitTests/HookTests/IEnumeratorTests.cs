@@ -7,11 +7,11 @@ public static partial class IEnumeratorTests
 {
     private static readonly Queue<int> order = [];
 
-    static readonly FieldReferenceGetter<int> stateRef = EnumerateRange
+    static readonly EnumeratorFieldReferenceGetter<int> stateRef = EnumerateRange
         .StateMachineTarget()
         .EnumeratorFastFieldReferenceState();
 
-    static readonly FieldReferenceGetter<object> currentRef = EnumerateRange
+    static readonly EnumeratorFieldReferenceGetter<object> currentRef = EnumerateRange
         .StateMachineTarget()
         .EnumeratorFastFieldReferenceCurrent<object>();
 
