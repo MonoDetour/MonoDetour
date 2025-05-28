@@ -2,7 +2,7 @@
 
 | MonoDetour | MonoDetour.HookGen | Community Support |
 |:-:|:-:|:-:|
-| [![MonoDetour](https://img.shields.io/nuget/v/MonoDetour?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/MonoDetour) | [![MonoDetour.HookGen](https://img.shields.io/nuget/v/MonoDetour.HookGen?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/MonoDetour.HookGen) | [![Discord](https://img.shields.io/discord/1377047282381361152?style=for-the-badge&label=Discord)](<https://discord.gg/uX3JbeTQ9b>) |
+| [![MonoDetour](https://img.shields.io/nuget/v/MonoDetour?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/MonoDetour) | [![MonoDetour.HookGen](https://img.shields.io/nuget/v/MonoDetour.HookGen?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/MonoDetour.HookGen) | [![Discord](https://img.shields.io/discord/1377047282381361152?style=for-the-badge&label=Discord)](<https://discord.gg/Pt2BsA2cP4>) |
 
 A `MonoMod.RuntimeDetour` wrapper optimized for convenience, based around HookGen with C# source generators.
 
@@ -35,7 +35,7 @@ Additionally MonoDetour automatically brings in the oldest MonoMod.RuntimeDetour
 ## Documentation
 
 - Website: <https://monodetour.github.io/>
-- Join the Discord server for further support: <https://discord.gg/uX3JbeTQ9b>
+- Join the Discord server for further support: <https://discord.gg/Pt2BsA2cP4>
 
 ## Usage
 
