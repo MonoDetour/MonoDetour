@@ -547,16 +547,28 @@ namespace MonoDetour.HookGen
                     }
                 );
 
-            var methodsToAnalyze = context.SyntaxProvider.CreateSyntaxProvider(
-                predicate: static (node, _) => node is MethodDeclarationSyntax,
-                transform: static (ctx, _) =>
-                {
-                    var methodSyntax = (MethodDeclarationSyntax)ctx.Node;
+            var methodsToAnalyze = context
+                .SyntaxProvider.CreateSyntaxProvider(
+                    predicate: static (node, _) => node is MethodDeclarationSyntax,
+                    transform: static (ctx, _) =>
+                    {
+                        var methodSyntax = (MethodDeclarationSyntax)ctx.Node;
+                        return (ctx.SemanticModel, methodSyntax);
+                    }
+                )
+                .Combine(shouldStripUnusedHooks)
+                .Select(
+                    (x, _) =>
+                    {
+                        var ((semanticModel, methodSyntax), stripUnusedHooks) = x;
+                        if (!stripUnusedHooks)
+                        {
+                            return null;
+                        }
 
-                    var symbol = ctx.SemanticModel.GetDeclaredSymbol(methodSyntax);
-                    return symbol;
-                }
-            );
+                        return semanticModel.GetDeclaredSymbol(methodSyntax);
+                    }
+                );
 
             var membersToGenerateForTypes = memberNameToModel.Combine(methodsToAnalyze.Collect());
 
