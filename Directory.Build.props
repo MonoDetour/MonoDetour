@@ -28,8 +28,8 @@
     <RuntimeDetourVersion>[21.12.13.1,)</RuntimeDetourVersion>
     <SolutionRoot>$(MSBuildThisFileDirectory)</SolutionRoot>
     <!-- Release version for HookGen and Analyzers packages -->
-    <HookGenAndAnalyzersVersionPrefix>0.3.0</HookGenAndAnalyzersVersionPrefix>
-    <HookGenAndAnalyzersVersionSuffix>dev</HookGenAndAnalyzersVersionSuffix>
+    <HookGenAndAnalyzersVersionPrefix>0.4.0</HookGenAndAnalyzersVersionPrefix>
+    <HookGenAndAnalyzersVersionSuffix></HookGenAndAnalyzersVersionSuffix>
   </PropertyGroup>
   <!-- MinVer -->
   <PropertyGroup>
