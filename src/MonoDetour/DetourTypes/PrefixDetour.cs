@@ -96,12 +96,6 @@ public class PrefixDetour : IMonoDetourHookApplier
 
         w.HandlerApply(handler);
 
-        if (Hook.Owner.PrintIL)
-        {
-            // w.Method.RecalculateILOffsets();
-            Console.WriteLine($"Manipulated by Prefix: {Hook.Manipulator.Name}: {il}");
-        }
-
         Hook.Owner.Log(
             MonoDetourLogger.LogChannel.IL,
             () =>

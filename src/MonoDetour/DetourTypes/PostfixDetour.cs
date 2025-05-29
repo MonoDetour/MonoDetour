@@ -76,19 +76,6 @@ public class PostfixDetour : IMonoDetourHookApplier
 
         w.HandlerApply(handler);
 
-        if (Hook.Owner.PrintIL)
-        {
-            w.Method.RecalculateILOffsets();
-            // Console.WriteLine(postfixStart.InteropGetTarget()!);
-            // Console.WriteLine("handler.TryStart:     " + handler.TryStart);
-            // Console.WriteLine("handler.TryEnd:       " + handler.TryEnd);
-            // Console.WriteLine("handler.HandlerStart: " + handler.HandlerStart);
-            // Console.WriteLine("handler.HandlerEnd:   " + handler.HandlerEnd);
-            // Console.WriteLine("handler.CatchType:    " + handler.CatchType?.ToString());
-            // Console.WriteLine("handler.HandlerType:  " + handler.HandlerType.ToString());
-            Console.WriteLine($"Manipulated by Postfix: {Hook.Manipulator.Name}: {il}");
-        }
-
         Hook.Owner.Log(
             MonoDetourLogger.LogChannel.IL,
             () =>

@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using MonoDetour.Interop.Cecil;
 
 namespace MonoDetour;
 
@@ -8,5 +9,6 @@ file static class ModuleInitialization
     internal static void InitializeModule()
     {
         ILHookGetDMDBeforeManipulation.InitHook();
+        ILHookInstructionILLabelCastFixes.InitHook();
     }
 }
