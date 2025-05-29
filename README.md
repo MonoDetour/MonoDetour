@@ -23,8 +23,8 @@ Change the version number to optimally the newest:
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="MonoDetour.HookGen" Version="0.1.0-*" PrivateAssets="all" />
-  <PackageReference Include="MonoDetour" Version="0.1.0-*" />
+  <PackageReference Include="MonoDetour.HookGen" Version="0.4.2" PrivateAssets="all" />
+  <PackageReference Include="MonoDetour" Version="0.4.0" />
 </ItemGroup>
 ```
 
@@ -38,11 +38,19 @@ You can configure this setting yourself however you wish, such as replicating th
 
 ```xml
 <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <MonoDetourHookGenStripUnusedHooks>true</MonoDetourHookGenStripUnusedHooks>
+  <MonoDetourHookGenStripUnusedHooks>true</MonoDetourHookGenStripUnusedHooks>
 </PropertyGroup>
 ```
 
 Having this setting enabled will be more expensive generation wise and intellisense may not keep up when writing hooks, e.g. Prefix, Postfix and ILHook methods may not immediately appear when typing `On.Namespace.Type.Method.` even if they have just been generated.
+
+If the default HookGen namespace `On` causes collisions or you just don't like it, you can set it with the following property:
+
+```xml
+<PropertyGroup>
+  <MonoDetourHookGenNamespace>On</MonoDetourHookGenNamespace>
+</PropertyGroup>
+```
 
 ## Documentation
 

@@ -4,5 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <CompilerVisibleProperty Include="MonoDetourHookGenStripUnusedHooks" />
+    <CompilerVisibleProperty Include="MonoDetourHookGenNamespace" />
   </ItemGroup>
 </Project>

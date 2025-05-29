@@ -270,17 +270,16 @@ public sealed class HookHelperAnalyzer : DiagnosticAnalyzer
     {
         var invocationExpression = (InvocationExpressionSyntax)context.Node;
 
+        var argumentList = invocationExpression.ArgumentList;
+        if (argumentList.Arguments.Count == 0)
+            return;
+
         // Check if we are accessing a member
         if (invocationExpression.Expression is not MemberAccessExpressionSyntax memberAccess)
             return;
 
         var methodName = memberAccess.Name.Identifier.Text;
-        if (methodName != "Prefix" && methodName != "Postfix")
-            return;
-
-        // The argument passed to hook registrar should be checked for static modifier
-        var argumentList = invocationExpression.ArgumentList;
-        if (argumentList.Arguments.Count == 0)
+        if (!methodName.Contains("Prefix") && methodName.Contains("Postfix"))
             return;
 
         // Check if the hook registrar's delegate type parameter
@@ -295,18 +294,30 @@ public sealed class HookHelperAnalyzer : DiagnosticAnalyzer
 
         var namespaceSymbol = hookParam.Type.ContainingNamespace;
 
+        var globalOptions = context.Options.AnalyzerConfigOptionsProvider.GlobalOptions;
+
+        globalOptions.TryGetValue(
+            "build_property.MonoDetourHookGenNamespace",
+            out var hookGenNamespace
+        );
+
+        if (string.IsNullOrEmpty(hookGenNamespace))
+        {
+            hookGenNamespace = "On";
+        }
+
         while (namespaceSymbol is not null)
         {
             var containingNamespace = namespaceSymbol.ContainingNamespace;
             if (containingNamespace?.IsGlobalNamespace == true)
             {
-                if (namespaceSymbol.Name == "On")
+                if (namespaceSymbol.Name == hookGenNamespace)
                     break;
             }
             namespaceSymbol = containingNamespace;
         }
 
-        // The root namespace wasn't 'On', not our problem
+        // The root namespace wasn't $(hookGenNamespace), not our problem
         if (namespaceSymbol is null)
             return;
 

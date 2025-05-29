@@ -464,7 +464,7 @@ namespace MonoDetour.HookGen
 
             var generatableTypes = generatableTypesWithoutSupport.Combine(support);
 
-            IncrementalValueProvider<bool> shouldStripUnusedHooks =
+            IncrementalValueProvider<(bool stripUnusedHooks, string hookGenNamespace)> userConfig =
                 context.AnalyzerConfigOptionsProvider.Select(
                     static (options, _) =>
                     {
@@ -474,24 +474,34 @@ namespace MonoDetour.HookGen
                             out var propertyStripUnusedHooks
                         );
 
+                        globalOptions.TryGetValue(
+                            "build_property.MonoDetourHookGenNamespace",
+                            out var hookGenNamespace
+                        );
+
                         bool stripUnusedHooks =
                             propertyStripUnusedHooks?.Equals(
                                 "true",
                                 StringComparison.InvariantCultureIgnoreCase
                             ) ?? false;
 
-                        return stripUnusedHooks;
+                        if (string.IsNullOrEmpty(hookGenNamespace))
+                        {
+                            hookGenNamespace = "On";
+                        }
+
+                        return (stripUnusedHooks, hookGenNamespace!);
                     }
                 );
 
             // We only try to generate hook contents for hooks which are used.
             var memberNameToModel = generatableTypesWithoutSupport
                 .Collect()
-                .Combine(shouldStripUnusedHooks)
+                .Combine(userConfig)
                 .Select(
                     (items, ct) =>
                     {
-                        var (types, stripUnusedHooks) = items;
+                        var (types, (stripUnusedHooks, _)) = items;
 
                         if (!stripUnusedHooks)
                         {
@@ -556,11 +566,11 @@ namespace MonoDetour.HookGen
                         return (ctx.SemanticModel, methodSyntax);
                     }
                 )
-                .Combine(shouldStripUnusedHooks)
+                .Combine(userConfig)
                 .Select(
                     (x, _) =>
                     {
-                        var ((semanticModel, methodSyntax), stripUnusedHooks) = x;
+                        var ((semanticModel, methodSyntax), (stripUnusedHooks, _)) = x;
                         if (!stripUnusedHooks)
                         {
                             return null;
@@ -614,14 +624,11 @@ namespace MonoDetour.HookGen
                 .SelectMany((x, _) => x);
 
             context.RegisterSourceOutput(
-                membersToGenerateHookContentsFor.Combine(support),
+                membersToGenerateHookContentsFor.Combine(support).Combine(userConfig),
                 EmitHelperTypeWithContent
             );
 
-            context.RegisterSourceOutput(
-                generatableTypes.Combine(shouldStripUnusedHooks),
-                EmitHelperTypeStub
-            );
+            context.RegisterSourceOutput(generatableTypes.Combine(userConfig), EmitHelperTypeStub);
         }
 
         static void AddReferencedHookGenHooks(
@@ -694,12 +701,15 @@ namespace MonoDetour.HookGen
         private void EmitHelperTypeWithContent(
             SourceProductionContext context,
             (
-                ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>,
-                ContextSupportOptions
+                (
+                    ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>,
+                    ContextSupportOptions
+                ),
+                (bool, string)
             ) input
         )
         {
-            var (items, ctx) = input;
+            var ((items, ctx), (_, hookGenNamespace)) = input;
 
             try
             {
@@ -714,7 +724,7 @@ namespace MonoDetour.HookGen
 
                     WriteTrowHelperClassIfCan(cb, ctx);
 
-                    cb.WriteLine("namespace On").OpenBlock();
+                    cb.Write("namespace ").WriteLine(hookGenNamespace).OpenBlock();
 
                     type.Type.AppendEnterContext(cb);
 
@@ -757,12 +767,12 @@ namespace MonoDetour.HookGen
 
         private void EmitHelperTypeStub(
             SourceProductionContext context,
-            ((GeneratableTypeModel, ContextSupportOptions), bool) input
+            ((GeneratableTypeModel, ContextSupportOptions), (bool, string)) input
         )
         {
             try
             {
-                var ((type, ctx), stripUnusedHooks) = input;
+                var ((type, ctx), (stripUnusedHooks, hookGenNamespace)) = input;
 
                 var sb = new StringBuilder();
                 var cb = new CodeBuilder(sb);
@@ -776,7 +786,7 @@ namespace MonoDetour.HookGen
 
                 if (type.HasHook)
                 {
-                    cb.WriteLine("namespace On").OpenBlock();
+                    cb.Write("namespace ").WriteLine(hookGenNamespace).OpenBlock();
 
                     type.Type.AppendEnterContext(cb);
 
