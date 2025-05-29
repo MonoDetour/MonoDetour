@@ -1,3 +1,5 @@
+using MonoDetour.Cil;
+using MonoDetour.Cil.Analysis;
 using On.MonoDetour.UnitTests.TestLib.ControlFlowLib;
 
 namespace MonoDetour.UnitTests.HookTests;
@@ -13,7 +15,7 @@ public static class ControlFlowTests
 
         SetStringToHello.ControlFlowPrefix(ControlFlowPrefixSkipOriginal, manager: m);
         SetStringToHello.Postfix(Postfix, manager: m);
-        // SetStringToHello.ILHook(ILHook_Print, new(priority: -4), manager: m);
+        SetStringToHello.ILHook(ILHook_Print, new(priority: -4), manager: m);
 
         string? message = null;
         lib.SetStringToHello(ref message);
@@ -63,10 +65,21 @@ public static class ControlFlowTests
         return ReturnFlow.HardReturn;
     }
 
-    // private static void ILHook_Print(ILManipulationInfo info)
-    // {
-    //     Console.WriteLine(info.ManipulationContext);
-    // }
+    private static void ILHook_Print(ILManipulationInfo info)
+    {
+        ILWeaver w = new(info);
+
+        w.InsertBeforeCurrent(w.Create(OpCodes.Ldc_I4_0));
+        w.CurrentTo(w.Last);
+        w.InsertBeforeCurrent(w.CreateCall(Foo));
+
+        StackSizeAnalyzer.Analyze(info);
+    }
+
+    static void Foo(int i)
+    {
+        return;
+    }
 
     private static ReturnFlow ControlFlowPrefixSkipOriginal(ControlFlowLib self, ref string message)
     {
