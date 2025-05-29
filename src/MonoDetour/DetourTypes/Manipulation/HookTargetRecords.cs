@@ -58,7 +58,7 @@ public static class HookTargetRecords
         }
 
         VariableDefinition? returnValue = null;
-        if (!il.Method.ReturnType.ToString().Equals("System.Void"))
+        if (il.Method.ReturnType.MetadataType != MetadataType.Void)
         {
             returnValue = new VariableDefinition(il.Method.ReturnType);
             il.Body.Variables.Add(returnValue);
