@@ -32,8 +32,7 @@ public static class HookTargetRecords
     /// <exception cref="Exception"></exception>
     internal static ReadOnlyCollection<Instruction> GetOriginalInstructions(MethodDefinition method)
     {
-        var methodInstructions =
-            ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions;
+        var methodInstructions = ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions;
 
         if (methodInstructions.TryGetValue(method, out var instructions))
         {
