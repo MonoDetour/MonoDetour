@@ -2,7 +2,6 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>com.github.MonoDetour.Analyzers</AssemblyName>
-    <ImplicitMinVer>false</ImplicitMinVer>
     <VersionPrefix>$(HookGenAndAnalyzersVersionPrefix)</VersionPrefix>
     <VersionSuffix>$(HookGenAndAnalyzersVersionSuffix)</VersionSuffix>
   </PropertyGroup>

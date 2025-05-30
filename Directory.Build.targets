@@ -7,11 +7,5 @@
       PrivateAssets="all"
       Condition="$(ImplicitPolySharpReference) != 'false'"
     />
-    <PackageReference
-      Include="MinVer"
-      Version="4.3.0"
-      PrivateAssets="all"
-      Condition="$(ImplicitMinVer) != 'false'"
-    />
   </ItemGroup>
 </Project>

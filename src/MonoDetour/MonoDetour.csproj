@@ -2,6 +2,8 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>com.github.MonoDetour</AssemblyName>
+    <VersionPrefix>$(MonoDetourVersionPrefix)</VersionPrefix>
+    <VersionSuffix>$(MonoDetourVersionSuffix)</VersionSuffix>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
