@@ -33,7 +33,7 @@ public static class HookTargetRecords
     internal static ReadOnlyCollection<Instruction> GetOriginalInstructions(MethodDefinition method)
     {
         var methodInstructions =
-            ILHookGetDMDBeforeManipulation.s_MethodDefinitionToOriginalInstructions;
+            ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions;
 
         if (methodInstructions.TryGetValue(method, out var instructions))
         {

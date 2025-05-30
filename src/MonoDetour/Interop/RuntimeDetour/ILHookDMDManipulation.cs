@@ -3,14 +3,19 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoDetour;
 using MonoDetour.Bindings.Reorg;
+using MonoDetour.Cil;
+using MonoDetour.Cil.Analysis;
+using MonoDetour.Logging;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 
-static class ILHookGetDMDBeforeManipulation
+static class ILHookDMDManipulation
 {
     internal static readonly ConditionalWeakTable<
         MethodDefinition,
@@ -25,6 +30,10 @@ static class ILHookGetDMDBeforeManipulation
     static ConstructorInfo dmdConstructor = null!;
 
     static ILHook getDmdBeforeManipulationHook = null!;
+
+    static readonly MonoDetourManager m = new(
+        typeof(ILHookDMDManipulation).Assembly.GetName().Name
+    );
 
     static bool initialized = false;
 
@@ -76,7 +85,10 @@ static class ILHookGetDMDBeforeManipulation
             type.GetMethod("UpdateEndOfChain", BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new NullReferenceException("Method 'UpdateEndOfChain' not found.");
 
-        getDmdBeforeManipulationHook = new(target, GetDMD);
+        getDmdBeforeManipulationHook = new(target, GetDMDBeforeManipulation);
+
+        // We now have access to MonoDetour hooks!
+        m.ILHook(target, TryCatchAnalyzeCompilation);
     }
 
     static void InitHookLegacy()
@@ -95,10 +107,10 @@ static class ILHookGetDMDBeforeManipulation
             type.GetMethod("Refresh")
             ?? throw new NullReferenceException("Method 'Refresh' not found.");
 
-        getDmdBeforeManipulationHook = new(target, GetDMD);
+        getDmdBeforeManipulationHook = new(target, GetDMDBeforeManipulation);
     }
 
-    private static void GetDMD(ILContext il)
+    private static void GetDMDBeforeManipulation(ILContext il)
     {
         ILCursor c = new(il);
         bool found = c.TryGotoNext(MoveType.After, x => x.MatchNewobj(dmdConstructor));
@@ -118,5 +130,68 @@ static class ILHookGetDMDBeforeManipulation
         s_MethodDefinitionToOriginalInstructions.Add(definition, instructions);
         s_MethodDefinitionToOriginalMethod.Add(definition, dmd.OriginalMethod);
         return dmd;
+    }
+
+    private static void TryCatchAnalyzeCompilation(ILManipulationInfo info)
+    {
+        // IL_00d5: ldloc.0
+        // IL_00d6: callvirt instance class [System.Runtime]System.Reflection.MethodInfo [MonoMod.Utils]MonoMod.Utils.DynamicMethodDefinition::Generate() /* 0A000077 */
+        // IL_00db: stloc.3
+        // IL_00dc: call class [MonoMod.Core]MonoMod.Core.Platforms.PlatformTriple [MonoMod.Core]MonoMod.Core.Platforms.PlatformTriple::get_Current() /* 0A00003A */
+        // IL_00e1: ldloc.3
+        // IL_00e2: callvirt instance void [MonoMod.Core]MonoMod.Core.Platforms.PlatformTriple::Compile(class [System.Runtime]System.Reflection.MethodBase) /* 0A00011B */
+
+        ILWeaver w = new(info);
+
+        int localIndexDmd = 0;
+        Instruction tryStart = null!;
+
+        w.MatchRelaxed(
+                x => x.MatchLdloc(out localIndexDmd),
+                x => x.MatchCallvirt(out _),
+                x => x.MatchStloc(out _),
+                x => x.MatchCall(out _) && w.SetInstructionTo(ref tryStart, x),
+                x => x.MatchLdloc(out _),
+                x => x.MatchCallvirt(out _) && w.SetCurrentTo(x)
+            )
+            .Extract(out var result);
+
+        if (!result.IsValid)
+        {
+            MonoDetourLogger.Log(
+                MonoDetourLogger.LogChannel.Error,
+                "MonoDetour's invalid IL analysis failed to be applied. "
+                    + $"Please report this issue: https://github.com/MonoDetour/MonoDetour: "
+                    + $"'{typeof(Hook).Assembly}'"
+            );
+            MonoDetourLogger.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
+            return;
+        }
+
+        w.HandlerCreateCatch(typeof(InvalidProgramException), out var handler);
+        w.HandlerSetTryStart(tryStart, handler);
+        w.HandlerSetTryEnd(w.Current, handler);
+
+        w.InsertAfterCurrent(w.Create(OpCodes.Ldloc, localIndexDmd), w.CreateCall(AnalyzeMethod));
+
+        w.HandlerSetHandlerEnd(w.Current, handler);
+
+        w.HandlerApply(handler);
+    }
+
+    static void AnalyzeMethod(InvalidProgramException ex, DynamicMethodDefinition dmd)
+    {
+        var capturedEx = ExceptionDispatchInfo.Capture(ex);
+
+        try
+        {
+            StackSizeAnalyzer.Analyze(dmd.Definition.Body);
+        }
+        catch
+        {
+            throw new Exception("MonoDetour failed to analyze invalid program.", ex);
+        }
+
+        capturedEx.Throw();
     }
 }

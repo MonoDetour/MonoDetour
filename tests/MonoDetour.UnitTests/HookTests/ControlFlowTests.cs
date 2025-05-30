@@ -72,8 +72,6 @@ public static class ControlFlowTests
         w.InsertBeforeCurrent(w.Create(OpCodes.Ldc_I4_0));
         w.CurrentTo(w.Last);
         w.InsertBeforeCurrent(w.CreateCall(Foo));
-
-        StackSizeAnalyzer.Analyze(info);
     }
 
     static void Foo(int i)

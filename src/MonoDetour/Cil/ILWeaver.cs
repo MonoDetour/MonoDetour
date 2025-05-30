@@ -791,7 +791,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// <param name="toBeSet">The instruction to be set.</param>
     /// <param name="target">The instruction toBeSet will be set to.</param>
     /// <returns>true</returns>
-    public bool PointInstructionTo([NotNull] Instruction? toBeSet, Instruction target)
+    public bool SetInstructionTo([NotNull] ref Instruction? toBeSet, Instruction target)
     {
         Helpers.ThrowIfNull(target);
         toBeSet = target;

@@ -143,14 +143,14 @@ internal static class StackSizeAnalyzer
         BeforeTryStart = 1 << 5,
     }
 
-    internal static void Analyze(ILManipulationInfo info)
+    internal static void Analyze(MethodBody body)
     {
         Console.WriteLine("--- MonoDetour Stack Size Analysis Start ---");
         Console.WriteLine("INFO: Stack size is on the left, instructions on the right.");
         Console.WriteLine();
 
-        info.Context.Method.RecalculateILOffsets();
-        var informationalInstructions = InformationalInstruction.CreateListFor(info.Context.Body);
+        body.Method.RecalculateILOffsets();
+        var informationalInstructions = InformationalInstruction.CreateListFor(body);
 
         bool negativeStackSizeFound = false;
         foreach (var instruction in informationalInstructions)
@@ -183,6 +183,9 @@ internal static class StackSizeAnalyzer
         }
 
         Console.WriteLine();
+        Console.Write("Analysis by MonoDetour ");
+        Console.WriteLine(typeof(StackSizeAnalyzer).Assembly.GetName().Version);
+        Console.WriteLine("NOTE: This analysis may not be perfect.");
         Console.WriteLine("--- MonoDetour Stack Size Analysis End ---");
     }
 
