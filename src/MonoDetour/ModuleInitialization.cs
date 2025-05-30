@@ -9,7 +9,7 @@ file static class ModuleInitialization
     [ModuleInitializer]
     internal static void InitializeModule()
     {
-        ILHookDMDManipulation.InitHook();
         ILHookInstructionILLabelCastFixes.InitHook();
+        ILHookDMDManipulation.InitHook();
     }
 }

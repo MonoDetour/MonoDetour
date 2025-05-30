@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -11,12 +12,18 @@ namespace MonoDetour.Cil.Analysis;
 
 internal static class StackSizeAnalyzer
 {
-    record InformationalInstruction(
-        Instruction Instruction,
-        int StackSize,
-        List<(HandlerPart HandlerPart, ExceptionHandlerType HandlerType)> HandlerParts
+    class InformationalInstruction(
+        Instruction instruction,
+        int stackSize,
+        List<(HandlerPart HandlerPart, ExceptionHandlerType HandlerType)> handlerParts
     )
     {
+        public Instruction Instruction => instruction;
+        public int StackSize => stackSize;
+
+        public List<(HandlerPart HandlerPart, ExceptionHandlerType HandlerType)> HandlerParts =>
+            handlerParts;
+
         public override string ToString()
         {
             if (HandlerParts.Count == 0)
@@ -86,6 +93,14 @@ internal static class StackSizeAnalyzer
 
             foreach (var eh in body.ExceptionHandlers)
             {
+                if (
+                    eh.HandlerType != ExceptionHandlerType.Catch
+                    && eh.HandlerType != ExceptionHandlerType.Filter
+                )
+                {
+                    continue;
+                }
+
                 handlerStarts.Add(eh.HandlerStart);
             }
 
@@ -143,61 +158,86 @@ internal static class StackSizeAnalyzer
         BeforeTryStart = 1 << 5,
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     internal static void Analyze(MethodBody body)
     {
-        Console.WriteLine("--- MonoDetour Stack Size Analysis Start ---");
-        Console.WriteLine("INFO: Stack size is on the left, instructions on the right.");
-        Console.WriteLine();
+        StringBuilder sb = new();
+        sb.AppendLine("--- MonoDetour Stack Size Analysis Start ---");
+        sb.AppendLine("INFO: Stack size is on the left, instructions on the right.");
+        sb.AppendLine();
+
+        if (body is null)
+        {
+            sb.AppendLine("Method Body is null, can't analyze.");
+            sb.AppendLine("--- MonoDetour Stack Size Analysis End ---");
+            return;
+        }
 
         body.Method.RecalculateILOffsets();
         var informationalInstructions = InformationalInstruction.CreateListFor(body);
 
+        int i = 0;
         bool negativeStackSizeFound = false;
         foreach (var instruction in informationalInstructions)
         {
-            Console.WriteLine(instruction);
+            sb.AppendLine(instruction.ToString());
 
             bool notDuplicateNegative = !negativeStackSizeFound;
-            string? error = AnalyzeInstructionIsFine(instruction, ref negativeStackSizeFound);
+            string? error = AnalyzeInstructionIsFine(
+                informationalInstructions,
+                i,
+                ref negativeStackSizeFound
+            );
             if (error is not null && notDuplicateNegative)
             {
-                Console.Write(error);
+                sb.Append(error);
             }
+            i++;
         }
 
-        Console.WriteLine();
-        Console.WriteLine("--- MonoDetour Stack Size Analysis Summary ---");
-        Console.WriteLine("INFO: Stack size is on the left, instructions on the right.");
-        Console.WriteLine();
+        sb.AppendLine();
+        sb.AppendLine("--- MonoDetour Stack Size Analysis Summary ---");
+        sb.AppendLine("INFO: Stack size is on the left, instructions on the right.");
+        sb.AppendLine();
 
+        i = 0;
         negativeStackSizeFound = false;
         foreach (var instruction in informationalInstructions)
         {
             bool notDuplicateNegative = !negativeStackSizeFound;
-            string? error = AnalyzeInstructionIsFine(instruction, ref negativeStackSizeFound);
+            string? error = AnalyzeInstructionIsFine(
+                informationalInstructions,
+                i,
+                ref negativeStackSizeFound
+            );
             if (error is not null && notDuplicateNegative)
             {
-                Console.WriteLine(instruction);
-                Console.Write(error);
+                sb.AppendLine(instruction.ToString());
+                sb.Append(error);
             }
+            i++;
         }
 
-        Console.WriteLine();
-        Console.Write("Analysis by MonoDetour ");
-        Console.WriteLine(typeof(StackSizeAnalyzer).Assembly.GetName().Version);
-        Console.WriteLine("NOTE: This analysis may not be perfect.");
-        Console.WriteLine("--- MonoDetour Stack Size Analysis End ---");
+        sb.AppendLine();
+        sb.Append("Analysis by MonoDetour ");
+        sb.AppendLine(typeof(StackSizeAnalyzer).Assembly.GetName().Version.ToString());
+        sb.AppendLine("NOTE: This analysis may not be perfect.");
+        sb.AppendLine("--- MonoDetour Stack Size Analysis End ---");
+
+        Console.WriteLine(sb.ToString());
     }
 
     static string? AnalyzeInstructionIsFine(
-        InformationalInstruction informationalInstruction,
+        List<InformationalInstruction> instructions,
+        int index,
         ref bool negativeStackSizeFound
     )
     {
         StringBuilder sb;
-        var instruction = informationalInstruction.Instruction;
-        var stackSize = informationalInstruction.StackSize;
-        var handlerParts = informationalInstruction.HandlerParts;
+        var instruction = instructions[index];
+        var realInstruction = instruction.Instruction;
+        var stackSize = instruction.StackSize;
+        var handlerParts = instruction.HandlerParts;
 
         // Stack on Try start must be 0
         if (
@@ -216,7 +256,7 @@ internal static class StackSizeAnalyzer
                 .Append(" └── ERROR: Negative stack size; cannot be ")
                 .AppendLine(stackSize.ToString());
         }
-        else if (instruction.OpCode.FlowControl is FlowControl.Return && stackSize != 0)
+        else if (realInstruction.OpCode.FlowControl is FlowControl.Return && stackSize != 0)
         {
             sb = new StringBuilder()
                 .Append(" └── ERROR: Stack size on return must be 0; it was ")
@@ -228,47 +268,63 @@ internal static class StackSizeAnalyzer
             return null;
         }
 
-        var problematicInstruction = GetProblematicInstructionWithWalkBack(instruction, stackSize);
-        Instruction enumeration = problematicInstruction;
+        var problematicIndex = GetProblematicInstructionIndexWithWalkBack(
+            instructions,
+            index,
+            stackSize
+        );
+
         sb.Append("   ¦ │ ").AppendLine("INFO: Stack imbalance starts at:");
+
+        var enumeration = instructions[problematicIndex];
 
         if (enumeration != instruction)
         {
-            sb.Append("   ¦ ├ ").Append(stackSize).Append(" | ").AppendLine(enumeration.ToString());
-            enumeration = enumeration.Next;
+            sb.Append("   ¦ ├ ").AppendLine(enumeration.ToString());
+            problematicIndex++;
+            enumeration = instructions[problematicIndex];
         }
 
         while (enumeration != instruction)
         {
-            sb.Append("   ¦ │ ").Append(stackSize).Append(" | ").AppendLine(enumeration.ToString());
-            enumeration = enumeration.Next;
+            sb.Append("   ¦ │ ").AppendLine(enumeration.ToString());
+            problematicIndex++;
+            enumeration = instructions[problematicIndex];
         }
-        sb.Append("   ¦ └ ").Append(stackSize).Append(" | ").AppendLine(enumeration.ToString());
-        ;
+
+        sb.Append("   ¦ └ ").AppendLine(enumeration.ToString());
         sb.AppendLine("   ¦");
 
-        return sb.ToString(); // $"\n| Problematic instruction: {problematicInstruction}\n";
+        return sb.ToString();
     }
 
-    static Instruction GetProblematicInstructionWithWalkBack(
-        Instruction instruction,
+    static int GetProblematicInstructionIndexWithWalkBack(
+        List<InformationalInstruction> instructions,
+        int index,
         int incorrectStackSize
     )
     {
         int walkBackStackSize = 0;
-        Instruction targetInstruction = instruction;
+        var targetInstruction = instructions[index];
 
         while (true)
         {
-            ComputeStackDelta(targetInstruction, ref walkBackStackSize);
+            ComputeStackDelta(targetInstruction.Instruction, ref walkBackStackSize);
 
             if (walkBackStackSize == incorrectStackSize)
                 break;
 
-            targetInstruction = targetInstruction.Previous;
+            if (index == 0)
+            {
+                Console.WriteLine("index is 0!");
+                break;
+            }
+
+            index--;
+            targetInstruction = instructions[index];
         }
 
-        return targetInstruction;
+        return index;
     }
 
     // https://github.com/jbevain/cecil/blob/3136847e/Mono.Cecil.Cil/CodeWriter.cs#L434

@@ -15,7 +15,7 @@ public static class ControlFlowTests
 
         SetStringToHello.ControlFlowPrefix(ControlFlowPrefixSkipOriginal, manager: m);
         SetStringToHello.Postfix(Postfix, manager: m);
-        SetStringToHello.ILHook(ILHook_Print, new(priority: -4), manager: m);
+        // SetStringToHello.ILHook(ILHook_Print, new(priority: -4), manager: m);
 
         string? message = null;
         lib.SetStringToHello(ref message);
@@ -65,14 +65,14 @@ public static class ControlFlowTests
         return ReturnFlow.HardReturn;
     }
 
-    private static void ILHook_Print(ILManipulationInfo info)
-    {
-        ILWeaver w = new(info);
+    // private static void ILHook_Print(ILManipulationInfo info)
+    // {
+    //     ILWeaver w = new(info);
 
-        w.InsertBeforeCurrent(w.Create(OpCodes.Ldc_I4_0));
-        w.CurrentTo(w.Last);
-        w.InsertBeforeCurrent(w.CreateCall(Foo));
-    }
+    //     w.InsertBeforeCurrent(w.Create(OpCodes.Ldc_I4_0));
+    //     w.CurrentTo(w.Last);
+    //     w.InsertBeforeCurrent(w.CreateCall(Foo));
+    // }
 
     static void Foo(int i)
     {

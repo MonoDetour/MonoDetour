@@ -192,7 +192,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     public ILWeaver MarkLabelTo(Instruction target, ILLabel label)
     {
         Helpers.ThrowIfNull(target);
-        label = Context.DefineLabel(target);
+        label.InteropSetTarget(target);
         return this;
     }
 
@@ -1000,6 +1000,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
             Helpers.ThrowIfNull(onMatched);
 
         Instruction originalCurrent = Current;
+        Instruction singleMatchCurrent = Current;
 
         List<int> matchedIndexes = [];
         List<(int count, int indexBeforeFailed)> bestAttempts = [(0, 0)];
@@ -1050,6 +1051,13 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
             {
                 onMatched!(Clone());
             }
+            else
+            {
+                // Capture Current because it's probably going
+                // to be overridden when testing against the rest
+                // of the instructions.
+                singleMatchCurrent = Current;
+            }
         }
 
         if (allowMultipleMatches)
@@ -1083,6 +1091,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         {
             if (matchedIndexes.Count == 1)
             {
+                Current = singleMatchCurrent;
                 return new ILWeaverResult(this, null);
             }
 

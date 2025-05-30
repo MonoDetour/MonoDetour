@@ -6,7 +6,11 @@ class ControlFlowLib
 {
     public void SetStringToHello(ref string? message)
     {
-        message = "hello";
+        try
+        {
+            message = "hello";
+        }
+        finally { }
     }
 
     public string ReturnHello()

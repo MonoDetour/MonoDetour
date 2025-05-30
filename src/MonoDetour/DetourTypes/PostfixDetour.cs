@@ -73,6 +73,11 @@ public class PostfixDetour : IMonoDetourHookApplier
 
         w.RetargetLabels(branches, postfixStart.InteropGetTarget()!);
         firstPostfixInstructions.Add(postfixStart.InteropGetTarget()!);
+        foreach (var eh in il.Body.ExceptionHandlers)
+        {
+            if (eh.HandlerEnd == w.Last)
+                eh.HandlerEnd = postfixStart.InteropGetTarget()!;
+        }
 
         w.HandlerApply(handler);
 
