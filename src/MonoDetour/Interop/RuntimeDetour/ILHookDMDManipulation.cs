@@ -266,13 +266,6 @@ static class ILHookDMDManipulation
         w.HandlerSetHandlerEnd(w.Current, handler);
 
         w.HandlerApply(handler);
-
-        MonoDetourLogger.Log(
-            MonoDetourLogger.LogChannel.Info,
-            "MonoDetour's invalid IL analysis applied. "
-        );
-        Console.WriteLine("MonoDetour's invalid IL analysis applied");
-        StackSizeAnalyzer.Analyze(info.Context.Body);
     }
 
     static MethodBody GetMethodBody(DynamicMethodDefinition dmd) => dmd.Definition.Body;
