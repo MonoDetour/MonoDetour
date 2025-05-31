@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>0.com.github.MonoDetour.BepInEx.5</AssemblyName>
+    <!-- Keep up with MonoDetour version -->
+    <VersionPrefix>$(MonoDetourVersionPrefix)</VersionPrefix>
+    <VersionSuffix>$(MonoDetourVersionSuffix)</VersionSuffix>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RestoreAdditionalProjectSources>
+      https://nuget.bepinex.dev/v3/index.json;
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="MonoDetour" Version="0.4.0" />
+  </ItemGroup>
+</Project>

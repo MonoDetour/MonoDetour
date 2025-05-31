@@ -4,6 +4,7 @@
 # Add source files
 !/src/
 !/tests/
+!/packaging/
 
 # Add root level source files
 !/Directory.Build.props

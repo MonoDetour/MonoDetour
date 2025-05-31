@@ -452,7 +452,9 @@ internal static class StackSizeAnalyzer
         sb.AppendLine();
         sb.Append("--- MonoDetour CIL Stack Analysis End ---");
 
-        Console.WriteLine(sb.ToString());
+        // This is an Info log and not a Debug one so that the developer who
+        // needs it the most actually finds it in their console output.
+        MonoDetourLogger.Log(MonoDetourLogger.LogChannel.Info, sb.ToString());
     }
 
     static string? AnalyzeInstructionIsFine(
