@@ -16,7 +16,7 @@
   </Target>
 
   <!-- Call with `dotnet build packaging/Thunderstore/ -target:PublishThunderstore` -->
-  <Target Name="PublishThunderstore" DependsOnTargets="PackThunderstore">
+  <Target Name="PublishThunderstore" DependsOnTargets="Build;PackThunderstore">
     <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)Thunderstore.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour-$(Version).zip&quot;" />
     <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5/Thunderstore.toml&quot; --file &quot;$(SolutionRoot)artifacts/MonoDetour.bepinex.5/MonoDetour-MonoDetour_BepInEx_5-$(Version).zip&quot;" />
   </Target>
