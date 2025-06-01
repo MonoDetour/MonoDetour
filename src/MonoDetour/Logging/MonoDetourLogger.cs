@@ -83,7 +83,7 @@ public static class MonoDetourLogger
     /// channel get propagated into <see cref="MessageReceived"/> event.
     /// </summary>
     public static LogChannel GlobalFilter { get; set; } =
-        LogChannel.Warn | LogChannel.Error | LogChannel.IL;
+        LogChannel.Info | LogChannel.Warn | LogChannel.Error;
 
     /// <summary>
     /// Event fired on any incoming message that passes the channel filter.

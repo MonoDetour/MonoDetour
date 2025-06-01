@@ -46,7 +46,7 @@ public static class CanAnalyzeStackSizeTests
         w.MarkLabelTo(w.Previous, label1);
         w.MarkLabelTo(w.Current, label2);
 
-        StackSizeAnalyzer.Analyze(info.Context.Body);
+        CilAnalyzer.Analyze(info.Context.Body);
     }
 
     static void Stub()

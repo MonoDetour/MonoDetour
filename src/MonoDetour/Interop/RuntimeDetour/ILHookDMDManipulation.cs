@@ -279,7 +279,7 @@ static class ILHookDMDManipulation
 
         try
         {
-            StackSizeAnalyzer.Analyze(body);
+            CilAnalyzer.Analyze(body);
         }
         catch
         {
