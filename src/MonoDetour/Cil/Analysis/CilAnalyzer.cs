@@ -14,7 +14,8 @@ internal static class CilAnalyzer
     internal static void Analyze(MethodBody body)
     {
         StringBuilder sb = new();
-        sb.AppendLine("\n--- MonoDetour CIL Analysis Start Full Method ---");
+        sb.AppendLine("An ILHook manipulation target method threw on compilation:");
+        sb.AppendLine("--- MonoDetour CIL Analysis Start Full Method ---");
         sb.AppendLine();
         sb.AppendLine("INFO: Stack size is on the left, instructions are on the right.");
         sb.AppendLine();
