@@ -20,6 +20,8 @@ internal class InformationalInstruction(
     )> handlerParts
 )
 {
+    public List<InformationalInstruction> IncomingBranches { get; private set; } = [];
+    public InformationalInstruction? PreviousChronological { get; private set; }
     public InformationalInstruction? Next { get; private set; }
     public Instruction Inst => instruction;
     public int StackSize
@@ -35,6 +37,11 @@ internal class InformationalInstruction(
     public int StackSizeBefore { get; private set; }
     public int StackPop { get; private set; }
     public int StackPush { get; private set; }
+
+    /// <summary>
+    /// The minimum distance from this instruction to the first instruction.
+    /// </summary>
+    public int Distance { get; private set; }
     public bool Unreachable => !explored;
 
     public List<(HandlerPart HandlerPart, ExceptionHandlerType HandlerType)> HandlerParts =>
@@ -69,14 +76,14 @@ internal class InformationalInstruction(
             StringBuilder sb = new();
             sb.AppendLine().Append(" └ ").Append(Message);
 
-            if (Range is null)
+            if (Range is null || Range.Instructions.Count == 0)
             {
                 return sb.ToString();
             }
 
-            var start = Range.Start;
-            var end = Range.End;
             var instructions = Range.Instructions;
+            var start = 0;
+            var end = instructions.Count - 1;
 
             sb.AppendLine();
             sb.AppendLine("   ¦ │ Info: Stack imbalance starts at:");
@@ -98,21 +105,11 @@ internal class InformationalInstruction(
     }
 
     public record class AnnotationRangeWalkBack(
-        List<InformationalInstruction> Instructions,
-        int End,
+        InformationalInstruction Instruction,
         int RequiredStackSize
-    )
-        : AnnotationRange(
-            Instructions,
-            GetProblematicInstructionIndexWithWalkBack(Instructions, End, RequiredStackSize),
-            End
-        );
+    ) : AnnotationRange(GetProblematicInstructionsWithWalkBack(Instruction, RequiredStackSize));
 
-    public record class AnnotationRange(
-        List<InformationalInstruction> Instructions,
-        int Start,
-        int End
-    );
+    public record class AnnotationRange(List<InformationalInstruction> Instructions);
 
     [Flags]
     public enum HandlerPart
@@ -259,7 +256,7 @@ internal class InformationalInstruction(
         int stackSize = 0;
         // This logic is heavily based on:
         // https://github.com/jbevain/cecil/blob/3136847e/Mono.Cecil.Cil/CodeWriter.cs#L332-L341
-        CrawlInstructions(informationalInstructions[0], map, ref stackSize, body);
+        CrawlInstructions(informationalInstructions[0], map, ref stackSize, body, distance: 0);
 
         return informationalInstructions;
     }
@@ -268,15 +265,21 @@ internal class InformationalInstruction(
         InformationalInstruction instruction,
         Dictionary<Instruction, InformationalInstruction> map,
         ref int stackSize,
-        MethodBody body
+        MethodBody body,
+        int distance
     )
     {
         var enumerable = instruction;
 
-        while (enumerable is not null)
+        while (true)
         {
             if (enumerable.explored)
             {
+                if (distance < enumerable.Distance)
+                {
+                    enumerable.Distance = distance;
+                }
+
                 if (enumerable.StackSizeBefore == stackSize)
                 {
                     break;
@@ -301,8 +304,11 @@ internal class InformationalInstruction(
             }
 
             enumerable.explored = true;
+            enumerable.Distance = distance;
+            distance++;
+
             ComputeStackDelta(enumerable, ref stackSize, body);
-            TryCrawlBranch(enumerable, map, stackSize, body);
+            TryCrawlBranch(enumerable, map, stackSize, body, distance);
 
             if (
                 enumerable.Inst.OpCode.FlowControl
@@ -313,7 +319,13 @@ internal class InformationalInstruction(
             {
                 break;
             }
+            var previous = enumerable;
             enumerable = enumerable.Next;
+
+            if (enumerable is null)
+                break;
+
+            enumerable.PreviousChronological = previous;
         }
     }
 
@@ -321,7 +333,8 @@ internal class InformationalInstruction(
         InformationalInstruction informationalInstruction,
         Dictionary<Instruction, InformationalInstruction> map,
         int stackSize,
-        MethodBody body
+        MethodBody body,
+        int distance
     )
     {
         var instruction = informationalInstruction.Inst;
@@ -337,7 +350,15 @@ internal class InformationalInstruction(
                 else
                     target = (Instruction)instruction.Operand;
 
-                CrawlInstructions(map[target], map, ref stackSize, body);
+                var informationalTarget = map[target];
+                informationalTarget.IncomingBranches.Add(informationalInstruction);
+
+                // This will get overridden if the target is explored later,
+                // which is what we want.
+                if (!informationalTarget.explored)
+                    informationalTarget.PreviousChronological = informationalInstruction;
+
+                CrawlInstructions(informationalTarget, map, ref stackSize, body, distance);
                 break;
 
             case OperandType.InlineSwitch:
@@ -349,7 +370,15 @@ internal class InformationalInstruction(
                     targets = (Instruction[])instruction.Operand;
 
                 for (int i = 0; i < targets.Length; i++)
-                    CrawlInstructions(map[targets[i]], map, ref stackSize, body);
+                {
+                    informationalTarget = map[targets[i]];
+                    informationalTarget.IncomingBranches.Add(informationalInstruction);
+
+                    if (!informationalTarget.explored)
+                        informationalTarget.PreviousChronological = informationalInstruction;
+
+                    CrawlInstructions(informationalTarget, map, ref stackSize, body, distance);
+                }
                 break;
         }
     }
@@ -467,31 +496,32 @@ internal class InformationalInstruction(
         }
     }
 
-    internal static int GetProblematicInstructionIndexWithWalkBack(
-        List<InformationalInstruction> instructions,
-        int index,
+    internal static List<InformationalInstruction> GetProblematicInstructionsWithWalkBack(
+        InformationalInstruction instruction,
         int requiredStackSize
     )
     {
+        Stack<InformationalInstruction> walkBackInstructions = [];
+
         int walkBackStackSize = 0;
-        var targetInstruction = instructions[index];
+        InformationalInstruction targetInstruction = instruction;
 
         while (true)
         {
+            walkBackInstructions.Push(targetInstruction);
+
             walkBackStackSize += targetInstruction.StackSizeDelta;
 
             if (walkBackStackSize == requiredStackSize)
                 break;
 
-            if (index <= 0)
-            {
+            var previous = targetInstruction.PreviousChronological;
+            if (previous is null)
                 break;
-            }
 
-            index--;
-            targetInstruction = instructions[index];
+            targetInstruction = previous;
         }
 
-        return index;
+        return [.. walkBackInstructions];
     }
 }

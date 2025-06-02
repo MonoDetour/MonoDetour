@@ -33,9 +33,13 @@ internal static class CilAnalyzer
 
         if (!instructions.Any(x => x.Annotations.Any(x => x is AnnotationStackSizeMismatch)))
         {
-            for (int i = 0; i < instructions.Count; i++)
+            var sorted = instructions.ToList();
+            sorted.Sort((x, y) => x.Distance - y.Distance);
+            HashSet<Type> types = [];
+
+            foreach (var instruction in sorted)
             {
-                AnalyzeAndAnnotateInstruction(instructions, i);
+                AnalyzeAndAnnotateInstruction(instruction, types);
             }
         }
 
@@ -75,11 +79,10 @@ internal static class CilAnalyzer
     }
 
     static void AnalyzeAndAnnotateInstruction(
-        List<InformationalInstruction> instructions,
-        int index
+        InformationalInstruction instruction,
+        HashSet<Type> types
     )
     {
-        var instruction = instructions[index];
         var stackSize = instruction.StackSize;
         var handlerParts = instruction.HandlerParts;
 
@@ -93,6 +96,10 @@ internal static class CilAnalyzer
 
         if (instruction.StackPop > instruction.StackSizeBefore)
         {
+            if (types.Contains(typeof(AnnotationPoppingMoreThanStackSize)))
+                return;
+            types.Add(typeof(AnnotationPoppingMoreThanStackSize));
+
             instruction.Annotations.Add(
                 new AnnotationPoppingMoreThanStackSize(
                     $"Error: Popping more than stack size; cannot pop {instruction.StackPop} "
@@ -105,10 +112,14 @@ internal static class CilAnalyzer
             && handlerParts.Any(x => x.HandlerPart.HasFlag(HandlerPart.BeforeTryStart))
         )
         {
+            if (types.Contains(typeof(AnnotationStackSizeMustBeX)))
+                return;
+            types.Add(typeof(AnnotationStackSizeMustBeX));
+
             instruction.Annotations.Add(
                 new AnnotationStackSizeMustBeX(
                     $"Error: Stack size before try start must be 0; it was {stackSize}",
-                    new AnnotationRangeWalkBack(instructions, index, stackSize)
+                    new AnnotationRangeWalkBack(instruction, stackSize)
                 )
             );
         }
@@ -117,6 +128,10 @@ internal static class CilAnalyzer
             && instruction.Inst.OpCode.FlowControl is FlowControl.Throw or FlowControl.Return
         )
         {
+            if (types.Contains(typeof(AnnotationPoppingMoreThanStackSize)))
+                return;
+            types.Add(typeof(AnnotationStackSizeMustBeX));
+
             string throwOrReturn = instruction.Inst.OpCode.FlowControl switch
             {
                 FlowControl.Throw => "throw",
@@ -127,7 +142,7 @@ internal static class CilAnalyzer
             instruction.Annotations.Add(
                 new AnnotationStackSizeMustBeX(
                     $"Error: Stack size on {throwOrReturn} must be 0; it was {stackSize}",
-                    new AnnotationRangeWalkBack(instructions, index, stackSize)
+                    new AnnotationRangeWalkBack(instruction, stackSize)
                 )
             );
         }
