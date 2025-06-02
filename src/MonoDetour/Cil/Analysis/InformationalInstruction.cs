@@ -5,6 +5,7 @@ using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoDetour.Interop.MonoModUtils;
+using MonoDetour.Logging;
 using MonoMod.Cil;
 
 namespace MonoDetour.Cil.Analysis;
@@ -19,6 +20,7 @@ internal class InformationalInstruction(
     )> handlerParts
 )
 {
+    public InformationalInstruction? Next { get; private set; }
     public Instruction Inst => instruction;
     public int StackSize
     {
@@ -33,6 +35,7 @@ internal class InformationalInstruction(
     public int StackSizeBefore { get; private set; }
     public int StackPop { get; private set; }
     public int StackPush { get; private set; }
+    public bool Unreachable => !explored;
 
     public List<(HandlerPart HandlerPart, ExceptionHandlerType HandlerType)> HandlerParts =>
         handlerParts;
@@ -41,6 +44,8 @@ internal class InformationalInstruction(
 
     public bool HasAnnotations => Annotations.Count != 0;
 
+    private bool explored = false;
+
     public record AnnotationStackSizeMustBeX(string Message, AnnotationRange? Range)
         : Annotation(Message, Range)
     {
@@ -48,6 +53,11 @@ internal class InformationalInstruction(
     }
 
     public record AnnotationPoppingMoreThanStackSize(string Message) : Annotation(Message, null)
+    {
+        public override string ToString() => base.ToString();
+    }
+
+    public record AnnotationStackSizeMismatch(string Message) : Annotation(Message, null)
     {
         public override string ToString() => base.ToString();
     }
@@ -81,8 +91,7 @@ internal class InformationalInstruction(
                 sb.Append("   ¦ │ ").AppendLine(instructions[i].ToString());
             }
 
-            sb.Append("   ¦ └ ").AppendLine(instructions[end].ToString());
-            sb.Append("   ¦");
+            sb.Append("   ¦ └ ").Append(instructions[end].ToString());
 
             return sb.ToString();
         }
@@ -91,11 +100,11 @@ internal class InformationalInstruction(
     public record class AnnotationRangeWalkBack(
         List<InformationalInstruction> Instructions,
         int End,
-        int IncorrectStackSize
+        int RequiredStackSize
     )
         : AnnotationRange(
             Instructions,
-            GetProblematicInstructionIndexWithWalkBack(Instructions, End, IncorrectStackSize),
+            GetProblematicInstructionIndexWithWalkBack(Instructions, End, RequiredStackSize),
             End
         );
 
@@ -150,7 +159,10 @@ internal class InformationalInstruction(
             }
         }
 
-        sb.Append($"{StackSize, 2} | {Inst}");
+        if (Unreachable)
+            sb.Append($" - | {Inst}");
+        else
+            sb.Append($"{StackSize, 2} | {Inst}");
 
         if (withAnnotations && Annotations.Count != 0)
         {
@@ -200,23 +212,13 @@ internal class InformationalInstruction(
 
     internal static List<InformationalInstruction> CreateList(MethodBody body)
     {
-        List<InformationalInstruction> informationalInstructions = [];
-
-        // This whole algorithm is from:
-        // https://github.com/jbevain/cecil/blob/3136847e/Mono.Cecil.Cil/CodeWriter.cs#L332-L341
-        Dictionary<Instruction, int> stackSizes = [];
-        int stackSize = 0;
-        int maxStack = 0;
-        if (body.HasExceptionHandlers)
-        {
-            ComputeExceptionHandlerStackSize(ref stackSizes, body);
-        }
-
         var instructions = body.Instructions;
+        List<InformationalInstruction> informationalInstructions = [];
+        Dictionary<Instruction, InformationalInstruction> map = [];
 
         for (int i = 0; i < instructions.Count; i++)
         {
-            var instruction = instructions[i];
+            var cecilIns = instructions[i];
 
             List<(HandlerPart, ExceptionHandlerType)> handlerParts = [];
 
@@ -224,18 +226,18 @@ internal class InformationalInstruction(
             {
                 HandlerPart handlerPart = 0;
 
-                if (eh.TryStart.Previous == instruction)
+                if (eh.TryStart.Previous == cecilIns)
                     handlerPart |= HandlerPart.BeforeTryStart;
 
-                if (eh.TryStart == instruction)
+                if (eh.TryStart == cecilIns)
                     handlerPart |= HandlerPart.TryStart;
-                if (eh.TryEnd == instruction)
+                if (eh.TryEnd == cecilIns)
                     handlerPart |= HandlerPart.TryEnd;
-                if (eh.FilterStart == instruction)
+                if (eh.FilterStart == cecilIns)
                     handlerPart |= HandlerPart.FilterStart;
-                if (eh.HandlerStart == instruction)
+                if (eh.HandlerStart == cecilIns)
                     handlerPart |= HandlerPart.HandlerStart;
-                if (eh.HandlerEnd == instruction)
+                if (eh.HandlerEnd == cecilIns)
                     handlerPart |= HandlerPart.HandlerEnd;
 
                 if (handlerPart == 0)
@@ -244,93 +246,83 @@ internal class InformationalInstruction(
                 handlerParts.Add((handlerPart, eh.HandlerType));
             }
 
-            InformationalInstruction ins = new(instruction, default, default, handlerParts);
+            InformationalInstruction ins = new(cecilIns, default, default, handlerParts);
             informationalInstructions.Add(ins);
+            map.Add(cecilIns, ins);
 
-            int oldStackSize = stackSize;
-            ComputeStackSize(
-                informationalInstructions,
-                i,
-                ref stackSizes,
-                ref stackSize,
-                ref maxStack
-            );
-            ins.StackSize = stackSize;
-            ins.StackSizeDelta = stackSize - oldStackSize;
+            if (i > 0)
+            {
+                informationalInstructions[i - 1].Next = ins;
+            }
         }
+
+        int stackSize = 0;
+        // This logic is heavily based on:
+        // https://github.com/jbevain/cecil/blob/3136847e/Mono.Cecil.Cil/CodeWriter.cs#L332-L341
+        CrawlInstructions(informationalInstructions[0], map, ref stackSize);
 
         return informationalInstructions;
     }
 
-    static void ComputeExceptionHandlerStackSize(
-        ref Dictionary<Instruction, int> stack_sizes,
-        MethodBody body
+    static void CrawlInstructions(
+        InformationalInstruction instruction,
+        Dictionary<Instruction, InformationalInstruction> map,
+        ref int stackSize
     )
     {
-        var exception_handlers = body.ExceptionHandlers;
+        var enumerable = instruction;
 
-        for (int i = 0; i < exception_handlers.Count; i++)
+        while (enumerable is not null)
         {
-            var exception_handler = exception_handlers[i];
-
-            switch (exception_handler.HandlerType)
+            if (enumerable.explored)
             {
-                case ExceptionHandlerType.Catch:
-                    AddExceptionStackSize(exception_handler.HandlerStart, ref stack_sizes);
+                if (enumerable.StackSizeBefore == stackSize)
+                {
                     break;
-                case ExceptionHandlerType.Filter:
-                    AddExceptionStackSize(exception_handler.FilterStart, ref stack_sizes);
-                    AddExceptionStackSize(exception_handler.HandlerStart, ref stack_sizes);
-                    break;
+                }
+
+                enumerable.Annotations.Add(
+                    new AnnotationStackSizeMismatch(
+                        $"Error: Stack size mismatch; incoming stack size from branches "
+                            + $"is both {enumerable.StackSizeBefore} and {stackSize}"
+                    )
+                );
+                break;
             }
+
+            if (
+                enumerable.HandlerParts.Any(x =>
+                    x.HandlerPart is HandlerPart.FilterStart or HandlerPart.HandlerStart
+                )
+            )
+            {
+                stackSize++;
+            }
+
+            enumerable.explored = true;
+            ComputeStackDelta(enumerable, ref stackSize);
+            TryCrawlBranch(enumerable, map, stackSize);
+
+            if (
+                enumerable.Inst.OpCode.FlowControl
+                is FlowControl.Branch
+                    or FlowControl.Throw
+                    or FlowControl.Return
+            )
+            {
+                break;
+            }
+            enumerable = enumerable.Next;
         }
     }
 
-    static void AddExceptionStackSize(
-        Instruction handler_start,
-        ref Dictionary<Instruction, int> stack_sizes
+    static void TryCrawlBranch(
+        InformationalInstruction informationalInstruction,
+        Dictionary<Instruction, InformationalInstruction> map,
+        int stackSize
     )
     {
-        if (handler_start == null)
-            return;
-
-        stack_sizes[handler_start] = 1;
-    }
-
-    static void ComputeStackSize(
-        List<InformationalInstruction> informationalInstructions,
-        int index,
-        ref Dictionary<Instruction, int> stack_sizes,
-        ref int stack_size,
-        ref int max_stack
-    )
-    {
-        var informationalInstruction = informationalInstructions[index];
         var instruction = informationalInstruction.Inst;
-
-        if (stack_sizes.TryGetValue(instruction, out int computed_size))
-            stack_size = computed_size;
-
-        max_stack = Math.Max(max_stack, stack_size);
-        ComputeStackDelta(informationalInstructions, index, ref stack_size);
-        max_stack = Math.Max(max_stack, stack_size);
-
-        CopyBranchStackSize(instruction, ref stack_sizes, stack_size);
-        // Removed the following method:
-        // ComputeStackSize(informationalInstructions, index, ref stack_size);
-        // https://github.com/jbevain/cecil/blob/3136847e/Mono.Cecil.Cil/CodeWriter.cs#L423-L432
-        // It would set the stack size to 0 on control flow changes, but we are
-        // validating stuff here. We don't add validation here yet though.
-    }
-
-    static void CopyBranchStackSize(
-        Instruction instruction,
-        ref Dictionary<Instruction, int> stack_sizes,
-        int stack_size
-    )
-    {
-        if (stack_size == 0)
-            return;
 
         switch (instruction.OpCode.OperandType)
         {
@@ -343,7 +335,7 @@ internal class InformationalInstruction(
                 else
                     target = (Instruction)instruction.Operand;
 
-                CopyBranchStackSize(ref stack_sizes, target, stack_size);
+                CrawlInstructions(map[target], map, ref stackSize);
                 break;
 
             case OperandType.InlineSwitch:
@@ -355,34 +347,18 @@ internal class InformationalInstruction(
                     targets = (Instruction[])instruction.Operand;
 
                 for (int i = 0; i < targets.Length; i++)
-                    CopyBranchStackSize(ref stack_sizes, targets[i], stack_size);
+                    CrawlInstructions(map[targets[i]], map, ref stackSize);
                 break;
         }
     }
 
-    static void CopyBranchStackSize(
-        ref Dictionary<Instruction, int> stack_sizes,
-        Instruction target,
-        int stack_size
-    )
-    {
-        int branch_stack_size = stack_size;
-
-        if (stack_sizes.TryGetValue(target, out int computed_size))
-            branch_stack_size = Math.Max(branch_stack_size, computed_size);
-
-        stack_sizes[target] = branch_stack_size;
-    }
-
     static void ComputeStackDelta(
-        List<InformationalInstruction> informationalInstructions,
-        int index,
-        ref int stack_size
+        InformationalInstruction informationalInstruction,
+        ref int stackSize
     )
     {
-        var informationalInstruction = informationalInstructions[index];
         var instruction = informationalInstruction.Inst;
-        int oldStackSize = stack_size;
+        int oldStackSize = stackSize;
         informationalInstruction.StackSizeBefore = oldStackSize;
 
         switch (instruction.OpCode.FlowControl)
@@ -396,15 +372,15 @@ internal class InformationalInstruction(
                     && !method.ExplicitThis
                     && instruction.OpCode.Code != Code.Newobj
                 )
-                    stack_size--;
+                    stackSize--;
                 // pop normal arguments
                 if (method.HasParameters)
-                    stack_size -= method.Parameters.Count;
+                    stackSize -= method.Parameters.Count;
                 // pop function pointer
                 if (instruction.OpCode.Code == Code.Calli)
-                    stack_size--;
+                    stackSize--;
 
-                informationalInstruction.StackPop = oldStackSize - stack_size;
+                informationalInstruction.StackPop = oldStackSize - stackSize;
 
                 // push return value
                 if (
@@ -412,19 +388,22 @@ internal class InformationalInstruction(
                     || instruction.OpCode.Code == Code.Newobj
                 )
                 {
-                    stack_size++;
+                    stackSize++;
                     informationalInstruction.StackPush = 1;
                 }
                 break;
             }
             default:
-                ComputePopDelta(instruction, ref stack_size);
-                informationalInstruction.StackPop = oldStackSize - stack_size;
-                oldStackSize = stack_size;
-                ComputePushDelta(instruction, ref stack_size);
-                informationalInstruction.StackPush = stack_size - oldStackSize;
+                ComputePopDelta(instruction, ref stackSize);
+                informationalInstruction.StackPop = oldStackSize - stackSize;
+                var stackSizeAfterPop = stackSize;
+                ComputePushDelta(instruction, ref stackSize);
+                informationalInstruction.StackPush = stackSize - stackSizeAfterPop;
                 break;
         }
+
+        informationalInstruction.StackSize = stackSize;
+        informationalInstruction.StackSizeDelta = stackSize - oldStackSize;
     }
 
     static void ComputePopDelta(Instruction instruction, ref int stack_size)
@@ -481,7 +460,7 @@ internal class InformationalInstruction(
     internal static int GetProblematicInstructionIndexWithWalkBack(
         List<InformationalInstruction> instructions,
         int index,
-        int incorrectStackSize
+        int requiredStackSize
     )
     {
         int walkBackStackSize = 0;
@@ -491,8 +470,13 @@ internal class InformationalInstruction(
         {
             walkBackStackSize += targetInstruction.StackSizeDelta;
 
-            if (walkBackStackSize == incorrectStackSize)
+            if (walkBackStackSize == requiredStackSize)
                 break;
+
+            if (index <= 0)
+            {
+                break;
+            }
 
             index--;
             targetInstruction = instructions[index];

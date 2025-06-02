@@ -17,7 +17,7 @@ internal static class CilAnalyzer
         sb.AppendLine("An ILHook manipulation target method threw on compilation:");
         sb.AppendLine("--- MonoDetour CIL Analysis Start Full Method ---");
         sb.AppendLine();
-        sb.AppendLine("INFO: Stack size is on the left, instructions are on the right.");
+        sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
         sb.AppendLine();
 
         if (body is null)
@@ -31,9 +31,12 @@ internal static class CilAnalyzer
         body.Method.RecalculateILOffsets();
         List<InformationalInstruction> instructions = CreateList(body);
 
-        for (int i = 0; i < instructions.Count; i++)
+        if (!instructions.Any(x => x.Annotations.Any(x => x is AnnotationStackSizeMismatch)))
         {
-            AnalyzeAndAnnotateInstruction(instructions, i);
+            for (int i = 0; i < instructions.Count; i++)
+            {
+                AnalyzeAndAnnotateInstruction(instructions, i);
+            }
         }
 
         sb.Append(instructions.ToStringWithAnnotationTypesDeduplicated());
@@ -44,24 +47,23 @@ internal static class CilAnalyzer
 
         if (instructions.All(x => !x.HasAnnotations))
         {
-            sb.AppendLine("No stack size related mistakes were found.");
-            sb.AppendLine("If there are errors, they may be related to the stack behavior of ")
+            sb.AppendLine("No mistakes were found.");
+            sb.AppendLine("If there are errors, MonoDetour simply didn't catch them.")
+                .AppendLine("Currently unreachable instructions aren't evaluated.")
+                .AppendLine("You can improve the analysis:")
                 .AppendLine(
-                    "individual instructions which MonoDetour does not check (at least yet)"
+                    "https://github.com/MonoDetour/MonoDetour/blob/main/src/MonoDetour/Cil/Analysis/CilAnalyzer.cs"
                 );
         }
         else
         {
-            sb.AppendLine("INFO: Stack size is on the left, instructions are on the right.");
+            sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
             sb.AppendLine();
 
             sb.Append(instructions.ToStringWithAnnotationTypesDeduplicatedExclusive());
 
             sb.AppendLine();
-            sb.AppendLine("NOTE: This analysis is not perfect; errors may not always be accurate.");
-            sb.AppendLine("TIP:  Pay close attention to stack sizes.");
-            sb.Append("      A branch pointing to an instruction can cause its ")
-                .AppendLine("stack size to increase seemingly out of nowhere.");
+            sb.AppendLine("Note: This analysis is not perfect; errors may not always be accurate.");
         }
 
         sb.AppendLine();
@@ -80,6 +82,14 @@ internal static class CilAnalyzer
         var instruction = instructions[index];
         var stackSize = instruction.StackSize;
         var handlerParts = instruction.HandlerParts;
+
+        // Unreachable instructions seem to sometimes not be evaluated,
+        // but sometimes they are evaluated anyways.
+        // I think it's safer to ignore unreachable instructions for now.
+        if (instruction.Unreachable)
+        {
+            return;
+        }
 
         if (instruction.StackPop > instruction.StackSizeBefore)
         {
