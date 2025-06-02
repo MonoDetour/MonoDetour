@@ -30,6 +30,9 @@ internal class InformationalInstruction(
         get => stackSizeDelta;
         private set => stackSizeDelta = value;
     }
+    public int StackSizeBefore { get; private set; }
+    public int StackPop { get; private set; }
+    public int StackPush { get; private set; }
 
     public List<(HandlerPart HandlerPart, ExceptionHandlerType HandlerType)> HandlerParts =>
         handlerParts;
@@ -41,10 +44,12 @@ internal class InformationalInstruction(
     public record AnnotationStackSizeMustBeX(string Message, AnnotationRange? Range)
         : Annotation(Message, Range)
     {
-        public override string ToString()
-        {
-            return base.ToString();
-        }
+        public override string ToString() => base.ToString();
+    }
+
+    public record AnnotationPoppingMoreThanStackSize(string Message) : Annotation(Message, null)
+    {
+        public override string ToString() => base.ToString();
     }
 
     public record Annotation(string Message, AnnotationRange? Range)
@@ -307,7 +312,7 @@ internal class InformationalInstruction(
             stack_size = computed_size;
 
         max_stack = Math.Max(max_stack, stack_size);
-        ComputeStackDelta(instruction, ref stack_size);
+        ComputeStackDelta(informationalInstructions, index, ref stack_size);
         max_stack = Math.Max(max_stack, stack_size);
 
         CopyBranchStackSize(instruction, ref stack_sizes, stack_size);
@@ -369,8 +374,17 @@ internal class InformationalInstruction(
         stack_sizes[target] = branch_stack_size;
     }
 
-    static void ComputeStackDelta(Instruction instruction, ref int stack_size)
+    static void ComputeStackDelta(
+        List<InformationalInstruction> informationalInstructions,
+        int index,
+        ref int stack_size
+    )
     {
+        var informationalInstruction = informationalInstructions[index];
+        var instruction = informationalInstruction.Inst;
+        int oldStackSize = stack_size;
+        informationalInstruction.StackSizeBefore = oldStackSize;
+
         switch (instruction.OpCode.FlowControl)
         {
             case FlowControl.Call:
@@ -389,17 +403,26 @@ internal class InformationalInstruction(
                 // pop function pointer
                 if (instruction.OpCode.Code == Code.Calli)
                     stack_size--;
+
+                informationalInstruction.StackPop = oldStackSize - stack_size;
+
                 // push return value
                 if (
                     method.ReturnType.MetadataType != MetadataType.Void
                     || instruction.OpCode.Code == Code.Newobj
                 )
+                {
                     stack_size++;
+                    informationalInstruction.StackPush = 1;
+                }
                 break;
             }
             default:
                 ComputePopDelta(instruction, ref stack_size);
+                informationalInstruction.StackPop = oldStackSize - stack_size;
+                oldStackSize = stack_size;
                 ComputePushDelta(instruction, ref stack_size);
+                informationalInstruction.StackPush = stack_size - oldStackSize;
                 break;
         }
     }

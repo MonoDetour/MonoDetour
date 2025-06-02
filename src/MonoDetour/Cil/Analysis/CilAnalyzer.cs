@@ -81,7 +81,16 @@ internal static class CilAnalyzer
         var stackSize = instruction.StackSize;
         var handlerParts = instruction.HandlerParts;
 
-        if (
+        if (instruction.StackPop > instruction.StackSizeBefore)
+        {
+            instruction.Annotations.Add(
+                new AnnotationPoppingMoreThanStackSize(
+                    $"Error: Popping more than stack size; cannot pop {instruction.StackPop} "
+                        + $"value(s) when stack size was {instruction.StackSizeBefore}"
+                )
+            );
+        }
+        else if (
             stackSize != 0
             && handlerParts.Any(x => x.HandlerPart.HasFlag(HandlerPart.BeforeTryStart))
         )
@@ -108,15 +117,6 @@ internal static class CilAnalyzer
             instruction.Annotations.Add(
                 new AnnotationStackSizeMustBeX(
                     $"Error: Stack size on {throwOrReturn} must be 0; it was {stackSize}",
-                    new AnnotationRangeWalkBack(instructions, index, stackSize)
-                )
-            );
-        }
-        else if (stackSize < 0)
-        {
-            instruction.Annotations.Add(
-                new AnnotationStackSizeMustBeX(
-                    $"Error: Negative stack size; cannot be  {stackSize}",
                     new AnnotationRangeWalkBack(instructions, index, stackSize)
                 )
             );
