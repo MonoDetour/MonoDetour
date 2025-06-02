@@ -259,7 +259,7 @@ internal class InformationalInstruction(
         int stackSize = 0;
         // This logic is heavily based on:
         // https://github.com/jbevain/cecil/blob/3136847e/Mono.Cecil.Cil/CodeWriter.cs#L332-L341
-        CrawlInstructions(informationalInstructions[0], map, ref stackSize);
+        CrawlInstructions(informationalInstructions[0], map, ref stackSize, body);
 
         return informationalInstructions;
     }
@@ -267,7 +267,8 @@ internal class InformationalInstruction(
     static void CrawlInstructions(
         InformationalInstruction instruction,
         Dictionary<Instruction, InformationalInstruction> map,
-        ref int stackSize
+        ref int stackSize,
+        MethodBody body
     )
     {
         var enumerable = instruction;
@@ -300,8 +301,8 @@ internal class InformationalInstruction(
             }
 
             enumerable.explored = true;
-            ComputeStackDelta(enumerable, ref stackSize);
-            TryCrawlBranch(enumerable, map, stackSize);
+            ComputeStackDelta(enumerable, ref stackSize, body);
+            TryCrawlBranch(enumerable, map, stackSize, body);
 
             if (
                 enumerable.Inst.OpCode.FlowControl
@@ -319,7 +320,8 @@ internal class InformationalInstruction(
     static void TryCrawlBranch(
         InformationalInstruction informationalInstruction,
         Dictionary<Instruction, InformationalInstruction> map,
-        int stackSize
+        int stackSize,
+        MethodBody body
     )
     {
         var instruction = informationalInstruction.Inst;
@@ -335,7 +337,7 @@ internal class InformationalInstruction(
                 else
                     target = (Instruction)instruction.Operand;
 
-                CrawlInstructions(map[target], map, ref stackSize);
+                CrawlInstructions(map[target], map, ref stackSize, body);
                 break;
 
             case OperandType.InlineSwitch:
@@ -347,14 +349,15 @@ internal class InformationalInstruction(
                     targets = (Instruction[])instruction.Operand;
 
                 for (int i = 0; i < targets.Length; i++)
-                    CrawlInstructions(map[targets[i]], map, ref stackSize);
+                    CrawlInstructions(map[targets[i]], map, ref stackSize, body);
                 break;
         }
     }
 
     static void ComputeStackDelta(
         InformationalInstruction informationalInstruction,
-        ref int stackSize
+        ref int stackSize,
+        MethodBody body
     )
     {
         var instruction = informationalInstruction.Inst;
@@ -393,6 +396,13 @@ internal class InformationalInstruction(
                 }
                 break;
             }
+            case FlowControl.Return:
+                if (body.Method.ReturnType.MetadataType != MetadataType.Void)
+                {
+                    stackSize--;
+                    informationalInstruction.StackPop = 1;
+                }
+                break;
             default:
                 ComputePopDelta(instruction, ref stackSize);
                 informationalInstruction.StackPop = oldStackSize - stackSize;

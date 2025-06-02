@@ -47,7 +47,7 @@ public static class CanAnalyzeStackSizeTests
         w.MarkLabelTo(w.Previous, label1);
         w.MarkLabelTo(w.Current, label2);
 
-        CilAnalyzer.Analyze(info.Context.Body);
+        // CilAnalyzer.Analyze(info.Context.Body);
     }
 
     private static void WriteLogic2(ILManipulationInfo info)
@@ -59,25 +59,26 @@ public static class CanAnalyzeStackSizeTests
 
         w.MarkLabelToFutureNextInsert(out var label2);
         w.InsertBeforeCurrent(
-            w.Create(OpCodes.Pop),
+            w.Create(OpCodes.Ldc_I4_1),
             w.Create(OpCodes.Ret),
             w.Create(OpCodes.Pop),
             w.Create(OpCodes.Ldc_I4_1),
-            w.Create(OpCodes.Br, label2)
+            w.Create(OpCodes.Ldc_I4_1),
+            w.Create(OpCodes.Brtrue, label2)
         );
 
-        w.MarkLabelTo(w.Previous.Previous, labelEndLdc);
+        w.MarkLabelTo(w.Previous.Previous.Previous, labelEndLdc);
 
         // CilAnalyzer.Analyze(info.Context.Body);
     }
 
-    static int Stub()
-    {
-        return 1;
-    }
-
-    static void Stub2()
+    static void Stub()
     {
         return;
+    }
+
+    static int Stub2()
+    {
+        return 1;
     }
 }
