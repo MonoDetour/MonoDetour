@@ -58,7 +58,7 @@ internal static class CilAnalyzer
             sb.Append(instructions.ToStringWithAnnotationTypesDeduplicatedExclusive());
 
             sb.AppendLine();
-            sb.AppendLine("NOTE: This analysis may not be perfect.");
+            sb.AppendLine("NOTE: This analysis is not perfect; errors may not always be accurate.");
             sb.AppendLine("TIP:  Pay close attention to stack sizes.");
             sb.Append("      A branch pointing to an instruction can cause its ")
                 .AppendLine("stack size to increase seemingly out of nowhere.");

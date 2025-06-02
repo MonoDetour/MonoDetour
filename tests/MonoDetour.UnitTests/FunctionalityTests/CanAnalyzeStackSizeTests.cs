@@ -12,6 +12,7 @@ public static class CanAnalyzeStackSizeTests
         m.LogFilter = MonoDetourLogger.LogChannel.None;
 
         m.ILHook(Stub, WriteLogic);
+        m.ILHook(Stub2, WriteLogic2);
     }
 
     private static void WriteLogic(ILManipulationInfo info)
@@ -46,10 +47,36 @@ public static class CanAnalyzeStackSizeTests
         w.MarkLabelTo(w.Previous, label1);
         w.MarkLabelTo(w.Current, label2);
 
+        // CilAnalyzer.Analyze(info.Context.Body);
+    }
+
+    private static void WriteLogic2(ILManipulationInfo info)
+    {
+        ILWeaver w = new(info);
+
+        w.DefineLabel(out var labelEndLdc);
+        w.InsertBeforeCurrent(w.Create(OpCodes.Br, labelEndLdc));
+
+        w.MarkLabelToFutureNextInsert(out var label2);
+        w.InsertBeforeCurrent(
+            w.Create(OpCodes.Pop),
+            w.Create(OpCodes.Ret),
+            w.Create(OpCodes.Pop),
+            w.Create(OpCodes.Ldc_I4_1),
+            w.Create(OpCodes.Br, label2)
+        );
+
+        w.MarkLabelTo(w.Current.Previous.Previous, labelEndLdc);
+
         CilAnalyzer.Analyze(info.Context.Body);
     }
 
     static void Stub()
+    {
+        return;
+    }
+
+    static void Stub2()
     {
         return;
     }
