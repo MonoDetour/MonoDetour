@@ -331,24 +331,24 @@ internal class InformationalInstruction(
         {
             case OperandType.ShortInlineBrTarget:
             case OperandType.InlineBrTarget:
-                Instruction ins = instruction;
+                Instruction target;
 
                 if (instruction.Operand is ILLabel label)
-                    ins.Operand = label.InteropGetTarget()!;
+                    target = label.InteropGetTarget()!;
+                else
+                    target = (Instruction)instruction.Operand;
 
-                CopyBranchStackSize(ref stack_sizes, (Instruction)ins.Operand, stack_size);
+                CopyBranchStackSize(ref stack_sizes, target, stack_size);
                 break;
 
             case OperandType.InlineSwitch:
                 Instruction[] targets;
+
                 if (instruction.Operand is ILLabel[] labels)
-                {
                     targets = [.. labels.Select(x => x.InteropGetTarget()!)];
-                }
                 else
-                {
                     targets = (Instruction[])instruction.Operand;
-                }
+
                 for (int i = 0; i < targets.Length; i++)
                     CopyBranchStackSize(ref stack_sizes, targets[i], stack_size);
                 break;
