@@ -23,9 +23,13 @@ internal static class CilAnalyzer
         if (body is null)
         {
             sb.AppendLine("Method Body is null, can't analyze.");
-            sb.AppendLine();
-            sb.AppendLine("--- MonoDetour CIL Analysis End ---");
-            return;
+            goto analysisEnd;
+        }
+
+        if (body.Instructions.Count == 0)
+        {
+            sb.AppendLine("Method has 0 instructions.");
+            goto analysisEnd;
         }
 
         body.Method.RecalculateILOffsets();
@@ -70,6 +74,7 @@ internal static class CilAnalyzer
             sb.AppendLine("Note: This analysis is not perfect; errors may not always be accurate.");
         }
 
+        analysisEnd:
         sb.AppendLine();
         sb.Append("--- MonoDetour CIL Analysis End ---");
 
