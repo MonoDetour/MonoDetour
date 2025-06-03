@@ -547,4 +547,31 @@ internal class InformationalInstruction(
 
         return [.. walkBackInstructions];
     }
+
+    public HashSet<InformationalInstruction> CollectIncoming()
+    {
+        HashSet<InformationalInstruction> collected = [];
+        CollectIncoming(this, ref collected);
+        return collected;
+    }
+
+    public static void CollectIncoming(
+        InformationalInstruction instruction,
+        ref HashSet<InformationalInstruction> collected
+    )
+    {
+        while (true)
+        {
+            collected.Add(instruction);
+
+            foreach (var branch in instruction.IncomingBranches)
+                CollectIncoming(branch, ref collected);
+
+            var previous = instruction.PreviousChronological;
+            if (previous is null || collected.Contains(previous))
+                break;
+
+            instruction = previous;
+        }
+    }
 }

@@ -35,17 +35,28 @@ internal static class CilAnalyzer
         body.Method.RecalculateILOffsets();
         List<InformationalInstruction> instructions = CreateList(body);
 
-        if (!instructions.Any(x => x.Annotations.Any(x => x is AnnotationStackSizeMismatch)))
-        {
-            var sorted = instructions.ToList();
-            sorted.Sort((x, y) => x.Distance - y.Distance);
-            HashSet<Type> types = [];
+        // TODO: I realize that sorting by only distance is kinda flawed,
+        // I optimally would check if the branch has previously ever gotten an error,
+        // and then decide if I should show an error there.
+        var sorted = instructions.ToList();
+        sorted.Sort((x, y) => x.Distance - y.Distance);
+        var analyzable = sorted;
 
-            foreach (var instruction in sorted)
-            {
-                AnalyzeAndAnnotateInstruction(instruction, types);
-            }
+        var firstStackSizeMismatch = sorted.FirstOrDefault(x =>
+            x.Annotations.Any(x => x is AnnotationStackSizeMismatch)
+        );
+
+        if (firstStackSizeMismatch is not null)
+        {
+            var mismatchBranch = firstStackSizeMismatch.CollectIncoming().ToList();
+            mismatchBranch.Sort((x, y) => x.Distance - y.Distance);
+            analyzable = mismatchBranch;
         }
+
+        HashSet<Type> types = [];
+
+        foreach (var instruction in analyzable)
+            AnalyzeAndAnnotateInstruction(instruction, types);
 
         sb.Append(instructions.ToStringWithAnnotationTypesDeduplicated());
 
