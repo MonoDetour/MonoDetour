@@ -64,9 +64,31 @@ internal class InformationalInstruction(
         public override string ToString() => base.ToString();
     }
 
-    public record AnnotationStackSizeMismatch(string Message) : Annotation(Message, null)
+    public record AnnotationStackSizeMismatch(
+        string Message,
+        List<InformationalInstruction> IncomingBranches
+    ) : Annotation(Message, null)
     {
-        public override string ToString() => base.ToString();
+        public override string ToString()
+        {
+            StringBuilder sb = new();
+            sb.AppendLine().Append(" └ ").AppendLine(Message);
+
+            sb.AppendLine("   ¦ │ Info: Incoming branches:");
+
+            var last = IncomingBranches.Last();
+            foreach (var instruction in IncomingBranches)
+            {
+                if (instruction == last)
+                    break;
+
+                sb.Append("   ¦ ├ ").AppendLine(instruction.ToString());
+            }
+
+            sb.Append("   ¦ └ ").Append(last.ToString());
+
+            return sb.ToString();
+        }
     }
 
     public record Annotation(string Message, AnnotationRange? Range)
@@ -288,7 +310,8 @@ internal class InformationalInstruction(
                 enumerable.Annotations.Add(
                     new AnnotationStackSizeMismatch(
                         $"Error: Stack size mismatch; incoming stack size from branches "
-                            + $"is both {enumerable.StackSizeBefore} and {stackSize}"
+                            + $"is both {enumerable.StackSizeBefore} and {stackSize}",
+                        enumerable.IncomingBranches
                     )
                 );
                 break;
