@@ -162,5 +162,8 @@ internal static class CilAnalyzer
                 )
             );
         }
+
+        // TODO: Check stuff like ldfld/ldsfld having a valid operand.
+        // It's not necessary, but will be more user-friendly.
     }
 }
