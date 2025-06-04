@@ -19,7 +19,7 @@ internal class InformationalInstruction(
     )> handlerParts
 )
 {
-    public List<InformationalInstruction> IncomingBranches { get; private set; } = [];
+    public HashSet<InformationalInstruction> IncomingBranches { get; private set; } = [];
 
     /// <summary>
     /// The immediate previous instruction in the list or an incoming branch if
@@ -70,9 +70,9 @@ internal class InformationalInstruction(
     public List<(HandlerPart HandlerPart, ExceptionHandlerType HandlerType)> HandlerParts =>
         handlerParts;
 
-    public List<Annotation> Annotations { get; } = [];
+    public List<Annotation> ErrorAnnotations { get; } = [];
 
-    public bool HasAnnotations => Annotations.Count != 0;
+    public bool HasErrorAnnotations => ErrorAnnotations.Count != 0;
 
     private bool explored = false;
 
@@ -89,7 +89,7 @@ internal class InformationalInstruction(
 
     public record AnnotationStackSizeMismatch(
         string Message,
-        List<InformationalInstruction> IncomingBranches
+        InformationalInstruction MismatchInstruction
     ) : Annotation(Message, null)
     {
         public override string ToString()
@@ -97,15 +97,24 @@ internal class InformationalInstruction(
             StringBuilder sb = new();
             sb.AppendLine().Append(" └ ").AppendLine(Message);
 
+            var incomingBranches = MismatchInstruction.IncomingBranches;
+
+            var previous = MismatchInstruction.PreviousChronological!;
+            if (!incomingBranches.Contains(previous))
+            {
+                sb.AppendLine("   ¦ │ Info: Previous instruction:");
+                sb.Append("   ¦ ├ ").AppendLine(previous.ToString());
+            }
+
             sb.AppendLine("   ¦ │ Info: Incoming branches:");
 
-            var last = IncomingBranches.Last();
-            foreach (var instruction in IncomingBranches)
+            var last = incomingBranches.Last();
+            foreach (var incomingBranch in incomingBranches)
             {
-                if (instruction == last)
+                if (incomingBranch == last)
                     break;
 
-                sb.Append("   ¦ ├ ").AppendLine(instruction.ToString());
+                sb.Append("   ¦ ├ ").AppendLine(incomingBranch.ToString());
             }
 
             sb.Append("   ¦ └ ").Append(last.ToString());
@@ -204,17 +213,44 @@ internal class InformationalInstruction(
         if (Unreachable)
             sb.Append($" - | {Inst}");
         else
-            sb.Append($"{StackSize, 2} | {Inst}");
-
-        if (withAnnotations && Annotations.Count != 0)
         {
-            foreach (var annotation in Annotations)
+            if (withAnnotations)
+            {
+                TryAppendIncomingBranchesInfo(sb, IncomingBranches);
+            }
+            sb.Append($"{StackSize, 2} | {Inst}");
+        }
+
+        if (withAnnotations && ErrorAnnotations.Count != 0)
+        {
+            foreach (var annotation in ErrorAnnotations)
             {
                 sb.Append(annotation.ToString());
             }
         }
 
         return sb.ToString();
+    }
+
+    static void TryAppendIncomingBranchesInfo(
+        StringBuilder sb,
+        IEnumerable<InformationalInstruction> incomingBranches
+    )
+    {
+        if (incomingBranches.FirstOrDefault() == null)
+        {
+            return;
+        }
+
+        sb.Append("   ¦ ┌ Incoming branches:");
+
+        foreach (var informational in incomingBranches)
+        {
+            sb.Append(" IL_");
+            sb.Append(informational.Inst.Offset.ToString("x4"));
+            sb.Append(";");
+        }
+        sb.AppendLine();
     }
 
     static string HandlerTypeToStringStart(ExceptionHandlerType handlerType)
@@ -316,11 +352,11 @@ internal class InformationalInstruction(
             {
                 if (enumerable.StackSizeBefore != stackSize)
                 {
-                    enumerable.Annotations.Add(
+                    enumerable.ErrorAnnotations.Add(
                         new AnnotationStackSizeMismatch(
-                            $"Error: Stack size mismatch; incoming stack size from branches "
-                                + $"is both {enumerable.StackSizeBefore} and {stackSize}",
-                            enumerable.IncomingBranches
+                            $"Error: Stack size mismatch; incoming stack size "
+                                + $"is both {stackSize} and {enumerable.StackSizeBefore}",
+                            enumerable
                         )
                     );
                     // The distance after this point does not need to be set to the minimum

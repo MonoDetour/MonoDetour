@@ -33,7 +33,7 @@ internal static class IEnumerableInformationalInstructionExtensions
     {
         StringBuilder sb = new();
 
-        foreach (var instruction in informationalInstructions.Where(x => x.HasAnnotations))
+        foreach (var instruction in informationalInstructions.Where(x => x.HasErrorAnnotations))
         {
             sb.AppendLine(instruction.ToStringWithAnnotations());
         }

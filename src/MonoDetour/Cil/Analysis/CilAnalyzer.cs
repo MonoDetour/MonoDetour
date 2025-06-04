@@ -43,7 +43,7 @@ internal static class CilAnalyzer
         var analyzable = sorted;
 
         var firstStackSizeMismatch = sorted.FirstOrDefault(x =>
-            x.Annotations.Any(x => x is AnnotationStackSizeMismatch)
+            x.ErrorAnnotations.Any(x => x is AnnotationStackSizeMismatch)
         );
 
         if (firstStackSizeMismatch is not null)
@@ -64,7 +64,7 @@ internal static class CilAnalyzer
         sb.AppendLine("--- MonoDetour CIL Analysis Summary ---");
         sb.AppendLine();
 
-        if (instructions.All(x => !x.HasAnnotations))
+        if (instructions.All(x => !x.HasErrorAnnotations))
         {
             sb.AppendLine("No mistakes were found.");
             sb.AppendLine("If there are errors, MonoDetour simply didn't catch them.")
@@ -116,7 +116,7 @@ internal static class CilAnalyzer
                 return;
             types.Add(typeof(AnnotationPoppingMoreThanStackSize));
 
-            instruction.Annotations.Add(
+            instruction.ErrorAnnotations.Add(
                 new AnnotationPoppingMoreThanStackSize(
                     $"Error: Popping more than stack size; cannot pop {instruction.StackPop} "
                         + $"value(s) when stack size was {instruction.StackSizeBefore}"
@@ -132,7 +132,7 @@ internal static class CilAnalyzer
                 return;
             types.Add(typeof(AnnotationStackSizeMustBeX));
 
-            instruction.Annotations.Add(
+            instruction.ErrorAnnotations.Add(
                 new AnnotationStackSizeMustBeX(
                     $"Error: Stack size before try start must be 0; it was {stackSize}",
                     new AnnotationRangeWalkBack(instruction, stackSize)
@@ -155,7 +155,7 @@ internal static class CilAnalyzer
                 _ => throw new Exception("Unreachable"),
             };
 
-            instruction.Annotations.Add(
+            instruction.ErrorAnnotations.Add(
                 new AnnotationStackSizeMustBeX(
                     $"Error: Stack size on {throwOrReturn} must be 0; it was {stackSize}",
                     new AnnotationRangeWalkBack(instruction, stackSize)
