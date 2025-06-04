@@ -287,16 +287,6 @@ static class ILHookDMDManipulation
             throw new Exception("MonoDetour failed to analyze invalid program.", ex);
         }
 
-        throw new InvalidILException(analysis.ToErrorMessageString(body), ex);
+        throw new InvalidProgramException(analysis.ToErrorMessageString(body), ex);
     }
-}
-
-internal class InvalidILException(string message, Exception inner) : Exception(message, inner)
-{
-    private protected const string InnerExceptionPrefix = " ---> ";
-    Exception _innerException = inner;
-
-    private string GetClassName() => GetType().ToString();
-
-    public override string ToString() => "hi";
 }
