@@ -44,36 +44,32 @@ internal static class CilAnalyzer
         return instructions;
     }
 
-    internal static void PrintAnalysis(MethodBody body)
+    internal static string ToErrorMessageString(
+        this List<InformationalInstruction> analysis,
+        MethodBody body
+    )
     {
         StringBuilder sb = new();
         sb.AppendLine("An ILHook manipulation target method threw on compilation:");
+        sb.AppendLine(body.Method.FullName);
         sb.AppendLine("--- MonoDetour CIL Analysis Start Full Method ---");
         sb.AppendLine();
         sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
         sb.AppendLine();
 
-        if (body is null)
-        {
-            sb.AppendLine("Method Body is null, can't analyze.");
-            goto analysisEnd;
-        }
-
-        if (body.Instructions.Count == 0)
+        if (analysis.Count == 0)
         {
             sb.AppendLine("Method has 0 instructions.");
             goto analysisEnd;
         }
 
-        var instructions = Analyze(body);
-
-        sb.Append(instructions.ToStringWithAnnotations());
+        sb.Append(analysis.ToStringWithAnnotations());
 
         sb.AppendLine();
         sb.AppendLine("--- MonoDetour CIL Analysis Summary ---");
         sb.AppendLine();
 
-        if (instructions.All(x => !x.HasErrorAnnotations))
+        if (analysis.All(x => !x.HasErrorAnnotations))
         {
             sb.AppendLine("No mistakes were found.");
             sb.AppendLine("If there are errors, MonoDetour simply didn't catch them.")
@@ -88,7 +84,7 @@ internal static class CilAnalyzer
             sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
             sb.AppendLine();
 
-            sb.Append(instructions.ToStringWithAnnotationsExclusive());
+            sb.Append(analysis.ToStringWithAnnotationsExclusive());
 
             sb.AppendLine();
             sb.AppendLine("Note: This analysis may not be perfect.");
@@ -98,9 +94,7 @@ internal static class CilAnalyzer
         sb.AppendLine();
         sb.Append("--- MonoDetour CIL Analysis End ---");
 
-        // This is an Info log and not a Debug one so that the developer who
-        // needs it the most actually finds it in their console output.
-        MonoDetourLogger.Log(MonoDetourLogger.LogChannel.Info, sb.ToString());
+        return sb.ToString();
     }
 
     static void AnalyzeAndAnnotateInstruction(

@@ -76,6 +76,8 @@ internal class InformationalInstruction(
 
     private bool explored = false;
 
+    internal const string Z = "│";
+
     public record AnnotationStackSizeMustBeX(string Message, AnnotationRange? Range)
         : Annotation(Message, Range)
     {
@@ -95,18 +97,18 @@ internal class InformationalInstruction(
         public override string ToString()
         {
             StringBuilder sb = new();
-            sb.AppendLine().Append(" └ ").AppendLine(Message);
+            sb.AppendLine().Append($"{Z} └ ").AppendLine(Message);
 
             var incomingBranches = MismatchInstruction.IncomingBranches;
 
             var previous = MismatchInstruction.PreviousChronological!;
             if (!incomingBranches.Contains(previous))
             {
-                sb.AppendLine("   ¦ │ Info: Previous instruction:");
-                sb.Append("   ¦ ├ ").AppendLine(previous.ToString());
+                sb.AppendLine($"{Z}   ¦ │ Info: Previous instruction:");
+                sb.Append($"{Z}   ¦ ├ ").AppendLine(previous.ToString());
             }
 
-            sb.AppendLine("   ¦ │ Info: Incoming branches:");
+            sb.AppendLine($"{Z}   ¦ │ Info: Incoming branches:");
 
             var last = incomingBranches.Last();
             foreach (var incomingBranch in incomingBranches)
@@ -114,10 +116,10 @@ internal class InformationalInstruction(
                 if (incomingBranch == last)
                     break;
 
-                sb.Append("   ¦ ├ ").AppendLine(incomingBranch.ToString());
+                sb.Append($"{Z}   ¦ ├ ").AppendLine(incomingBranch.ToString());
             }
 
-            sb.Append("   ¦ └ ").Append(last.ToString());
+            sb.Append($"{Z}   ¦ └ ").Append(last.ToString());
 
             return sb.ToString();
         }
@@ -128,7 +130,7 @@ internal class InformationalInstruction(
         public override string ToString()
         {
             StringBuilder sb = new();
-            sb.AppendLine().Append(" └ ").Append(Message);
+            sb.AppendLine().Append($"{Z} └ ").Append(Message);
 
             if (Range is null || Range.Instructions.Count == 0)
             {
@@ -140,19 +142,19 @@ internal class InformationalInstruction(
             var end = instructions.Count - 1;
 
             sb.AppendLine();
-            sb.AppendLine("   ¦ │ Info: Stack imbalance starts at:");
+            sb.AppendLine($"{Z}   ¦ │ Info: Stack imbalance starts at:");
 
             if (start != end)
             {
-                sb.Append("   ¦ ├ ").AppendLine(instructions[start].ToString());
+                sb.Append($"{Z}   ¦ ├ ").AppendLine(instructions[start].ToString());
             }
 
             for (int i = start + 1; i < end; i++)
             {
-                sb.Append("   ¦ │ ").AppendLine(instructions[i].ToString());
+                sb.Append($"{Z}   ¦ │ ").AppendLine(instructions[i].ToString());
             }
 
-            sb.Append("   ¦ └ ").Append(instructions[end].ToString());
+            sb.Append($"{Z}   ¦ └ ").Append(instructions[end].ToString());
 
             return sb.ToString();
         }
@@ -189,7 +191,7 @@ internal class InformationalInstruction(
             foreach (var (handlerPart, handlerType) in HandlerParts)
             {
                 if (handlerPart.HasFlag(HandlerPart.TryEnd))
-                    sb.AppendLine("} // end try");
+                    sb.AppendLine(Z + "} // end try");
 
                 if (handlerPart.HasFlag(HandlerPart.HandlerEnd))
                     sb.AppendLine(HandlerTypeToStringEnd(handlerType));
@@ -198,15 +200,15 @@ internal class InformationalInstruction(
             foreach (var (handlerPart, handlerType) in HandlerParts)
             {
                 if (handlerPart.HasFlag(HandlerPart.TryStart))
-                    sb.AppendLine(".try\n{");
+                    sb.AppendLine(Z + ".try\n{");
 
                 if (handlerPart.HasFlag(HandlerPart.FilterStart))
-                    sb.AppendLine("filter\n{");
+                    sb.AppendLine(Z + "filter\n{");
 
                 if (handlerPart.HasFlag(HandlerPart.HandlerStart))
                 {
                     if (handlerType == ExceptionHandlerType.Filter)
-                        sb.AppendLine("} // end filter");
+                        sb.AppendLine(Z + "} // end filter");
 
                     sb.AppendLine(HandlerTypeToStringStart(handlerType));
                 }
@@ -214,14 +216,18 @@ internal class InformationalInstruction(
         }
 
         if (Unreachable)
-            sb.Append($" - | {Inst}");
+            sb.Append($"{Z} - | {Inst}");
         else
         {
             if (withAnnotations)
             {
                 TryAppendIncomingBranchesInfo(sb, IncomingBranches);
+                sb.Append($"{Z}{StackSize, 2} | {Inst}");
             }
-            sb.Append($"{StackSize, 2} | {Inst}");
+            else
+            {
+                sb.Append($"{StackSize, 2} | {Inst}");
+            }
         }
 
         if (withAnnotations && ErrorAnnotations.Count != 0)
@@ -245,7 +251,7 @@ internal class InformationalInstruction(
             return;
         }
 
-        sb.Append("   ¦ ┌ Incoming branches:");
+        sb.Append($"{Z}   ¦ ┌ Incoming branches:");
 
         foreach (var informational in incomingBranches)
         {
@@ -260,10 +266,10 @@ internal class InformationalInstruction(
     {
         return handlerType switch
         {
-            ExceptionHandlerType.Catch => "catch\n{",
-            ExceptionHandlerType.Filter => "catch\n{",
-            ExceptionHandlerType.Fault => "fault\n{",
-            ExceptionHandlerType.Finally => "finally\n{",
+            ExceptionHandlerType.Catch => Z + "catch\n{",
+            ExceptionHandlerType.Filter => Z + "catch\n{",
+            ExceptionHandlerType.Fault => Z + "fault\n{",
+            ExceptionHandlerType.Finally => Z + "finally\n{",
             _ => throw new ArgumentOutOfRangeException(handlerType.ToString()),
         };
     }
@@ -272,10 +278,10 @@ internal class InformationalInstruction(
     {
         return handlerType switch
         {
-            ExceptionHandlerType.Catch => "} // end catch",
-            ExceptionHandlerType.Filter => "} // end catch",
-            ExceptionHandlerType.Fault => "} // end fault",
-            ExceptionHandlerType.Finally => "} // end finally",
+            ExceptionHandlerType.Catch => Z + "} // end catch",
+            ExceptionHandlerType.Filter => Z + "} // end catch",
+            ExceptionHandlerType.Fault => Z + "} // end fault",
+            ExceptionHandlerType.Finally => Z + "} // end finally",
             _ => throw new ArgumentOutOfRangeException(handlerType.ToString()),
         };
     }
@@ -384,14 +390,17 @@ internal class InformationalInstruction(
             {
                 if (enumerable.StackSizeBefore != stackSize)
                 {
-                    enumerable.ErrorAnnotations.Add(
-                        new AnnotationStackSizeMismatch(
-                            $"Error: Stack size mismatch; incoming stack size "
-                                + $"is both {enumerable.StackSizeBefore} and {stackSize}",
-                            enumerable
-                        )
-                    );
-                    // The distance after this point does not need to be set to the minimum
+                    if (!enumerable.HasErrorAnnotations)
+                    {
+                        enumerable.ErrorAnnotations.Add(
+                            new AnnotationStackSizeMismatch(
+                                $"Error: Stack size mismatch; incoming stack size "
+                                    + $"is both {enumerable.StackSizeBefore} and {stackSize}",
+                                enumerable
+                            )
+                        );
+                        // The distance after this point does not need to be set to the minimum
+                    }
                     // since those instructions won't be evaluated for errors anyways.
                     return;
                 }
