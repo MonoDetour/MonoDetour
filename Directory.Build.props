@@ -31,7 +31,7 @@
     <MonoDetourVersionPrefix>0.5.0</MonoDetourVersionPrefix>
     <MonoDetourVersionSuffix></MonoDetourVersionSuffix>
     <!-- Release version for HookGen and Analyzers packages -->
-    <HookGenAndAnalyzersVersionPrefix>0.4.2</HookGenAndAnalyzersVersionPrefix>
+    <HookGenAndAnalyzersVersionPrefix>0.5.0</HookGenAndAnalyzersVersionPrefix>
     <HookGenAndAnalyzersVersionSuffix></HookGenAndAnalyzersVersionSuffix>
   </PropertyGroup>
 </Project>
