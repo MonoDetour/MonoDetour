@@ -1132,11 +1132,11 @@ namespace MonoDetour.HookGen
                 if (warnIEnumerator)
                     PrintIEnumeratorWarning("MoveNextPrefix");
 
-                cb.Write("public static ").Write(hookType).Write("<PrefixDetour> ");
+                cb.Write("public static ").Write(hookType);
                 if (forMoveNext)
-                    cb.Write("PrefixMoveNext(PrefixMoveNextSignature hook, ");
+                    cb.Write(" PrefixMoveNext(PrefixMoveNextSignature hook, ");
                 else
-                    cb.Write("Prefix(PrefixSignature hook, ");
+                    cb.Write(" Prefix(PrefixSignature hook, ");
                 cb.WriteLine(
                         "global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
                     )
@@ -1156,13 +1156,13 @@ namespace MonoDetour.HookGen
 
                 if (member.GenerateControlFlowVariants)
                 {
-                    cb.Write("public static ").Write(hookType).Write("<PrefixDetour> ");
+                    cb.Write("public static ").Write(hookType);
                     if (forMoveNext)
                         cb.Write(
-                            "ControlFlowPrefixMoveNext(ControlFlowPrefixMoveNextSignature hook, "
+                            " ControlFlowPrefixMoveNext(ControlFlowPrefixMoveNextSignature hook, "
                         );
                     else
-                        cb.Write("ControlFlowPrefix(ControlFlowPrefixSignature hook, ");
+                        cb.Write(" ControlFlowPrefix(ControlFlowPrefixSignature hook, ");
                     cb.WriteLine(
                             "global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
                         )
@@ -1184,11 +1184,11 @@ namespace MonoDetour.HookGen
                 if (warnIEnumerator)
                     PrintIEnumeratorWarning("MoveNextPostfix");
 
-                cb.Write("public static ").Write(hookType).Write("<PostfixDetour> ");
+                cb.Write("public static ").Write(hookType);
                 if (forMoveNext)
-                    cb.Write("PostfixMoveNext(PostfixMoveNextSignature hook, ");
+                    cb.Write(" PostfixMoveNext(PostfixMoveNextSignature hook, ");
                 else
-                    cb.Write("Postfix(PostfixSignature hook, ");
+                    cb.Write(" Postfix(PostfixSignature hook, ");
                 cb.WriteLine(
                         "global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
                     )
@@ -1209,7 +1209,7 @@ namespace MonoDetour.HookGen
                 if (warnIEnumerator)
                     PrintIEnumeratorWarning("ILHookMoveNext");
 
-                cb.Write("public static ").Write(hookType).Write("<ILHookDetour> ILHook");
+                cb.Write("public static ").Write(hookType).Write(" ILHook");
                 if (forMoveNext)
                     cb.Write("MoveNext");
                 cb.WriteLine(

@@ -9,10 +9,7 @@ namespace MonoDetour;
 /// <summary>
 /// A MonoDetour Hook.
 /// </summary>
-/// <typeparam name="TApplier">The <see cref="IMonoDetourHookApplier"/>
-/// type to define how to apply this hook.</typeparam>
-public class MonoDetourHook<TApplier> : IMonoDetourHook<TApplier>
-    where TApplier : IMonoDetourHookApplier
+public class MonoDetourHook : IMonoDetourHook
 {
     /// <inheritdoc/>
     public MethodBase Target { get; }
@@ -36,21 +33,29 @@ public class MonoDetourHook<TApplier> : IMonoDetourHook<TApplier>
     /// </summary>
     public ILHook Applier { get; }
 
+    /// <summary>
+    /// The <see cref="IMonoDetourHookApplier"/> type which defines how this
+    /// <see cref="MonoDetourHook"/> is applied to the target method.
+    /// </summary>
+    public Type ApplierType { get; }
+
     bool isDisposed = false;
 
     /// <summary>
-    /// Constructs a <see cref="MonoDetourHook{TApplier}"/> with <see cref="Applier"/> defined by
-    /// <typeparamref name="TApplier"/>.
+    /// Constructs a <see cref="MonoDetourHook"/> with <see cref="Applier"/> defined by
+    /// <paramref name="applierType"/>.
     /// </summary>
     /// <param name="target">The method to hook.</param>
     /// <param name="manipulator">The hook or manipulator method.</param>
+    /// <param name="applierType">The <see cref="IMonoDetourHookApplier"/> type.</param>
     /// <param name="owner">The owner of this hook.</param>
     /// <param name="config">The config which defines how to apply and treat this hook.</param>
     /// <param name="applyByDefault">Whether or not the hook should be applied
     /// after it has been constructed.</param>
-    public MonoDetourHook(
+    private MonoDetourHook(
         MethodBase target,
         MethodBase manipulator,
+        Type applierType,
         MonoDetourManager owner,
         MonoDetourConfig? config = null,
         bool applyByDefault = true
@@ -59,9 +64,10 @@ public class MonoDetourHook<TApplier> : IMonoDetourHook<TApplier>
         Target = Helpers.ThrowIfNull(target);
         Manipulator = Helpers.ThrowIfNull(manipulator);
         Owner = Helpers.ThrowIfNull(owner);
+        ApplierType = applierType;
         Config = config;
 
-        var applierInstance = Activator.CreateInstance<TApplier>();
+        var applierInstance = (IMonoDetourHookApplier)Activator.CreateInstance(applierType);
         applierInstance.Hook = this;
 
         owner.MonoDetourHooks.Add(this);
@@ -79,6 +85,26 @@ public class MonoDetourHook<TApplier> : IMonoDetourHook<TApplier>
         }
     }
 
+    /// <summary>
+    /// Constructs a <see cref="MonoDetourHook"/> with <see cref="Applier"/> defined by
+    /// <typeparamref name="TApplier"/>.
+    /// </summary>
+    /// <typeparam name="TApplier">The <see cref="IMonoDetourHookApplier"/>
+    /// type to define how to apply this hook.</typeparam>
+    /// <returns>
+    /// A new <see cref="MonoDetourHook"/>.
+    /// </returns>
+    /// <inheritdoc cref="MonoDetourHook(MethodBase, MethodBase, Type, MonoDetourManager, MonoDetourConfig, bool)"/>
+    public static MonoDetourHook Create<TApplier>(
+        MethodBase target,
+        MethodBase manipulator,
+        MonoDetourManager owner,
+        MonoDetourConfig? config = null,
+        bool applyByDefault = true
+    )
+        where TApplier : IMonoDetourHookApplier =>
+        new(target, manipulator, typeof(TApplier), owner, config, applyByDefault);
+
     /// <inheritdoc/>
     public void Apply() => Applier.Apply();
 
@@ -86,7 +112,7 @@ public class MonoDetourHook<TApplier> : IMonoDetourHook<TApplier>
     public void Undo() => Applier.Undo();
 
     /// <summary>
-    /// Disposes the <see cref="Applier"/> hook, disposing this <see cref="MonoDetourHook{TApplier}"/>.
+    /// Disposes the <see cref="Applier"/> hook, disposing this <see cref="MonoDetourHook"/>.
     /// </summary>
     public void Dispose()
     {

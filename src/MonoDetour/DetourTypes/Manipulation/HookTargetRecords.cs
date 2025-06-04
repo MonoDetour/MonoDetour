@@ -25,7 +25,7 @@ public static class HookTargetRecords
     /// </summary>
     /// <remarks>
     /// This method is strictly intended to be used in <see cref="MonoMod.RuntimeDetour.ILHook"/>
-    /// manipulators, including <see cref="MonoDetourHook{TApplier}"/>. Usage elsewhere is not supported.
+    /// manipulators, including <see cref="MonoDetourHook"/>. Usage elsewhere is not supported.
     /// </remarks>
     /// <param name="method">The <see cref="MethodDefinition"/> whose original instructions to get.</param>
     /// <returns>The original instructions.</returns>

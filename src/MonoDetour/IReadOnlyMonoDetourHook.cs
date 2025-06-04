@@ -1,10 +1,9 @@
 using System.Reflection;
-using MonoDetour.DetourTypes;
 
 namespace MonoDetour;
 
 /// <summary>
-/// A non-generic readonly MonoDetour Hook interface.
+/// A readonly MonoDetour Hook interface.
 /// </summary>
 public interface IReadOnlyMonoDetourHook
 {
@@ -26,9 +25,3 @@ public interface IReadOnlyMonoDetourHook
     /// <inheritdoc cref="MonoDetourConfig"/>
     public MonoDetourConfig? Config { get; }
 }
-
-/// <summary>
-/// A generic readonly MonoDetour Hook interface.
-/// </summary>
-public interface IReadOnlyMonoDetourHook<TApplier> : IReadOnlyMonoDetourHook
-    where TApplier : IMonoDetourHookApplier;

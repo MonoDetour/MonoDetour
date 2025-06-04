@@ -1,11 +1,9 @@
 using System;
-using MonoDetour.DetourTypes;
-using MonoMod.RuntimeDetour;
 
 namespace MonoDetour;
 
 /// <summary>
-/// A non-generic MonoDetour Hook interface.
+/// A MonoDetour Hook interface.
 /// </summary>
 public interface IMonoDetourHook : IReadOnlyMonoDetourHook, IDisposable
 {
@@ -19,9 +17,3 @@ public interface IMonoDetourHook : IReadOnlyMonoDetourHook, IDisposable
     /// </summary>
     public void Undo();
 }
-
-/// <summary>
-/// A generic MonoDetour Hook interface.
-/// </summary>
-public interface IMonoDetourHook<TApplier> : IMonoDetourHook, IReadOnlyMonoDetourHook<TApplier>
-    where TApplier : IMonoDetourHookApplier;

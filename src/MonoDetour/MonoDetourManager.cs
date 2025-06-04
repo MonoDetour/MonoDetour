@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using MonoDetour.Cil;
 using MonoDetour.DetourTypes;
 using MonoDetour.Logging;
@@ -9,7 +8,7 @@ using MonoDetour.Logging;
 namespace MonoDetour;
 
 /// <summary>
-/// A manager for <see cref="MonoDetourHook{TApplier}"/>s.
+/// A manager for <see cref="MonoDetourHook"/>s.
 /// </summary>
 /// <param name="id">
 /// The identifier for this manager. This will be used as
@@ -134,7 +133,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     }
 
     /// <inheritdoc cref="ILHook(MethodBase, ILManipulationInfo.Manipulator, MonoDetourConfig?, bool)"/>
-    public MonoDetourHook<ILHookDetour> ILHook(
+    public MonoDetourHook ILHook(
         Delegate target,
         ILManipulationInfo.Manipulator manipulator,
         MonoDetourConfig? config = null,
@@ -149,7 +148,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
     /// <param name="target"/>
     /// <param name="applyByDefault"/>
-    public MonoDetourHook<ILHookDetour> ILHook(
+    public MonoDetourHook ILHook(
         MethodBase target,
         ILManipulationInfo.Manipulator manipulator,
         MonoDetourConfig? config = null,
@@ -160,24 +159,24 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     }
 
     /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
-    public MonoDetourHook<T> Hook<T>(
+    public MonoDetourHook Hook<TApplier>(
         Delegate target,
         Delegate manipulator,
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where T : IMonoDetourHookApplier =>
-        Hook<T>(target.Method, manipulator.Method, config, applyByDefault);
+        where TApplier : IMonoDetourHookApplier =>
+        Hook<TApplier>(target.Method, manipulator.Method, config, applyByDefault);
 
     /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
-    public MonoDetourHook<T> Hook<T>(
+    public MonoDetourHook Hook<TApplier>(
         MethodBase target,
         Delegate manipulator,
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where T : IMonoDetourHookApplier =>
-        Hook<T>(target, manipulator.Method, config, applyByDefault);
+        where TApplier : IMonoDetourHookApplier =>
+        Hook<TApplier>(target, manipulator.Method, config, applyByDefault);
 
     /// <summary>
     /// Creates a MonoDetour Hook using the information defined.
@@ -186,22 +185,24 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     /// This method is not intended to be used directly, but is instead
     /// used by MonoDetour's HookGen.
     /// </remarks>
+    /// <typeparam name="TApplier">The <see cref="IMonoDetourHookApplier"/>
+    /// type to define how to apply this hook.</typeparam>
     /// <param name="target">The method to be hooked.</param>
     /// <param name="manipulator">The hook or manipulator method.</param>
     /// <param name="config">Metadata configuration for the MonoDetour Hook.</param>
     /// <param name="applyByDefault">Whether or not the hook should be applied
     /// after it has been constructed.</param>
     /// <returns>The hook.</returns>
-    public MonoDetourHook<T> Hook<T>(
+    public MonoDetourHook Hook<TApplier>(
         MethodBase target,
         MethodBase manipulator,
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where T : IMonoDetourHookApplier
+        where TApplier : IMonoDetourHookApplier
     {
         ThrowIfDisposed();
-        return new MonoDetourHook<T>(target, manipulator, this, config, applyByDefault);
+        return MonoDetourHook.Create<TApplier>(target, manipulator, this, config, applyByDefault);
     }
 
     /// <inheritdoc/>
