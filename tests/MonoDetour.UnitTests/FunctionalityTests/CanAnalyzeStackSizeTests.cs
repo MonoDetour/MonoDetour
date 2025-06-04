@@ -32,7 +32,6 @@ public static class CanAnalyzeStackSizeTests
             var l5 = il.DefineLabel();
             var leave = il.DefineLabel();
             il.Emit(Op.Ldc_I4_1);
-            il.Emit(Op.Ldc_I4_1);
             il.Emit(Op.Brtrue, l1);
             il.Emit(Op.Br, leave);
 
@@ -50,6 +49,7 @@ public static class CanAnalyzeStackSizeTests
             il.Emit(Op.Br, l4);
 
             il.MarkLabel(l1);
+            il.Emit(Op.Ldc_I4_1);
             il.Emit(Op.Ldc_I4_2);
             il.Emit(Op.Br, l2);
 

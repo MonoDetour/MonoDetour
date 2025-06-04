@@ -387,7 +387,7 @@ internal class InformationalInstruction(
                     enumerable.ErrorAnnotations.Add(
                         new AnnotationStackSizeMismatch(
                             $"Error: Stack size mismatch; incoming stack size "
-                                + $"is both {stackSize} and {enumerable.StackSizeBefore}",
+                                + $"is both {enumerable.StackSizeBefore} and {stackSize}",
                             enumerable
                         )
                     );
