@@ -41,9 +41,10 @@ target = "/"
 
 [publish]
 # https://thunderstore.io/api/experimental/community/
-communities = [ "lethal-company", "repo", ]
+communities = [ "lethal-company", "repo", "riskofrain2" ]
 
 [publish.categories]
 # https://thunderstore.io/api/experimental/community/lethal-company/category/
 lethal-company = [ "libraries", ]
 repo = [ "libraries", ]
+riskofrain2 = [ "libraries", ]
