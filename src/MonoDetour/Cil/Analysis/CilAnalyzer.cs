@@ -58,7 +58,7 @@ internal static class CilAnalyzer
         foreach (var instruction in analyzable)
             AnalyzeAndAnnotateInstruction(instruction, types);
 
-        sb.Append(instructions.ToStringWithAnnotationTypesDeduplicated());
+        sb.Append(instructions.ToStringWithAnnotations());
 
         sb.AppendLine();
         sb.AppendLine("--- MonoDetour CIL Analysis Summary ---");
@@ -79,7 +79,7 @@ internal static class CilAnalyzer
             sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
             sb.AppendLine();
 
-            sb.Append(instructions.ToStringWithAnnotationTypesDeduplicatedExclusive());
+            sb.Append(instructions.ToStringWithAnnotationsExclusive());
 
             sb.AppendLine();
             sb.AppendLine("Note: This analysis may not be perfect.");
@@ -144,7 +144,7 @@ internal static class CilAnalyzer
             && instruction.Inst.OpCode.FlowControl is FlowControl.Throw or FlowControl.Return
         )
         {
-            if (types.Contains(typeof(AnnotationPoppingMoreThanStackSize)))
+            if (types.Contains(typeof(AnnotationStackSizeMustBeX)))
                 return;
             types.Add(typeof(AnnotationStackSizeMustBeX));
 

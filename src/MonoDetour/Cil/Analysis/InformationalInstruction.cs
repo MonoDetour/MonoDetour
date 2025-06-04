@@ -171,7 +171,7 @@ internal class InformationalInstruction(
 
     public string ToStringWithAnnotations() => ToStringInternal(withAnnotations: true);
 
-    internal string ToStringInternal(bool withAnnotations, HashSet<Type>? types = null)
+    internal string ToStringInternal(bool withAnnotations)
     {
         StringBuilder sb = new();
 
@@ -210,17 +210,6 @@ internal class InformationalInstruction(
         {
             foreach (var annotation in Annotations)
             {
-                // Deduplication time!
-                if (types is not null)
-                {
-                    var annotationType = annotation.GetType();
-                    if (types.Contains(annotationType))
-                    {
-                        continue;
-                    }
-                    types.Add(annotationType);
-                }
-
                 sb.Append(annotation.ToString());
             }
         }

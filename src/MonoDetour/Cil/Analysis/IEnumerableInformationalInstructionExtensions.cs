@@ -8,47 +8,34 @@ namespace MonoDetour.Cil.Analysis;
 internal static class IEnumerableInformationalInstructionExtensions
 {
     /// <summary>
-    /// To string with annotation types deduplicated.
+    /// To string with annotations.
     /// </summary>
-    public static string ToStringWithAnnotationTypesDeduplicated(
+    public static string ToStringWithAnnotations(
         this IEnumerable<InformationalInstruction> informationalInstructions
     )
     {
         StringBuilder sb = new();
-        HashSet<Type> types = [];
 
         foreach (var instruction in informationalInstructions)
         {
-            sb.AppendLine(instruction.ToStringInternal(withAnnotations: true, types));
+            sb.AppendLine(instruction.ToStringWithAnnotations());
         }
 
         return sb.ToString();
     }
 
     /// <summary>
-    /// To string with annotation types deduplicated. Excludes all other instructions.
+    /// To string with annotations. Excludes all other instructions.
     /// </summary>
-    public static string ToStringWithAnnotationTypesDeduplicatedExclusive(
+    public static string ToStringWithAnnotationsExclusive(
         this IEnumerable<InformationalInstruction> informationalInstructions
     )
     {
         StringBuilder sb = new();
-        HashSet<Type> types = [];
 
         foreach (var instruction in informationalInstructions.Where(x => x.HasAnnotations))
         {
-            var annotationTypes = instruction.Annotations.Select(x => x.GetType());
-            if (annotationTypes.All(types.Contains))
-            {
-                continue;
-            }
-
-            sb.AppendLine(instruction.ToStringInternal(withAnnotations: true, types));
-
-            foreach (var annotationType in annotationTypes)
-            {
-                types.Add(annotationType);
-            }
+            sb.AppendLine(instruction.ToStringWithAnnotations());
         }
 
         return sb.ToString();
