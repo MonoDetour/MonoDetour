@@ -11,27 +11,8 @@ namespace MonoDetour.Cil.Analysis;
 
 internal static class CilAnalyzer
 {
-    internal static void Analyze(MethodBody body)
+    internal static List<InformationalInstruction> Analyze(this MethodBody body)
     {
-        StringBuilder sb = new();
-        sb.AppendLine("An ILHook manipulation target method threw on compilation:");
-        sb.AppendLine("--- MonoDetour CIL Analysis Start Full Method ---");
-        sb.AppendLine();
-        sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
-        sb.AppendLine();
-
-        if (body is null)
-        {
-            sb.AppendLine("Method Body is null, can't analyze.");
-            goto analysisEnd;
-        }
-
-        if (body.Instructions.Count == 0)
-        {
-            sb.AppendLine("Method has 0 instructions.");
-            goto analysisEnd;
-        }
-
         body.Method.RecalculateILOffsets();
         List<InformationalInstruction> instructions = CreateList(body);
 
@@ -56,7 +37,35 @@ internal static class CilAnalyzer
         HashSet<Type> types = [];
 
         foreach (var instruction in analyzable)
+        {
             AnalyzeAndAnnotateInstruction(instruction, types);
+        }
+
+        return instructions;
+    }
+
+    internal static void PrintAnalysis(MethodBody body)
+    {
+        StringBuilder sb = new();
+        sb.AppendLine("An ILHook manipulation target method threw on compilation:");
+        sb.AppendLine("--- MonoDetour CIL Analysis Start Full Method ---");
+        sb.AppendLine();
+        sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
+        sb.AppendLine();
+
+        if (body is null)
+        {
+            sb.AppendLine("Method Body is null, can't analyze.");
+            goto analysisEnd;
+        }
+
+        if (body.Instructions.Count == 0)
+        {
+            sb.AppendLine("Method has 0 instructions.");
+            goto analysisEnd;
+        }
+
+        var instructions = Analyze(body);
 
         sb.Append(instructions.ToStringWithAnnotations());
 

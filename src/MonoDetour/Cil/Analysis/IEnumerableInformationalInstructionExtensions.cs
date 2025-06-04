@@ -40,4 +40,24 @@ internal static class IEnumerableInformationalInstructionExtensions
 
         return sb.ToString();
     }
+
+    internal static void ThrowIfErrorAnnotations(
+        this IEnumerable<InformationalInstruction> informationalInstructions
+    )
+    {
+        if (informationalInstructions.Any(x => x.HasErrorAnnotations))
+        {
+            throw new Exception("Informational instructions had exception annotations.");
+        }
+    }
+
+    internal static void ThrowIfNoErrorAnnotations(
+        this IEnumerable<InformationalInstruction> informationalInstructions
+    )
+    {
+        if (!informationalInstructions.Any(x => x.HasErrorAnnotations))
+        {
+            throw new Exception("Informational instructions had exception annotations.");
+        }
+    }
 }

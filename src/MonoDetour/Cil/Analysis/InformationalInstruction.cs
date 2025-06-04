@@ -184,29 +184,32 @@ internal class InformationalInstruction(
     {
         StringBuilder sb = new();
 
-        foreach (var (handlerPart, handlerType) in HandlerParts)
+        if (withAnnotations)
         {
-            if (handlerPart.HasFlag(HandlerPart.TryEnd))
-                sb.AppendLine("} // end try");
-
-            if (handlerPart.HasFlag(HandlerPart.HandlerEnd))
-                sb.AppendLine(HandlerTypeToStringEnd(handlerType));
-        }
-
-        foreach (var (handlerPart, handlerType) in HandlerParts)
-        {
-            if (handlerPart.HasFlag(HandlerPart.TryStart))
-                sb.AppendLine(".try {");
-
-            if (handlerPart.HasFlag(HandlerPart.FilterStart))
-                sb.AppendLine("filter {");
-
-            if (handlerPart.HasFlag(HandlerPart.HandlerStart))
+            foreach (var (handlerPart, handlerType) in HandlerParts)
             {
-                if (handlerType == ExceptionHandlerType.Filter)
-                    sb.AppendLine("} // end filter");
+                if (handlerPart.HasFlag(HandlerPart.TryEnd))
+                    sb.AppendLine("} // end try");
 
-                sb.AppendLine(HandlerTypeToStringStart(handlerType));
+                if (handlerPart.HasFlag(HandlerPart.HandlerEnd))
+                    sb.AppendLine(HandlerTypeToStringEnd(handlerType));
+            }
+
+            foreach (var (handlerPart, handlerType) in HandlerParts)
+            {
+                if (handlerPart.HasFlag(HandlerPart.TryStart))
+                    sb.AppendLine(".try\n{");
+
+                if (handlerPart.HasFlag(HandlerPart.FilterStart))
+                    sb.AppendLine("filter\n{");
+
+                if (handlerPart.HasFlag(HandlerPart.HandlerStart))
+                {
+                    if (handlerType == ExceptionHandlerType.Filter)
+                        sb.AppendLine("} // end filter");
+
+                    sb.AppendLine(HandlerTypeToStringStart(handlerType));
+                }
             }
         }
 
@@ -257,10 +260,10 @@ internal class InformationalInstruction(
     {
         return handlerType switch
         {
-            ExceptionHandlerType.Catch => "catch {",
-            ExceptionHandlerType.Filter => "catch {",
-            ExceptionHandlerType.Fault => "fault {",
-            ExceptionHandlerType.Finally => "finally {",
+            ExceptionHandlerType.Catch => "catch\n{",
+            ExceptionHandlerType.Filter => "catch\n{",
+            ExceptionHandlerType.Fault => "fault\n{",
+            ExceptionHandlerType.Finally => "finally\n{",
             _ => throw new ArgumentOutOfRangeException(handlerType.ToString()),
         };
     }
@@ -333,6 +336,34 @@ internal class InformationalInstruction(
         // https://github.com/jbevain/cecil/blob/3136847e/Mono.Cecil.Cil/CodeWriter.cs#L332-L341
         CrawlInstructions(informationalInstructions[0], map, ref stackSize, body, distance: 0);
 
+        foreach (var eh in body.ExceptionHandlers)
+        {
+            stackSize = 1;
+
+            if (eh.FilterStart is not null)
+            {
+                CrawlInstructions(
+                    map[eh.FilterStart],
+                    map,
+                    ref stackSize,
+                    body,
+                    map[eh.HandlerEnd].Distance - 1,
+                    allowUpdateDistance: false
+                );
+            }
+            if (eh.HandlerStart is not null)
+            {
+                CrawlInstructions(
+                    map[eh.HandlerStart],
+                    map,
+                    ref stackSize,
+                    body,
+                    map[eh.HandlerEnd].Distance - 1,
+                    allowUpdateDistance: false
+                );
+            }
+        }
+
         return informationalInstructions;
     }
 
@@ -341,7 +372,8 @@ internal class InformationalInstruction(
         Dictionary<Instruction, InformationalInstruction> map,
         ref int stackSize,
         MethodBody body,
-        int distance
+        int distance,
+        bool allowUpdateDistance = true
     )
     {
         var enumerable = instruction;
@@ -364,29 +396,24 @@ internal class InformationalInstruction(
                     return;
                 }
 
-                if (distance < enumerable.Distance)
+                if (allowUpdateDistance && distance < enumerable.Distance)
                 {
                     goto evaluateDistanceAndMoveNext;
                 }
                 return;
             }
 
-            if (
-                enumerable.HandlerParts.Any(x =>
-                    x.HandlerPart is HandlerPart.FilterStart or HandlerPart.HandlerStart
-                )
-            )
-            {
-                stackSize++;
-            }
-
             ComputeStackDelta(enumerable, ref stackSize, body);
             enumerable.explored = true;
 
             evaluateDistanceAndMoveNext:
-            enumerable.Distance = distance;
-            distance++;
-            TryCrawlBranch(enumerable, map, stackSize, body, distance);
+            if (allowUpdateDistance)
+            {
+                enumerable.Distance = distance;
+                distance++;
+            }
+
+            TryCrawlBranch(enumerable, map, stackSize, body, distance, allowUpdateDistance);
 
             if (
                 enumerable.Inst.OpCode.FlowControl
@@ -412,7 +439,8 @@ internal class InformationalInstruction(
         Dictionary<Instruction, InformationalInstruction> map,
         int stackSize,
         MethodBody body,
-        int distance
+        int distance,
+        bool allowUpdateDistance
     )
     {
         var instruction = informationalInstruction.Inst;
@@ -436,7 +464,14 @@ internal class InformationalInstruction(
                 if (!informationalTarget.explored)
                     informationalTarget.PreviousChronological = informationalInstruction;
 
-                CrawlInstructions(informationalTarget, map, ref stackSize, body, distance);
+                CrawlInstructions(
+                    informationalTarget,
+                    map,
+                    ref stackSize,
+                    body,
+                    distance,
+                    allowUpdateDistance
+                );
                 break;
 
             case OperandType.InlineSwitch:
@@ -455,7 +490,14 @@ internal class InformationalInstruction(
                     if (!informationalTarget.explored)
                         informationalTarget.PreviousChronological = informationalInstruction;
 
-                    CrawlInstructions(informationalTarget, map, ref stackSize, body, distance);
+                    CrawlInstructions(
+                        informationalTarget,
+                        map,
+                        ref stackSize,
+                        body,
+                        distance,
+                        allowUpdateDistance
+                    );
                 }
                 break;
         }
@@ -607,6 +649,7 @@ internal class InformationalInstruction(
     {
         HashSet<InformationalInstruction> collected = [];
         CollectIncoming(this, ref collected);
+        collected.Remove(this);
         return collected;
     }
 

@@ -279,7 +279,7 @@ static class ILHookDMDManipulation
 
         try
         {
-            CilAnalyzer.Analyze(body);
+            CilAnalyzer.PrintAnalysis(body);
         }
         catch
         {
