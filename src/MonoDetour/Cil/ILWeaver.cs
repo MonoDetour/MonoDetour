@@ -89,7 +89,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// <exception cref="IndexOutOfRangeException"></exception>
     public int Index
     {
-        get => Context.IndexOf(Current);
+        get => Instructions.IndexOf(Current);
         set => CurrentTo(value);
     }
 
@@ -400,7 +400,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
 
     public ILWeaver Remove(Instruction instruction, out ILLabel? orphanedLabel)
     {
-        RemoveAt(Context.IndexOf(instruction), 1, out var orphanedLabels);
+        RemoveAt(Instructions.IndexOf(instruction), 1, out var orphanedLabels);
         orphanedLabel = orphanedLabels.FirstOrDefault();
         return this;
     }
@@ -1244,6 +1244,19 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     {
         Helpers.ThrowIfNull(instruction);
 
+        if (index == -1)
+        {
+            throw new IndexOutOfRangeException(
+                $"The index -1 or target instruction to be inserted at does not exist in the method body."
+            );
+        }
+        else if (index > Instructions.Count)
+        {
+            throw new IndexOutOfRangeException(
+                $"The index to be inserted is out of range; index: {index} / instructions: {Instructions.Count}"
+            );
+        }
+
         Instruction InstructionAtIndex = Instructions[index];
 
         // When inserting before a target instruction that is inside handler ranges,
@@ -1293,7 +1306,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// </summary>
     ILWeaver GhostInsertBefore(Instruction target, Instruction instruction)
     {
-        Instructions.Insert(Context.IndexOf(target), instruction);
+        Instructions.Insert(Instructions.IndexOf(target), instruction);
         return this;
     }
 
@@ -1302,7 +1315,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// </summary>
     ILWeaver GhostInsertAfter(Instruction target, Instruction instruction)
     {
-        Instructions.Insert(Context.IndexOf(target) + 1, instruction);
+        Instructions.Insert(Instructions.IndexOf(target) + 1, instruction);
         return this;
     }
 
@@ -1336,7 +1349,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     public ILWeaver InsertBefore(
         Instruction target,
         params IEnumerable<Instruction> instructions
-    ) => InsertBefore(Context.IndexOf(target), instructions);
+    ) => InsertBefore(Instructions.IndexOf(target), instructions);
 
     /// <summary>
     /// Insert instructions before this weaver's current position.
@@ -1378,7 +1391,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// will become the new end of that range.
     /// </remarks>
     public ILWeaver InsertAfter(Instruction target, params IEnumerable<Instruction> instructions) =>
-        InsertAfter(Context.IndexOf(target), instructions);
+        InsertAfter(Instructions.IndexOf(target), instructions);
 
     /// <summary>
     /// Insert instructions after this weaver's current position.
