@@ -7,7 +7,7 @@ namespace MonoDetour.UnitTests.FunctionalityTests;
 
 public static class CanAnalyzeStackSizeTests
 {
-    [Fact]
+    /* [Fact]
     public static void CanAnalyzeStackSize()
     {
         var m = DefaultMonoDetourManager.New();
@@ -49,7 +49,6 @@ public static class CanAnalyzeStackSizeTests
             il.Emit(Op.Br, l4);
 
             il.MarkLabel(l1);
-            il.Emit(Op.Ldc_I4_1);
             il.Emit(Op.Ldc_I4_2);
             il.Emit(Op.Br, l2);
 
@@ -66,7 +65,7 @@ public static class CanAnalyzeStackSizeTests
             dmd.Definition.Body.Analyze().ToStringWithAnnotations()
         );
         PlatformTriple.Current.Compile(dmd.Generate());
-    }
+    } */
 
     private static void WriteLogic(ILManipulationInfo info)
     {

@@ -41,11 +41,28 @@ internal static class IEnumerableInformationalInstructionExtensions
         return sb.ToString();
     }
 
-    internal static void ThrowIfErrorAnnotations(
+    /// <summary>
+    /// Returns true if the list of informational instructions has annotated errors.
+    /// </summary>
+    /// <param name="informationalInstructions">The list of informational instructions.</param>
+    /// <returns>Whether or not the list of informational instructions has annotated errors.</returns>
+    public static bool HasErrors(
         this IEnumerable<InformationalInstruction> informationalInstructions
     )
     {
         if (informationalInstructions.Any(x => x.HasErrorAnnotations))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    internal static void ThrowIfErrorAnnotations(
+        this IEnumerable<InformationalInstruction> informationalInstructions
+    )
+    {
+        if (informationalInstructions.HasErrors())
         {
             throw new Exception("Informational instructions had exception annotations.");
         }
@@ -55,7 +72,7 @@ internal static class IEnumerableInformationalInstructionExtensions
         this IEnumerable<InformationalInstruction> informationalInstructions
     )
     {
-        if (!informationalInstructions.Any(x => x.HasErrorAnnotations))
+        if (!informationalInstructions.HasErrors())
         {
             throw new Exception("Informational instructions had exception annotations.");
         }

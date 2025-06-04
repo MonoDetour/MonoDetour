@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Reflection;
 using Mono.Cecil.Cil;
+using MonoDetour.Cil.Analysis;
 using MonoDetour.DetourTypes.Manipulation;
 using MonoMod.Cil;
 using MonoMod.Utils;
@@ -60,4 +61,7 @@ public class ILManipulationInfo(ILContext il, MethodBase original)
     public ILContext UnmanipulatedContext =>
         _original ??= new ILContext(new DynamicMethodDefinition(Original).Definition);
     ILContext? _original;
+
+    /// <inheritdoc cref="ILContextExtensions.ToAnalyzedString(ILContext)"/>
+    public override string ToString() => Context.ToAnalyzedString();
 }
