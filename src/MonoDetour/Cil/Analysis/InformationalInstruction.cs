@@ -347,8 +347,8 @@ internal class InformationalInstruction(
                     map,
                     ref stackSize,
                     body,
-                    map[eh.HandlerEnd].Distance - 1,
-                    allowUpdateDistance: false
+                    map[eh.HandlerEnd].Distance - 10_000 + 1,
+                    outsideExceptionHandler: false
                 );
             }
             if (eh.HandlerStart is not null)
@@ -358,8 +358,8 @@ internal class InformationalInstruction(
                     map,
                     ref stackSize,
                     body,
-                    map[eh.HandlerEnd].Distance - 1,
-                    allowUpdateDistance: false
+                    map[eh.HandlerEnd].Distance - 9_000,
+                    outsideExceptionHandler: false
                 );
             }
         }
@@ -373,7 +373,7 @@ internal class InformationalInstruction(
         ref int stackSize,
         MethodBody body,
         int distance,
-        bool allowUpdateDistance = true
+        bool outsideExceptionHandler = true
     )
     {
         var enumerable = instruction;
@@ -396,7 +396,7 @@ internal class InformationalInstruction(
                     return;
                 }
 
-                if (allowUpdateDistance && distance < enumerable.Distance)
+                if (outsideExceptionHandler && distance < enumerable.Distance)
                 {
                     goto evaluateDistanceAndMoveNext;
                 }
@@ -407,13 +407,13 @@ internal class InformationalInstruction(
             enumerable.explored = true;
 
             evaluateDistanceAndMoveNext:
-            if (allowUpdateDistance)
-            {
-                enumerable.Distance = distance;
-                distance++;
-            }
+            enumerable.Distance = distance;
+            if (outsideExceptionHandler)
+                distance += 10_000;
+            else
+                distance += 1;
 
-            TryCrawlBranch(enumerable, map, stackSize, body, distance, allowUpdateDistance);
+            TryCrawlBranch(enumerable, map, stackSize, body, distance, outsideExceptionHandler);
 
             if (
                 enumerable.Inst.OpCode.FlowControl
@@ -440,7 +440,7 @@ internal class InformationalInstruction(
         int stackSize,
         MethodBody body,
         int distance,
-        bool allowUpdateDistance
+        bool outsideExceptionHandler
     )
     {
         var instruction = informationalInstruction.Inst;
@@ -470,7 +470,7 @@ internal class InformationalInstruction(
                     ref stackSize,
                     body,
                     distance,
-                    allowUpdateDistance
+                    outsideExceptionHandler
                 );
                 break;
 
@@ -496,7 +496,7 @@ internal class InformationalInstruction(
                         ref stackSize,
                         body,
                         distance,
-                        allowUpdateDistance
+                        outsideExceptionHandler
                     );
                 }
                 break;
@@ -638,6 +638,18 @@ internal class InformationalInstruction(
             var previous = targetInstruction.PreviousChronological;
             if (previous is null)
                 break;
+
+            // Find the shortest path.
+            // We know that the undesired stack size must be at the earlier branch
+            // because otherwise there would be a stack size mismatch which we
+            // already check for and do not evaluate errors after it.
+            foreach (var branch in targetInstruction.IncomingBranches)
+            {
+                if (branch.Distance < previous.Distance)
+                {
+                    previous = branch;
+                }
+            }
 
             targetInstruction = previous;
         }
