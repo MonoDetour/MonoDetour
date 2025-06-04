@@ -51,7 +51,7 @@ internal class InformationalInstruction(
         get => stackSizeDelta;
         private set => stackSizeDelta = value;
     }
-    public int StackSizeBefore { get; private set; }
+    public int StackSizeBefore => PreviousChronological?.StackSize ?? 0;
     public int StackPop { get; private set; }
     public int StackPush { get; private set; }
 
@@ -97,9 +97,20 @@ internal class InformationalInstruction(
         public override string ToString()
         {
             StringBuilder sb = new();
-            sb.AppendLine().Append($"{Z} └ ").AppendLine(Message);
+            sb.AppendLine().Append($"{Z} └ ").Append(Message);
 
             var incomingBranches = MismatchInstruction.IncomingBranches;
+
+            var last = incomingBranches.Last();
+            foreach (var m in incomingBranches)
+            {
+                if (m == last)
+                    break;
+
+                sb.Append(", ").Append(m.StackSize);
+            }
+
+            sb.Append(" and ").AppendLine(last.StackSize.ToString());
 
             var previous = MismatchInstruction.PreviousChronological!;
             if (!incomingBranches.Contains(previous))
@@ -110,7 +121,6 @@ internal class InformationalInstruction(
 
             sb.AppendLine($"{Z}   ¦ │ Info: Incoming branches:");
 
-            var last = incomingBranches.Last();
             foreach (var incomingBranch in incomingBranches)
             {
                 if (incomingBranch == last)
@@ -230,11 +240,27 @@ internal class InformationalInstruction(
             }
         }
 
-        if (withAnnotations && ErrorAnnotations.Count != 0)
+        if (withAnnotations)
         {
-            foreach (var annotation in ErrorAnnotations)
+            if (HasErrorAnnotations)
             {
-                sb.Append(annotation.ToString());
+                foreach (var annotation in ErrorAnnotations)
+                {
+                    sb.Append(annotation.ToString());
+                }
+            }
+            else
+            {
+                if (
+                    Inst.OpCode.FlowControl
+                    is FlowControl.Branch
+                        or FlowControl.Cond_Branch
+                        or FlowControl.Return
+                        or FlowControl.Throw
+                )
+                {
+                    sb.AppendLine().Append($"{Z}   ¦");
+                }
             }
         }
 
@@ -395,7 +421,7 @@ internal class InformationalInstruction(
                         enumerable.ErrorAnnotations.Add(
                             new AnnotationStackSizeMismatch(
                                 $"Error: Stack size mismatch; incoming stack size "
-                                    + $"is both {enumerable.StackSizeBefore} and {stackSize}",
+                                    + $"is both {enumerable.StackSizeBefore}",
                                 enumerable
                             )
                         );
@@ -520,7 +546,6 @@ internal class InformationalInstruction(
     {
         var instruction = informationalInstruction.Inst;
         int oldStackSize = stackSize;
-        informationalInstruction.StackSizeBefore = oldStackSize;
 
         switch (instruction.OpCode.FlowControl)
         {
