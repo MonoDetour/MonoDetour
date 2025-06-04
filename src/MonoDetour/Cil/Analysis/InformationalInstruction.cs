@@ -5,7 +5,6 @@ using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoDetour.Interop.MonoModUtils;
-using MonoDetour.Logging;
 using MonoMod.Cil;
 
 namespace MonoDetour.Cil.Analysis;
@@ -21,6 +20,24 @@ internal class InformationalInstruction(
 )
 {
     public List<InformationalInstruction> IncomingBranches { get; private set; } = [];
+
+    /// <summary>
+    /// The immediate previous instruction in the list or an incoming branch if
+    /// control flow stops at the immediate previous instruction.
+    /// </summary>
+    /// <remarks>
+    /// In a case where there are multiple incoming branches,
+    /// this will point to the first evaluated incoming branch.<br/>
+    /// If you care about finding a previous incoming invalid stack size somewhere,
+    /// this will work fine.<br/>
+    /// <br/>
+    /// In a case where an incoming invalid stack size exists on a branch other than
+    /// what is found via backtracking with this, it's not a problem because the error
+    /// in that case is stack size mismatch which is evaluated during the CIL instruction
+    /// crawling phase. And in such a case we do NOT evaluate further errors after that point
+    /// because the whole stack after that point is invalid and any stack size related
+    /// error would be misleading.
+    /// </remarks>
     public InformationalInstruction? PreviousChronological { get; private set; }
     public InformationalInstruction? Next { get; private set; }
     public Instruction Inst => instruction;
@@ -42,6 +59,12 @@ internal class InformationalInstruction(
     /// The minimum distance from this instruction to the first instruction.
     /// </summary>
     public int Distance { get; private set; }
+
+    /// <summary>
+    /// True if this instruction can not be reached from anywhere in the method based
+    /// on the OpCode of instructions. Instructions after conditional branches are
+    /// evaluated and considered reachable.
+    /// </summary>
     public bool Unreachable => !explored;
 
     public List<(HandlerPart HandlerPart, ExceptionHandlerType HandlerType)> HandlerParts =>
@@ -233,6 +256,11 @@ internal class InformationalInstruction(
     {
         var instructions = body.Instructions;
         List<InformationalInstruction> informationalInstructions = [];
+        if (instructions.Count == 0)
+        {
+            return informationalInstructions;
+        }
+
         Dictionary<Instruction, InformationalInstruction> map = [];
 
         for (int i = 0; i < instructions.Count; i++)
@@ -297,24 +325,25 @@ internal class InformationalInstruction(
         {
             if (enumerable.explored)
             {
+                if (enumerable.StackSizeBefore != stackSize)
+                {
+                    enumerable.Annotations.Add(
+                        new AnnotationStackSizeMismatch(
+                            $"Error: Stack size mismatch; incoming stack size from branches "
+                                + $"is both {enumerable.StackSizeBefore} and {stackSize}",
+                            enumerable.IncomingBranches
+                        )
+                    );
+                    // The distance after this point does not need to be set to the minimum
+                    // since those instructions won't be evaluated for errors anyways.
+                    return;
+                }
+
                 if (distance < enumerable.Distance)
                 {
-                    enumerable.Distance = distance;
+                    goto evaluateDistanceAndMoveNext;
                 }
-
-                if (enumerable.StackSizeBefore == stackSize)
-                {
-                    break;
-                }
-
-                enumerable.Annotations.Add(
-                    new AnnotationStackSizeMismatch(
-                        $"Error: Stack size mismatch; incoming stack size from branches "
-                            + $"is both {enumerable.StackSizeBefore} and {stackSize}",
-                        enumerable.IncomingBranches
-                    )
-                );
-                break;
+                return;
             }
 
             if (
@@ -326,11 +355,12 @@ internal class InformationalInstruction(
                 stackSize++;
             }
 
+            ComputeStackDelta(enumerable, ref stackSize, body);
             enumerable.explored = true;
+
+            evaluateDistanceAndMoveNext:
             enumerable.Distance = distance;
             distance++;
-
-            ComputeStackDelta(enumerable, ref stackSize, body);
             TryCrawlBranch(enumerable, map, stackSize, body, distance);
 
             if (
@@ -340,13 +370,13 @@ internal class InformationalInstruction(
                     or FlowControl.Return
             )
             {
-                break;
+                return;
             }
             var previous = enumerable;
             enumerable = enumerable.Next;
 
             if (enumerable is null)
-                break;
+                return;
 
             enumerable.PreviousChronological = previous;
         }

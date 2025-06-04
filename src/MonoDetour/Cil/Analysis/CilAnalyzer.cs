@@ -82,7 +82,7 @@ internal static class CilAnalyzer
             sb.Append(instructions.ToStringWithAnnotationTypesDeduplicatedExclusive());
 
             sb.AppendLine();
-            sb.AppendLine("Note: This analysis is not perfect; errors may not always be accurate.");
+            sb.AppendLine("Note: This analysis may not be perfect.");
         }
 
         analysisEnd:
