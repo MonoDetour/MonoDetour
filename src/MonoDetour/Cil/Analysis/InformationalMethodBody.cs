@@ -170,9 +170,9 @@ internal class InformationalMethodBody
 
         if (!HasErrors())
         {
-            sb.AppendLine("No mistakes were found.");
-            sb.AppendLine("If there are errors, MonoDetour simply didn't catch them.")
-                .AppendLine("Currently unreachable instructions aren't evaluated.")
+            sb.AppendLine("MonoDetour didn't catch any mistakes.")
+                .AppendLine("The errors may not be directly stack behavior related.")
+                .AppendLine("Operands or types on the stack aren't validated.")
                 .AppendLine("You can improve the analysis:")
                 .AppendLine(
                     "https://github.com/MonoDetour/MonoDetour/blob/main/src/MonoDetour/Cil/Analysis/CilAnalyzer.cs"

@@ -85,29 +85,23 @@ internal static class CilAnalyzer
                 )
             );
         }
-        else if (
-            stackSize != 0
-            && instruction.Inst.OpCode.FlowControl is FlowControl.Throw or FlowControl.Return
-        )
+        // Apparently stack size doesn't matter on throw
+        else if (stackSize != 0 && instruction.Inst.OpCode.FlowControl == FlowControl.Return)
         {
             if (types.Contains(typeof(AnnotationStackSizeMustBeX)))
                 return;
             types.Add(typeof(AnnotationStackSizeMustBeX));
 
-            string throwOrReturn = instruction.Inst.OpCode.FlowControl switch
-            {
-                FlowControl.Throw => "throw",
-                FlowControl.Return => "return",
-                _ => throw new Exception("Unreachable"),
-            };
-
             instruction.ErrorAnnotations.Add(
                 new AnnotationStackSizeMustBeX(
-                    $"Error: Stack size on {throwOrReturn} must be 0; it was {stackSize}",
+                    $"Error: Stack size on return must be 0; it was {stackSize}",
                     new AnnotationRangeWalkBack(instruction, stackSize)
                 )
             );
         }
+
+        // TODO: Better analysis of exception handlers.
+        // Those are a pain to work with so it'd be really good to have that.
 
         // TODO: Check stuff like ldfld/ldsfld having a valid operand.
         // It's not necessary, but will be more user-friendly.

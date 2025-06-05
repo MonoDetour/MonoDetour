@@ -51,7 +51,15 @@ internal class InformationalInstruction(
         get => stackSizeDelta;
         private set => stackSizeDelta = value;
     }
-    public int StackSizeBefore => PreviousChronological?.StackSize ?? 0;
+    public int StackSizeBefore =>
+        PreviousChronological?.StackSize
+        ?? (
+            HandlerParts.Any(x =>
+                (x.HandlerPart & HandlerPart.FilterOrHandlerStart) != HandlerPart.None
+            )
+                ? 1
+                : 0
+        );
     public int StackPop { get; private set; }
     public int StackPush { get; private set; }
 
@@ -194,12 +202,15 @@ internal class InformationalInstruction(
     [Flags]
     public enum HandlerPart
     {
+        None = 0,
         TryStart = 1 << 0,
         TryEnd = 1 << 1,
         FilterStart = 1 << 2,
         HandlerStart = 1 << 3,
         HandlerEnd = 1 << 4,
         BeforeTryStart = 1 << 5,
+        TryOrHandlerEnd = TryEnd | HandlerEnd,
+        FilterOrHandlerStart = FilterStart | HandlerStart,
     }
 
     public override string ToString() => ToStringInternal(withAnnotations: false);
@@ -279,10 +290,17 @@ internal class InformationalInstruction(
             {
                 if (
                     Inst.OpCode.FlowControl
-                    is FlowControl.Branch
-                        or FlowControl.Cond_Branch
-                        or FlowControl.Return
-                        or FlowControl.Throw
+                        is FlowControl.Branch
+                            or FlowControl.Cond_Branch
+                            or FlowControl.Return
+                            or FlowControl.Throw
+                    && ( // get rid of space before the } bracket
+                        (
+                            Next?.HandlerParts.Any(x =>
+                                (x.HandlerPart & HandlerPart.TryOrHandlerEnd) != HandlerPart.None
+                            ) ?? true
+                        ) == false
+                    )
                 )
                 {
                     sb.AppendLine().Append(EmptyPad);
