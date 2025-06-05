@@ -106,6 +106,16 @@ internal class InformationalInstruction(
         public override string ToString() => base.ToString();
     }
 
+    public class AnnotationNullOperand() : Annotation($"Error: Operand is null", null)
+    {
+        public override string ToString() => base.ToString();
+    }
+
+    public class AnnotationNullSwitchTarget() : Annotation($"Error: Null switch target", null)
+    {
+        public override string ToString() => base.ToString();
+    }
+
     public class AnnotationStackSizeMismatch(
         string Message,
         InformationalInstruction MismatchInstruction
@@ -443,12 +453,18 @@ internal class InformationalInstruction(
         {
             case OperandType.ShortInlineBrTarget:
             case OperandType.InlineBrTarget:
-                Instruction target;
+                Instruction? target;
 
                 if (instruction.Operand is ILLabel label)
-                    target = label.InteropGetTarget()!;
+                    target = label.InteropGetTarget();
                 else
-                    target = (Instruction)instruction.Operand;
+                    target = instruction.Operand as Instruction;
+
+                if (target is null)
+                {
+                    informationalInstruction.ErrorAnnotations.Add(new AnnotationNullOperand());
+                    break;
+                }
 
                 var informationalTarget = map[target];
                 informationalTarget.IncomingBranches.Add(informationalInstruction);
@@ -469,16 +485,31 @@ internal class InformationalInstruction(
                 break;
 
             case OperandType.InlineSwitch:
-                Instruction[] targets;
+                Instruction?[]? targets;
 
                 if (instruction.Operand is ILLabel[] labels)
-                    targets = [.. labels.Select(x => x.InteropGetTarget()!)];
+                    targets = [.. labels.Select(x => x.InteropGetTarget())];
                 else
-                    targets = (Instruction[])instruction.Operand;
+                    targets = instruction.Operand as Instruction[];
+
+                if (targets is null)
+                {
+                    informationalInstruction.ErrorAnnotations.Add(new AnnotationNullOperand());
+                    break;
+                }
 
                 for (int i = 0; i < targets.Length; i++)
                 {
-                    informationalTarget = map[targets[i]];
+                    var switchTarget = targets[i];
+                    if (switchTarget is null)
+                    {
+                        informationalInstruction.ErrorAnnotations.Add(
+                            new AnnotationNullSwitchTarget()
+                        );
+                        continue;
+                    }
+
+                    informationalTarget = map[switchTarget];
                     informationalTarget.IncomingBranches.Add(informationalInstruction);
 
                     if (!informationalTarget.explored)
@@ -510,7 +541,11 @@ internal class InformationalInstruction(
         {
             case FlowControl.Call:
             {
-                var method = (IMethodSignature)instruction.Operand;
+                if (instruction.Operand is not IMethodSignature method)
+                {
+                    informationalInstruction.ErrorAnnotations.Add(new AnnotationNullOperand());
+                    break;
+                }
                 // pop 'this' argument
                 if (
                     method.HasThis
