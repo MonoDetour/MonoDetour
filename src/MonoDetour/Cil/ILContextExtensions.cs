@@ -17,7 +17,7 @@ public static class ILContextExtensions
     /// </summary>
     /// <returns>A rich string presentation of the method body's instructions.</returns>
     public static string ToAnalyzedString(this ILContext context) =>
-        context.Body.Analyze().ToStringWithAnnotations();
+        context.Body.CreateInformationalSnapshot().AnnotateErrors().ToStringWithAnnotations();
 
     internal static VariableDefinition DeclareVariable(this ILContext il, Type type)
     {

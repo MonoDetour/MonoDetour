@@ -1,25 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Mono.Cecil.Cil;
-using MonoDetour.Logging;
-using MonoMod.Utils;
 using static MonoDetour.Cil.Analysis.InformationalInstruction;
 
 namespace MonoDetour.Cil.Analysis;
 
 internal static class CilAnalyzer
 {
-    internal static List<InformationalInstruction> Analyze(this MethodBody body)
+    internal static InformationalMethodBody AnnotateErrors(
+        this InformationalMethodBody informationalBody
+    )
     {
-        body.Method.RecalculateILOffsets();
-        List<InformationalInstruction> instructions = CreateList(body);
-
         // TODO: I realize that sorting by only distance is kinda flawed,
         // I optimally would check if the branch has previously ever gotten an error,
         // and then decide if I should show an error there.
-        var sorted = instructions.ToList();
+        var sorted = informationalBody.Instructions.ToList();
         sorted.Sort((x, y) => x.Distance - y.Distance);
         var analyzable = sorted;
 
@@ -41,60 +37,7 @@ internal static class CilAnalyzer
             AnalyzeAndAnnotateInstruction(instruction, types);
         }
 
-        return instructions;
-    }
-
-    internal static string ToErrorMessageString(
-        this List<InformationalInstruction> analysis,
-        MethodBody body
-    )
-    {
-        StringBuilder sb = new();
-        sb.AppendLine("An ILHook manipulation target method threw on compilation:");
-        sb.AppendLine(body.Method.FullName);
-        sb.AppendLine("--- MonoDetour CIL Analysis Start Full Method ---");
-        sb.AppendLine();
-        sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
-        sb.AppendLine();
-
-        if (analysis.Count == 0)
-        {
-            sb.AppendLine("Method has 0 instructions.");
-            goto analysisEnd;
-        }
-
-        sb.Append(analysis.ToStringWithAnnotations());
-
-        sb.AppendLine();
-        sb.AppendLine("--- MonoDetour CIL Analysis Summary ---");
-        sb.AppendLine();
-
-        if (analysis.All(x => !x.HasErrorAnnotations))
-        {
-            sb.AppendLine("No mistakes were found.");
-            sb.AppendLine("If there are errors, MonoDetour simply didn't catch them.")
-                .AppendLine("Currently unreachable instructions aren't evaluated.")
-                .AppendLine("You can improve the analysis:")
-                .AppendLine(
-                    "https://github.com/MonoDetour/MonoDetour/blob/main/src/MonoDetour/Cil/Analysis/CilAnalyzer.cs"
-                );
-        }
-        else
-        {
-            sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
-            sb.AppendLine();
-
-            sb.Append(analysis.ToStringWithAnnotationsExclusive());
-
-            sb.AppendLine();
-            sb.AppendLine("Note: This analysis may not be perfect.");
-        }
-
-        analysisEnd:
-        sb.AppendLine();
-        sb.Append("--- MonoDetour CIL Analysis End ---");
-
-        return sb.ToString();
+        return informationalBody;
     }
 
     static void AnalyzeAndAnnotateInstruction(

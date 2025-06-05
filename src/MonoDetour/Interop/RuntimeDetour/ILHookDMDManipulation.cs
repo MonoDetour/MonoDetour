@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
-using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoDetour;
@@ -277,16 +274,16 @@ static class ILHookDMDManipulation
 
     static void AnalyzeMethodBody(InvalidProgramException ex, MethodBody body)
     {
-        List<InformationalInstruction> analysis;
+        InformationalMethodBody analysis;
         try
         {
-            analysis = body.Analyze();
+            analysis = body.CreateInformationalSnapshot().AnnotateErrors();
         }
         catch
         {
             throw new Exception("MonoDetour failed to analyze invalid program.", ex);
         }
 
-        throw new InvalidProgramException(analysis.ToErrorMessageString(body), ex);
+        throw new InvalidProgramException(analysis.ToErrorMessageString(), ex);
     }
 }

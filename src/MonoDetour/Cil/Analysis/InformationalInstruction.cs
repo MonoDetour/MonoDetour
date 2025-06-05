@@ -39,7 +39,7 @@ internal class InformationalInstruction(
     /// error would be misleading.
     /// </remarks>
     public InformationalInstruction? PreviousChronological { get; private set; }
-    public InformationalInstruction? Next { get; private set; }
+    public InformationalInstruction? Next { get; internal set; }
     public Instruction Inst => instruction;
     public int StackSize
     {
@@ -76,28 +76,39 @@ internal class InformationalInstruction(
 
     private bool explored = false;
 
-    internal const string Z = "│";
+    internal const string LongPipe = "│";
+    internal const string LeftWall = LongPipe;
+    internal const string EmptyPad = $"{LeftWall}   ¦ ";
+    internal static string VariableEmptyPad = $"{LeftWall}   ¦ ";
 
-    public record AnnotationStackSizeMustBeX(string Message, AnnotationRange? Range)
+    public class AnnotationStackSizeMustBeX(string Message, AnnotationRange? Range)
         : Annotation(Message, Range)
     {
         public override string ToString() => base.ToString();
     }
 
-    public record AnnotationPoppingMoreThanStackSize(string Message) : Annotation(Message, null)
+    public class AnnotationPoppingMoreThanStackSize(string Message) : Annotation(Message, null)
     {
         public override string ToString() => base.ToString();
     }
 
-    public record AnnotationStackSizeMismatch(
+    public class AnnotationDuplicateInstance()
+        : Annotation($"Warning: Duplicate instruction instance; These may break the method.", null)
+    {
+        public override string ToString() => base.ToString();
+    }
+
+    public class AnnotationStackSizeMismatch(
         string Message,
         InformationalInstruction MismatchInstruction
     ) : Annotation(Message, null)
     {
+        readonly string message = Message;
+
         public override string ToString()
         {
             StringBuilder sb = new();
-            sb.AppendLine().Append($"{Z} └ ").Append(Message);
+            sb.Append(message);
 
             var incomingBranches = MismatchInstruction.IncomingBranches;
 
@@ -115,32 +126,32 @@ internal class InformationalInstruction(
             var previous = MismatchInstruction.PreviousChronological!;
             if (!incomingBranches.Contains(previous))
             {
-                sb.AppendLine($"{Z}   ¦ │ Info: Previous instruction:");
-                sb.Append($"{Z}   ¦ ├ ").AppendLine(previous.ToString());
+                sb.AppendLine($"{VariableEmptyPad}│ Info: Previous instruction:");
+                sb.Append($"{VariableEmptyPad}├ ").AppendLine(previous.ToString());
             }
 
-            sb.AppendLine($"{Z}   ¦ │ Info: Incoming branches:");
+            sb.AppendLine($"{VariableEmptyPad}│ Info: Incoming branches:");
 
             foreach (var incomingBranch in incomingBranches)
             {
                 if (incomingBranch == last)
                     break;
 
-                sb.Append($"{Z}   ¦ ├ ").AppendLine(incomingBranch.ToString());
+                sb.Append($"{VariableEmptyPad}├ ").AppendLine(incomingBranch.ToString());
             }
 
-            sb.Append($"{Z}   ¦ └ ").Append(last.ToString());
+            sb.Append($"{VariableEmptyPad}└ ").Append(last.ToString());
 
             return sb.ToString();
         }
     }
 
-    public record Annotation(string Message, AnnotationRange? Range)
+    public class Annotation(string Message, AnnotationRange? Range)
     {
         public override string ToString()
         {
             StringBuilder sb = new();
-            sb.AppendLine().Append($"{Z} └ ").Append(Message);
+            sb.Append(Message);
 
             if (Range is null || Range.Instructions.Count == 0)
             {
@@ -152,30 +163,33 @@ internal class InformationalInstruction(
             var end = instructions.Count - 1;
 
             sb.AppendLine();
-            sb.AppendLine($"{Z}   ¦ │ Info: Stack imbalance starts at:");
+            sb.AppendLine($"{VariableEmptyPad}│ Info: Stack imbalance starts at:");
 
             if (start != end)
             {
-                sb.Append($"{Z}   ¦ ├ ").AppendLine(instructions[start].ToString());
+                sb.Append($"{VariableEmptyPad}├ ").AppendLine(instructions[start].ToString());
             }
 
             for (int i = start + 1; i < end; i++)
             {
-                sb.Append($"{Z}   ¦ │ ").AppendLine(instructions[i].ToString());
+                sb.Append($"{VariableEmptyPad}│ ").AppendLine(instructions[i].ToString());
             }
 
-            sb.Append($"{Z}   ¦ └ ").Append(instructions[end].ToString());
+            sb.Append($"{VariableEmptyPad}└ ").Append(instructions[end].ToString());
 
             return sb.ToString();
         }
     }
 
-    public record class AnnotationRangeWalkBack(
+    public class AnnotationRangeWalkBack(
         InformationalInstruction Instruction,
         int RequiredStackSize
-    ) : AnnotationRange(GetProblematicInstructionsWithWalkBack(Instruction, RequiredStackSize));
+    ) : AnnotationRange(Instruction.GetProblematicInstructionsWithWalkBack(RequiredStackSize));
 
-    public record class AnnotationRange(List<InformationalInstruction> Instructions);
+    public class AnnotationRange(List<InformationalInstruction> Instructions)
+    {
+        public List<InformationalInstruction> Instructions { get; } = Instructions;
+    }
 
     [Flags]
     public enum HandlerPart
@@ -201,7 +215,7 @@ internal class InformationalInstruction(
             foreach (var (handlerPart, handlerType) in HandlerParts)
             {
                 if (handlerPart.HasFlag(HandlerPart.TryEnd))
-                    sb.AppendLine(Z + "} // end try");
+                    sb.AppendLine(EmptyPad + "} // end try");
 
                 if (handlerPart.HasFlag(HandlerPart.HandlerEnd))
                     sb.AppendLine(HandlerTypeToStringEnd(handlerType));
@@ -210,15 +224,15 @@ internal class InformationalInstruction(
             foreach (var (handlerPart, handlerType) in HandlerParts)
             {
                 if (handlerPart.HasFlag(HandlerPart.TryStart))
-                    sb.AppendLine(Z + ".try\n{");
+                    sb.AppendLine(EmptyPad + ".try\n" + EmptyPad + "{");
 
                 if (handlerPart.HasFlag(HandlerPart.FilterStart))
-                    sb.AppendLine(Z + "filter\n{");
+                    sb.AppendLine(EmptyPad + "filter\n" + EmptyPad + "{");
 
                 if (handlerPart.HasFlag(HandlerPart.HandlerStart))
                 {
                     if (handlerType == ExceptionHandlerType.Filter)
-                        sb.AppendLine(Z + "} // end filter");
+                        sb.AppendLine(EmptyPad + "} // end filter");
 
                     sb.AppendLine(HandlerTypeToStringStart(handlerType));
                 }
@@ -226,13 +240,13 @@ internal class InformationalInstruction(
         }
 
         if (Unreachable)
-            sb.Append($"{Z} - | {Inst}");
+            sb.Append($"{LeftWall} - | {Inst}");
         else
         {
             if (withAnnotations)
             {
                 TryAppendIncomingBranchesInfo(sb, IncomingBranches);
-                sb.Append($"{Z}{StackSize, 2} | {Inst}");
+                sb.Append($"{LeftWall}{StackSize, 2} | {Inst}");
             }
             else
             {
@@ -244,8 +258,20 @@ internal class InformationalInstruction(
         {
             if (HasErrorAnnotations)
             {
+                VariableEmptyPad = $"{LeftWall} {LongPipe}  ";
+                var last = ErrorAnnotations[^1];
                 foreach (var annotation in ErrorAnnotations)
                 {
+                    sb.AppendLine();
+                    if (annotation != last)
+                    {
+                        sb.Append($"{LeftWall} ├ ");
+                    }
+                    else
+                    {
+                        sb.Append($"{LeftWall} └ ");
+                        VariableEmptyPad = EmptyPad;
+                    }
                     sb.Append(annotation.ToString());
                 }
             }
@@ -259,7 +285,7 @@ internal class InformationalInstruction(
                         or FlowControl.Throw
                 )
                 {
-                    sb.AppendLine().Append($"{Z}   ¦");
+                    sb.AppendLine().Append(EmptyPad);
                 }
             }
         }
@@ -277,7 +303,7 @@ internal class InformationalInstruction(
             return;
         }
 
-        sb.Append($"{Z}   ¦ ┌ Incoming branches:");
+        sb.Append($"{EmptyPad}┌ Incoming branches:");
 
         foreach (var informational in incomingBranches)
         {
@@ -292,10 +318,10 @@ internal class InformationalInstruction(
     {
         return handlerType switch
         {
-            ExceptionHandlerType.Catch => Z + "catch\n{",
-            ExceptionHandlerType.Filter => Z + "catch\n{",
-            ExceptionHandlerType.Fault => Z + "fault\n{",
-            ExceptionHandlerType.Finally => Z + "finally\n{",
+            ExceptionHandlerType.Catch => EmptyPad + "catch\n" + EmptyPad + "{",
+            ExceptionHandlerType.Filter => EmptyPad + "catch\n" + EmptyPad + "{",
+            ExceptionHandlerType.Fault => EmptyPad + "fault\n" + EmptyPad + "{",
+            ExceptionHandlerType.Finally => EmptyPad + "finally\n" + EmptyPad + "{",
             _ => throw new ArgumentOutOfRangeException(handlerType.ToString()),
         };
     }
@@ -304,102 +330,17 @@ internal class InformationalInstruction(
     {
         return handlerType switch
         {
-            ExceptionHandlerType.Catch => Z + "} // end catch",
-            ExceptionHandlerType.Filter => Z + "} // end catch",
-            ExceptionHandlerType.Fault => Z + "} // end fault",
-            ExceptionHandlerType.Finally => Z + "} // end finally",
+            ExceptionHandlerType.Catch => EmptyPad + "} // end catch",
+            ExceptionHandlerType.Filter => EmptyPad + "} // end catch",
+            ExceptionHandlerType.Fault => EmptyPad + "} // end fault",
+            ExceptionHandlerType.Finally => EmptyPad + "} // end finally",
             _ => throw new ArgumentOutOfRangeException(handlerType.ToString()),
         };
     }
 
-    internal static List<InformationalInstruction> CreateList(MethodBody body)
-    {
-        var instructions = body.Instructions;
-        List<InformationalInstruction> informationalInstructions = [];
-        if (instructions.Count == 0)
-        {
-            return informationalInstructions;
-        }
-
-        Dictionary<Instruction, InformationalInstruction> map = [];
-
-        for (int i = 0; i < instructions.Count; i++)
-        {
-            var cecilIns = instructions[i];
-
-            List<(HandlerPart, ExceptionHandlerType)> handlerParts = [];
-
-            foreach (var eh in body.ExceptionHandlers)
-            {
-                HandlerPart handlerPart = 0;
-
-                if (eh.TryStart.Previous == cecilIns)
-                    handlerPart |= HandlerPart.BeforeTryStart;
-
-                if (eh.TryStart == cecilIns)
-                    handlerPart |= HandlerPart.TryStart;
-                if (eh.TryEnd == cecilIns)
-                    handlerPart |= HandlerPart.TryEnd;
-                if (eh.FilterStart == cecilIns)
-                    handlerPart |= HandlerPart.FilterStart;
-                if (eh.HandlerStart == cecilIns)
-                    handlerPart |= HandlerPart.HandlerStart;
-                if (eh.HandlerEnd == cecilIns)
-                    handlerPart |= HandlerPart.HandlerEnd;
-
-                if (handlerPart == 0)
-                    continue;
-
-                handlerParts.Add((handlerPart, eh.HandlerType));
-            }
-
-            InformationalInstruction ins = new(cecilIns, default, default, handlerParts);
-            informationalInstructions.Add(ins);
-            map.Add(cecilIns, ins);
-
-            if (i > 0)
-            {
-                informationalInstructions[i - 1].Next = ins;
-            }
-        }
-
-        int stackSize = 0;
-        // This logic is heavily based on:
-        // https://github.com/jbevain/cecil/blob/3136847e/Mono.Cecil.Cil/CodeWriter.cs#L332-L341
-        CrawlInstructions(informationalInstructions[0], map, ref stackSize, body, distance: 0);
-
-        foreach (var eh in body.ExceptionHandlers)
-        {
-            stackSize = 1;
-
-            if (eh.FilterStart is not null)
-            {
-                CrawlInstructions(
-                    map[eh.FilterStart],
-                    map,
-                    ref stackSize,
-                    body,
-                    map[eh.HandlerEnd].Distance - 10_000 + 1,
-                    outsideExceptionHandler: false
-                );
-            }
-            if (eh.HandlerStart is not null)
-            {
-                CrawlInstructions(
-                    map[eh.HandlerStart],
-                    map,
-                    ref stackSize,
-                    body,
-                    map[eh.HandlerEnd].Distance - 9_000,
-                    outsideExceptionHandler: false
-                );
-            }
-        }
-
-        return informationalInstructions;
-    }
-
-    static void CrawlInstructions(
+    // This logic is heavily based on:
+    // https://github.com/jbevain/cecil/blob/3136847e/Mono.Cecil.Cil/CodeWriter.cs#L332-L341
+    internal static void CrawlInstructions(
         InformationalInstruction instruction,
         Dictionary<Instruction, InformationalInstruction> map,
         ref int stackSize,
@@ -650,15 +591,14 @@ internal class InformationalInstruction(
         }
     }
 
-    internal static List<InformationalInstruction> GetProblematicInstructionsWithWalkBack(
-        InformationalInstruction instruction,
+    internal List<InformationalInstruction> GetProblematicInstructionsWithWalkBack(
         int requiredStackSize
     )
     {
         Stack<InformationalInstruction> walkBackInstructions = [];
 
         int walkBackStackSize = 0;
-        InformationalInstruction targetInstruction = instruction;
+        InformationalInstruction targetInstruction = this;
 
         while (true)
         {
