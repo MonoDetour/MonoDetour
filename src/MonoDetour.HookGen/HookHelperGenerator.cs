@@ -722,8 +722,6 @@ namespace MonoDetour.HookGen
 
                     cb.WriteHeader();
 
-                    WriteTrowHelperClassIfCan(cb, ctx);
-
                     cb.Write("namespace ").WriteLine(hookGenNamespace).OpenBlock();
 
                     type.Type.AppendEnterContext(cb);
@@ -779,11 +777,6 @@ namespace MonoDetour.HookGen
 
                 cb.WriteHeader();
 
-                if (!stripUnusedHooks)
-                {
-                    WriteTrowHelperClassIfCan(cb, ctx);
-                }
-
                 if (type.HasHook)
                 {
                     cb.Write("namespace ").WriteLine(hookGenNamespace).OpenBlock();
@@ -808,87 +801,26 @@ namespace MonoDetour.HookGen
             }
         }
 
-        static void WriteTrowHelperClassIfCan(CodeBuilder cb, ContextSupportOptions ctx)
-        {
-            if (ctx.Lang.FileLocalTypes)
-            {
-                cb.WriteLine("file static class ThrowHelper").OpenBlock();
-
-                if (ctx.Bcl.DoesNotReturnAttribute)
-                {
-                    cb.WriteLine(
-                        "[global::System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute]"
-                    );
-                }
-
-                cb.WriteLine("public static void ThrowMissingMethod(string type, string method)")
-                    .OpenBlock()
-                    .WriteLine("throw new global::System.MissingMethodException(type, method);")
-                    .CloseBlock();
-
-                if (ctx.Bcl.DoesNotReturnAttribute)
-                {
-                    cb.WriteLine(
-                        "[global::System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute]"
-                    );
-                }
-
-                cb.WriteLine("public static void ThrowMissingType(string type)")
-                    .OpenBlock()
-                    .WriteLine(
-                        "throw new global::System.Exception($\"Missing Type: '{type}'. This exception should go away by recompiling against latest assembly references.\");"
-                    )
-                    .CloseBlock();
-
-                cb.CloseBlock();
-            }
-        }
-
         private static void EmitThrowMissing(
             GeneratableTypeModel type,
             GeneratableMemberModel? member,
-            CodeBuilder cb,
-            ContextSupportOptions ctx,
-            bool force = false
+            CodeBuilder cb
         )
         {
-            if (force || !ctx.Lang.FileLocalTypes)
+            if (member is { })
             {
-                if (member is { })
-                {
-                    cb.Write("throw new global::System.MissingMethodException(\"")
-                        .Write(type.Type.InnermostType.MdName)
-                        .Write("\", \"")
-                        .Write(member.Name)
-                        .WriteLine("\");");
-                }
-                else
-                {
-                    cb.Write("throw new global::System.Exception(\"")
-                        .Write("Missing Type: '")
-                        .Write(type.Type.InnermostType.MdName)
-                        .Write(
-                            "'. This exception should go away by recompiling against latest assembly references."
-                        )
-                        .WriteLine("\");");
-                }
+                cb.Write("throw new global::System.MissingMethodException(\"")
+                    .Write(type.Type.InnermostType.MdName)
+                    .Write("\", \"")
+                    .Write(member.Name)
+                    .WriteLine("\");");
             }
             else
             {
-                if (member is { })
-                {
-                    cb.Write("ThrowHelper.ThrowMissingMethod(\"")
-                        .Write(type.Type.InnermostType.MdName)
-                        .Write("\", \"")
-                        .Write(member.Name)
-                        .WriteLine("\");");
-                }
-                else
-                {
-                    cb.Write("ThrowHelper.ThrowMissingType(\"")
-                        .Write(type.Type.InnermostType.MdName)
-                        .WriteLine("\");");
-                }
+                cb.Write("throw new global::System.Exception(\"")
+                    .Write("Missing Type: '")
+                    .Write(type.Type.InnermostType.MdName)
+                    .WriteLine("'\");");
             }
         }
 
@@ -1249,7 +1181,7 @@ namespace MonoDetour.HookGen
                     .WriteLine("\");")
                     .Write("if (type is null) ");
 
-                EmitThrowMissing(type, null, cb, ctx);
+                EmitThrowMissing(type, null, cb);
             }
             else
             {
@@ -1302,7 +1234,7 @@ namespace MonoDetour.HookGen
             EmitCloseArray(cb, ctx);
 
             cb.WriteLine(", null);").Write("if (method is null) ");
-            EmitThrowMissing(type, member, cb, ctx);
+            EmitThrowMissing(type, member, cb);
             cb.WriteLine($"return method{(ctx.Bcl.DoesNotReturnAttribute ? "" : "!")};")
                 .CloseBlock();
 
