@@ -70,7 +70,7 @@ public class MonoDetourHook : IMonoDetourHook
         var applierInstance = (IMonoDetourHookApplier)Activator.CreateInstance(applierType);
         applierInstance.Hook = this;
 
-        owner.MonoDetourHooks.Add(this);
+        owner.Hooks.Add(this);
 
         Applier = ProxyILHookConstructor.ConstructILHook(
             target,

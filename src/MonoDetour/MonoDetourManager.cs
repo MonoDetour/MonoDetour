@@ -21,19 +21,19 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     /// <summary>
     /// Identifier for a <see cref="MonoDetourManager"/>.
     /// This will be used as the identifier in <see cref="MonoDetourConfig"/> by default.<br/>
-    /// This ID should be unique per mod, such as the assembly name, but
+    /// This ID should be unique per mod such as the assembly name, but
     /// a single mod can use the same ID for all its <see cref="MonoDetourManager"/>s.
     /// </summary>
     public string Id { get; } = Helpers.ThrowIfNull(id);
 
     /// <inheritdoc/>
     public MonoDetourLogger.LogChannel LogFilter { get; set; } =
-        MonoDetourLogger.LogChannel.Warn | MonoDetourLogger.LogChannel.Error;
+        MonoDetourLogger.LogChannel.Warning | MonoDetourLogger.LogChannel.Error;
 
     /// <summary>
     /// The hooks applied by this MonoDetourManager.
     /// </summary>
-    public List<IMonoDetourHook> MonoDetourHooks { get; } = [];
+    public List<IMonoDetourHook> Hooks { get; } = [];
 
     /// <summary>
     /// An event which is called when a hook owned by this <see cref="MonoDetourManager"/>
@@ -46,8 +46,6 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     /// The hook which threw is passed as the only argument.
     /// </summary>
     public event Action<IReadOnlyMonoDetourHook>? OnHookThrew;
-
-    internal bool PrintIL { get; set; }
 
     bool isDisposed = false;
 
@@ -116,20 +114,20 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     /// You need to initialize the hooks first, either calling them manually or using
     /// <see cref="InvokeHookInitializers(Assembly)"/> or any of its overloads.
     /// </remarks>
-    public void ApplyHooks() => MonoDetourHooks.ForEach(x => x.Apply());
+    public void ApplyHooks() => Hooks.ForEach(x => x.Apply());
 
     /// <summary>
     /// Undoes all applied hooks belonging to this manager.
     /// </summary>
-    public void UndoHooks() => MonoDetourHooks.ForEach(x => x.Undo());
+    public void UndoHooks() => Hooks.ForEach(x => x.Undo());
 
     /// <summary>
     /// Undoes and disposes all hooks belonging to this manager.
     /// </summary>
     public void DisposeHooks()
     {
-        MonoDetourHooks.ForEach(x => x.Dispose());
-        MonoDetourHooks.Clear();
+        Hooks.ForEach(x => x.Dispose());
+        Hooks.Clear();
     }
 
     /// <inheritdoc cref="ILHook(MethodBase, ILManipulationInfo.Manipulator, MonoDetourConfig?, bool)"/>

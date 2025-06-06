@@ -95,7 +95,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
 
     /// <inheritdoc/>
     public MonoDetourLogger.LogChannel LogFilter { get; set; } =
-        MonoDetourLogger.LogChannel.Warn | MonoDetourLogger.LogChannel.Error;
+        MonoDetourLogger.LogChannel.Warning | MonoDetourLogger.LogChannel.Error;
 
     Instruction current = il.Context.Instrs[0];
 
@@ -1120,7 +1120,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         void LogFailure(string failureMessage)
         {
             this.Log(
-                MonoDetourLogger.LogChannel.Warn,
+                MonoDetourLogger.LogChannel.Warning,
                 "Match succeeded against 'original' instructions as a fallback "
                     + "but failed against current ones. This ILHook still probably works.\n"
                     + "Here's what went wrong when matching against current instructions:\n"

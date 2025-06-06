@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BepInEx.Logging;
 using Mono.Cecil;
+using static MonoDetour.Logging.MonoDetourLogger;
 
 namespace MonoDetour.Logging;
 
@@ -11,25 +12,25 @@ internal static class Patcher
 
     public static void Initialize()
     {
-        MonoDetourLogger.MessageReceived += LogHandler;
+        OnLog += LogHandler;
     }
 
-    static void LogHandler(object sender, MonoDetourLogger.LogEventArgs e)
+    static void LogHandler(LogChannel channel, string message)
     {
-        var logLevel = e.LogChannel switch
+        var logLevel = channel switch
         {
-            MonoDetourLogger.LogChannel.None => LogLevel.None,
-            MonoDetourLogger.LogChannel.Debug => LogLevel.Debug,
-            MonoDetourLogger.LogChannel.Info => LogLevel.Info,
-            MonoDetourLogger.LogChannel.Warn => LogLevel.Warning,
-            MonoDetourLogger.LogChannel.Error => LogLevel.Error,
-            MonoDetourLogger.LogChannel.IL => LogLevel.Debug,
+            LogChannel.None => LogLevel.None,
+            // MonoDetourLogger.LogChannel.Debug => LogLevel.Debug,
+            // MonoDetourLogger.LogChannel.Info => LogLevel.Info,
+            LogChannel.Warning => LogLevel.Warning,
+            LogChannel.Error => LogLevel.Error,
+            LogChannel.IL => LogLevel.Debug,
             _ => throw new ArgumentOutOfRangeException(
                 "A log can only have a single known channel."
             ),
         };
 
-        Log.Log(logLevel, e.Message);
+        Log.Log(logLevel, message);
     }
 
     // Load us https://docs.bepinex.dev/articles/dev_guide/preloader_patchers.html

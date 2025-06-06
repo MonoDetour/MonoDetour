@@ -95,7 +95,7 @@ static class Utils
             if (!hadHandler)
             {
                 hook.Owner.Log(
-                    MonoDetourLogger.LogChannel.Warn,
+                    MonoDetourLogger.LogChannel.Warning,
                     () =>
                         $"No disposal event handler for the {nameof(MonoDetourManager)} was registered."
                 );
