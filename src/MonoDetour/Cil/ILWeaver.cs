@@ -1257,7 +1257,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
             );
         }
 
-        Instruction InstructionAtIndex = Instructions[index];
+        Instruction instructionAtIndex = Instructions[index];
 
         // When inserting before a target instruction that is inside handler ranges,
         // include the inserted instruction inside the start range.
@@ -1265,12 +1265,18 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         {
             foreach (var eh in Body.ExceptionHandlers)
             {
-                if (eh.TryStart == InstructionAtIndex)
+                if (eh.TryStart == instructionAtIndex)
                     eh.TryStart = instruction;
-                if (eh.HandlerStart == InstructionAtIndex)
+                if (eh.HandlerStart == instructionAtIndex)
                     eh.HandlerStart = instruction;
-                if (eh.FilterStart == InstructionAtIndex)
+                if (eh.FilterStart == instructionAtIndex)
                     eh.FilterStart = instruction;
+                // Handler end ranges is exclusive, so we most likely
+                // want our instruction to become the new end
+                if (eh.TryEnd == instructionAtIndex)
+                    eh.TryEnd = instruction;
+                if (eh.HandlerEnd == instructionAtIndex)
+                    eh.HandlerEnd = instruction;
             }
         }
         // TODO: The following is actually terrible default behavior because

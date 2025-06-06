@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Mono.Cecil.Cil;
 using MonoDetour.Cil;
+using MonoDetour.Cil.Analysis;
 using MonoDetour.DetourTypes.Manipulation;
 using MonoDetour.Interop.MonoModUtils;
 using MonoDetour.Logging;
 using MonoMod.Cil;
-using MonoMod.Utils;
 
 namespace MonoDetour.DetourTypes;
 
@@ -85,10 +85,12 @@ public class PostfixDetour : IMonoDetourHookApplier
             MonoDetourLogger.LogChannel.IL,
             () =>
             {
-                w.Method.RecalculateILOffsets();
-                return $"Manipulated by Postfix: {Hook.Manipulator.Name}: {il}";
+                var body = w.Body.CreateInformationalSnapshot().AnnotateErrors();
+                return $"Manipulated by Postfix: {Hook.Manipulator.Name}:\n{body}";
             }
         );
+
+        Utils.DebugValidateCILValidatorNoErrors(Hook, w.Body);
     }
 
     // Taken and adapted from HarmonyX

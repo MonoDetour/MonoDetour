@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil.Cil;
 using MonoDetour.Cil;
+using MonoDetour.Cil.Analysis;
 using MonoDetour.Logging;
 using MonoDetour.Reflection.Unspeakable;
 
@@ -111,6 +113,22 @@ static class Utils
         finally
         {
             hook.Owner.DisposeHooks();
+        }
+    }
+
+    [Conditional("DEBUG")]
+    internal static void DebugValidateCILValidatorNoErrors(
+        IReadOnlyMonoDetourHook hook,
+        Mono.Cecil.Cil.MethodBody body
+    )
+    {
+        var informationalBody = body.CreateInformationalSnapshot().AnnotateErrors();
+        if (informationalBody.HasErrors())
+        {
+            hook.Owner.Log(
+                MonoDetourLogger.LogChannel.Error,
+                $"Hook CIL validation failed! {hook.Manipulator.Name}\n{informationalBody.ToErrorMessageString()}"
+            );
         }
     }
 }

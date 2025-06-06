@@ -371,7 +371,7 @@ internal class InformationalInstruction(
     internal static void CrawlInstructions(
         InformationalInstruction instruction,
         Dictionary<Instruction, InformationalInstruction> map,
-        ref int stackSize,
+        int stackSize,
         MethodBody body,
         int distance,
         bool outsideExceptionHandler = true
@@ -411,6 +411,9 @@ internal class InformationalInstruction(
             enumerable.explored = true;
 
             evaluateDistanceAndMoveNext:
+            // Important when rewriting distance
+            stackSize = enumerable.StackSize;
+
             enumerable.Distance = distance;
             if (outsideExceptionHandler)
                 distance += 10_000;
@@ -477,7 +480,7 @@ internal class InformationalInstruction(
                 CrawlInstructions(
                     informationalTarget,
                     map,
-                    ref stackSize,
+                    stackSize,
                     body,
                     distance,
                     outsideExceptionHandler
@@ -518,7 +521,7 @@ internal class InformationalInstruction(
                     CrawlInstructions(
                         informationalTarget,
                         map,
-                        ref stackSize,
+                        stackSize,
                         body,
                         distance,
                         outsideExceptionHandler

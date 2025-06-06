@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Mono.Cecil.Cil;
 using MonoDetour.Cil;
+using MonoDetour.Cil.Analysis;
 using MonoDetour.DetourTypes.Manipulation;
 using MonoDetour.Logging;
 using MonoMod.Cil;
@@ -100,9 +101,11 @@ public class PrefixDetour : IMonoDetourHookApplier
             MonoDetourLogger.LogChannel.IL,
             () =>
             {
-                w.Method.RecalculateILOffsets();
-                return $"Manipulated by Prefix: {Hook.Manipulator.Name}: {il}";
+                var body = w.Body.CreateInformationalSnapshot().AnnotateErrors();
+                return $"Manipulated by Prefix: {Hook.Manipulator.Name}:\n{body}";
             }
         );
+
+        Utils.DebugValidateCILValidatorNoErrors(Hook, w.Body);
     }
 }

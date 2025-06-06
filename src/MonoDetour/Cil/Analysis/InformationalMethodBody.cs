@@ -28,6 +28,7 @@ internal class InformationalMethodBody
         IList<Instruction> enumerableInstructions = bodyInstructions;
         HashSet<Instruction> originalInstructions = [];
         HashSet<Instruction> originallyDuplicateInstructions = [];
+        Dictionary<Instruction, Instruction> duplicateInstructionToCopy = [];
 
         foreach (var instruction in bodyInstructions)
         {
@@ -51,6 +52,7 @@ internal class InformationalMethodBody
                     newIns.Offset = offset;
                     enumerableInstructions.Add(newIns);
                     originallyDuplicateInstructions.Add(newIns);
+                    duplicateInstructionToCopy.Add(instruction, newIns);
                 }
                 else
                 {
@@ -113,34 +115,59 @@ internal class InformationalMethodBody
         }
 
         int stackSize = 0;
-        CrawlInstructions(Instructions[0], map, ref stackSize, body, distance: 0);
+        CrawlInstructions(Instructions[0], map, stackSize, body, distance: 0);
 
         foreach (var eh in body.ExceptionHandlers)
         {
-            stackSize = 1;
+            stackSize = 0;
 
-            if (eh.FilterStart is not null)
+            if (eh.HandlerType is ExceptionHandlerType.Filter or ExceptionHandlerType.Catch)
             {
-                CrawlInstructions(
-                    map[eh.FilterStart],
-                    map,
-                    ref stackSize,
-                    body,
-                    map[eh.HandlerEnd].Distance - 10_000 + 1,
-                    outsideExceptionHandler: false
-                );
+                stackSize = 1;
             }
-            if (eh.HandlerStart is not null)
+
+            if (eh.HandlerStart is null || eh.HandlerEnd is null)
             {
-                CrawlInstructions(
-                    map[eh.HandlerStart],
-                    map,
-                    ref stackSize,
-                    body,
-                    map[eh.HandlerEnd].Distance - 9_000,
-                    outsideExceptionHandler: false
-                );
+                continue;
             }
+
+            if (!duplicateInstructionToCopy.TryGetValue(eh.HandlerStart, out var handlerStart))
+            {
+                handlerStart = eh.HandlerStart;
+            }
+
+            if (!duplicateInstructionToCopy.TryGetValue(eh.HandlerEnd, out var handlerEnd))
+            {
+                handlerEnd = eh.HandlerEnd;
+            }
+
+            CrawlInstructions(
+                map[handlerStart],
+                map,
+                stackSize,
+                body,
+                map[handlerEnd].Distance - 9_000,
+                outsideExceptionHandler: false
+            );
+
+            if (eh.FilterStart is null)
+            {
+                continue;
+            }
+
+            if (!duplicateInstructionToCopy.TryGetValue(eh.FilterStart, out var filterStart))
+            {
+                filterStart = eh.FilterStart;
+            }
+
+            CrawlInstructions(
+                map[filterStart],
+                map,
+                stackSize,
+                body,
+                map[handlerEnd].Distance - 10_000 + 1,
+                outsideExceptionHandler: false
+            );
         }
     }
 
@@ -196,25 +223,8 @@ internal class InformationalMethodBody
         return sb.ToString();
     }
 
-    static void TryAppendDuplicates(StringBuilder sb, InformationalMethodBody body)
-    {
-        if (!body.HasDuplicates)
-        {
-            return;
-        }
-
-        sb.AppendLine("Warning: Duplicate instruction instances; These may break the method");
-
-        var instructions = body.Duplicates.ToList();
-        var end = instructions.Count - 1;
-
-        for (int i = 0; i < end; i++)
-        {
-            sb.Append($"├ ").AppendLine(instructions[i].ToString());
-        }
-
-        sb.Append($"└ ").AppendLine(instructions[end].ToString());
-    }
+    public override string ToString() =>
+        CecilMethodBody.Method.FullName + "\n" + ToStringWithAnnotations();
 
     /// <summary>
     /// To string with annotations.
