@@ -172,6 +172,8 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         return this;
     }
 
+    // TODO: Make variations like ILLabel DefineLabel
+
     /// <summary>
     /// Defines a new <see cref="ILLabel"/> to be targeted.
     /// </summary>
@@ -1462,10 +1464,23 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         IL.Create(opcode, variable);
 
     /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
-    public Instruction Create(OpCode opcode, Instruction[] targets) => IL.Create(opcode, targets);
+    public Instruction Create(OpCode opcode, Instruction[] targets)
+    {
+        ILLabel[] labels = new ILLabel[targets.Length];
+        for (int i = 0; i < targets.Length; i++)
+        {
+            MarkLabelTo(targets[i], out var label);
+            labels[i] = label;
+        }
+        return IL.Create(opcode, targets);
+    }
 
     /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
-    public Instruction Create(OpCode opcode, Instruction target) => IL.Create(opcode, target);
+    public Instruction Create(OpCode opcode, Instruction target)
+    {
+        MarkLabelTo(target, out var label);
+        return IL.Create(opcode, label);
+    }
 
     /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, double value) => IL.Create(opcode, value);
