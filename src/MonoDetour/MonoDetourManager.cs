@@ -163,7 +163,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where TApplier : IMonoDetourHookApplier =>
+        where TApplier : class, IMonoDetourHookApplier =>
         Hook<TApplier>(target.Method, manipulator.Method, config, applyByDefault);
 
     /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
@@ -173,7 +173,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where TApplier : IMonoDetourHookApplier =>
+        where TApplier : class, IMonoDetourHookApplier =>
         Hook<TApplier>(target, manipulator.Method, config, applyByDefault);
 
     /// <summary>
@@ -197,7 +197,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where TApplier : IMonoDetourHookApplier
+        where TApplier : class, IMonoDetourHookApplier
     {
         ThrowIfDisposed();
         return MonoDetourHook.Create<TApplier>(target, manipulator, this, config, applyByDefault);

@@ -18,10 +18,10 @@ static class Utils
         Type enumeratorType
     )
     {
-        var preBuildMethod = speakableEnumeratorType.GetMethod("PreBuildFieldReferenceGetters");
+        var preBuildMethod = speakableEnumeratorType.GetMethod("PreBuildFieldReferenceGetters")!;
         preBuildMethod.Invoke(null, [enumeratorType]);
 
-        MethodInfo method = speakableEnumeratorType.GetMethod("GetOrCreate");
+        MethodInfo method = speakableEnumeratorType.GetMethod("GetOrCreate")!;
         w.InsertBeforeCurrent(w.Create(OpCodes.Call, method));
     }
 
@@ -57,8 +57,14 @@ static class Utils
                 var firstArg = hook.Manipulator.GetParameters().First().ParameterType;
                 if (typeof(ISpeakableEnumerator).IsAssignableFrom(firstArg))
                 {
+                    var targetDeclaringType =
+                        hook.Target.DeclaringType
+                        ?? throw new NullReferenceException(
+                            "Declaring type of target method is null!"
+                        );
+
                     w.InsertBeforeCurrent(w.Create(OpCodes.Ldarg, origParam.Index));
-                    WriteSpeakableEnumerator(w, firstArg, hook.Target.DeclaringType);
+                    WriteSpeakableEnumerator(w, firstArg, targetDeclaringType);
                 }
                 else
                 {

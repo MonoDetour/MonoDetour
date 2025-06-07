@@ -32,7 +32,7 @@ static class ILHookDMDManipulation
     static ILHook getDmdBeforeManipulationHook = null!;
 
     static readonly MonoDetourManager m = new(
-        typeof(ILHookDMDManipulation).Assembly.GetName().Name
+        typeof(ILHookDMDManipulation).Assembly.GetName().Name!
     );
 
     static bool initialized = false;

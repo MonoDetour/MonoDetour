@@ -19,15 +19,15 @@ readme = "./README.md"
 outdir = "../../artifacts/thunderstore/"
 
 [[build.copy]]
-source = "../../artifacts/bin/MonoDetour/release/com.github.MonoDetour.dll"
+source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.dll"
 target = "core/"
 
 [[build.copy]]
-source = "../../artifacts/bin/MonoDetour/release/com.github.MonoDetour.Reflection.dll"
+source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Reflection.dll"
 target = "core/"
 
 [[build.copy]]
-source = "../../artifacts/bin/MonoDetour/release/com.github.MonoDetour.Bindings.Reorg.dll"
+source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Bindings.Reorg.dll"
 target = "core/"
 
 # TODO: Maybe add changelog?

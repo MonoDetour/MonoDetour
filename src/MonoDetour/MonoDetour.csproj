@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>$(MonoDetourTargetFrameworks)</TargetFrameworks>
     <AssemblyName>com.github.MonoDetour</AssemblyName>
     <VersionPrefix>$(MonoDetourVersionPrefix)</VersionPrefix>
     <VersionSuffix>$(MonoDetourVersionSuffix)</VersionSuffix>
@@ -34,9 +34,12 @@
   </ItemGroup>
   <!-- Include local project references in this NuGet package. -->
   <Target Name="PackDependencies" BeforeTargets="GenerateNuspec">
+    <PropertyGroup>
+      <TargetDirs>$(OutputPath)*/</TargetDirs>
+    </PropertyGroup>
     <ItemGroup>
-      <_PackageFiles Include="$(TargetDir)*MonoDetour.*.dll;$(TargetDir)*MonoDetour.*.xml">
-        <PackagePath>lib/$(TargetFramework)/%(RecursiveDir)</PackagePath>
+      <_PackageFiles Include="$(TargetDirs)*MonoDetour.*.dll;$(TargetDirs)*MonoDetour.*.xml">
+        <PackagePath>lib/%(RecursiveDir)</PackagePath>
         <Visible>false</Visible>
         <BuildAction>Content</BuildAction>
       </_PackageFiles>

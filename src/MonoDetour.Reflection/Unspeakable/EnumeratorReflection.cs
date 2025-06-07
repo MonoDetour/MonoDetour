@@ -30,6 +30,8 @@ file static class EnumeratorExtensionsCache<T>
 /// </summary>
 public static class EnumeratorReflection
 {
+    const string DeclaringTypeNull = "Declaring type of method is null!";
+
     /// <returns></returns>
     /// <inheritdoc cref="EnumeratorFastFieldReferenceThis{T}(MethodInfo)"/>
     public static void EnumeratorFastFieldReferenceThis<T>(
@@ -40,7 +42,9 @@ public static class EnumeratorReflection
     /// <inheritdoc cref="EnumeratorFastFieldReferenceThis{T}(Type)"/>
     public static EnumeratorFieldReferenceGetter<T> EnumeratorFastFieldReferenceThis<T>(
         this MethodInfo methodInfo
-    ) => methodInfo.DeclaringType.EnumeratorFastFieldReferenceThis<T>();
+    ) =>
+        methodInfo.DeclaringType?.EnumeratorFastFieldReferenceThis<T>()
+        ?? throw new NullReferenceException(DeclaringTypeNull);
 
     /// <returns></returns>
     /// <inheritdoc cref="EnumeratorFastFieldReferenceThis{T}(Type)"/>
@@ -68,7 +72,9 @@ public static class EnumeratorReflection
     /// <inheritdoc cref="EnumeratorFastFieldReferenceCurrent{T}(Type)"/>
     public static EnumeratorFieldReferenceGetter<T> EnumeratorFastFieldReferenceCurrent<T>(
         this MethodInfo methodInfo
-    ) => methodInfo.DeclaringType.EnumeratorFastFieldReferenceCurrent<T>();
+    ) =>
+        methodInfo.DeclaringType?.EnumeratorFastFieldReferenceCurrent<T>()
+        ?? throw new NullReferenceException(DeclaringTypeNull);
 
     /// <returns></returns>
     /// <inheritdoc cref="EnumeratorFastFieldReferenceCurrent{T}(Type)"/>
@@ -96,7 +102,9 @@ public static class EnumeratorReflection
     /// <inheritdoc cref="EnumeratorFastFieldReferenceState(Type)"/>
     public static EnumeratorFieldReferenceGetter<int> EnumeratorFastFieldReferenceState(
         this MethodInfo methodInfo
-    ) => methodInfo.DeclaringType.EnumeratorFastFieldReferenceState();
+    ) =>
+        methodInfo.DeclaringType?.EnumeratorFastFieldReferenceState()
+        ?? throw new NullReferenceException(DeclaringTypeNull);
 
     /// <returns></returns>
     /// <inheritdoc cref="EnumeratorFastFieldReferenceState(Type)"/>
@@ -126,7 +134,9 @@ public static class EnumeratorReflection
     public static EnumeratorFieldReferenceGetter<T> EnumeratorFastFieldReference<T>(
         this MethodInfo methodInfo,
         string fieldName
-    ) => methodInfo.DeclaringType.EnumeratorFastFieldReference<T>(fieldName);
+    ) =>
+        methodInfo.DeclaringType?.EnumeratorFastFieldReference<T>(fieldName)
+        ?? throw new NullReferenceException(DeclaringTypeNull);
 
     /// <returns></returns>
     /// <inheritdoc cref="EnumeratorFastFieldReference{T}(Type, string)"/>

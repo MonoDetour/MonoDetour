@@ -32,7 +32,7 @@ static class ProxyILHookConstructor
     {
         var getter =
             typeof(DetourContext)
-                .GetProperty("Current", BindingFlags.Static | BindingFlags.NonPublic)
+                .GetProperty("Current", BindingFlags.Static | BindingFlags.NonPublic)!
                 .GetGetMethod(nonPublic: true)
             ?? throw new NullReferenceException("Couldn't find 'DetourContext.get_Current'.");
 

@@ -67,7 +67,7 @@ public class MonoDetourHook : IMonoDetourHook
         ApplierType = applierType;
         Config = config;
 
-        var applierInstance = (IMonoDetourHookApplier)Activator.CreateInstance(applierType);
+        var applierInstance = (IMonoDetourHookApplier)Activator.CreateInstance(applierType)!;
         applierInstance.Hook = this;
 
         owner.Hooks.Add(this);
@@ -102,7 +102,7 @@ public class MonoDetourHook : IMonoDetourHook
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where TApplier : IMonoDetourHookApplier =>
+        where TApplier : class, IMonoDetourHookApplier =>
         new(target, manipulator, typeof(TApplier), owner, config, applyByDefault);
 
     /// <inheritdoc/>

@@ -8,7 +8,7 @@ internal static class MonoModVersion
 
     static MonoModVersion()
     {
-        if (typeof(Hook).Assembly.GetName().Version.Major >= 25)
+        if (typeof(Hook).Assembly.GetName().Version!.Major >= 25)
         {
             IsReorg = true;
         }

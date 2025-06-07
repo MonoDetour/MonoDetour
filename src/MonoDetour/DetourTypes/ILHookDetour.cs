@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Threading;
 using MonoDetour.Cil;
 using MonoDetour.DetourTypes.Manipulation;
 using MonoMod.Cil;
@@ -23,6 +24,9 @@ public class ILHookDetour : IMonoDetourHookApplier
                 Delegate.CreateDelegate(
                     typeof(ILManipulationInfo.Manipulator),
                     Hook.Manipulator as MethodInfo
+                        ?? throw new InvalidCastException(
+                            $"{nameof(Hook)} {nameof(Hook.Manipulator)} method is not {nameof(MethodInfo)}!"
+                        )
                 );
         }
     }
