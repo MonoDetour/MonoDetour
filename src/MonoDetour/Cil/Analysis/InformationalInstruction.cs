@@ -145,7 +145,7 @@ internal class InformationalInstruction(
             if (previous is null)
             {
                 sb.AppendLine($"{VariableEmptyPad}│ Info: Previous instruction:");
-                sb.Append($"{VariableEmptyPad}├ ").AppendLine($"0 | <before method body>");
+                sb.Append($"{VariableEmptyPad}├ ").AppendLine($" 0 | <before method body>");
             }
             else if (!incomingBranches.Contains(previous))
             {
