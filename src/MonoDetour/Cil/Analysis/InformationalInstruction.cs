@@ -141,8 +141,13 @@ internal class InformationalInstruction(
 
             sb.Append(" and ").AppendLine(last.StackSize.ToString());
 
-            var previous = MismatchInstruction.PreviousChronological!;
-            if (!incomingBranches.Contains(previous))
+            var previous = MismatchInstruction.PreviousChronological;
+            if (previous is null)
+            {
+                sb.AppendLine($"{VariableEmptyPad}│ Info: Previous instruction:");
+                sb.Append($"{VariableEmptyPad}├ ").AppendLine($"0 | <before method body>");
+            }
+            else if (!incomingBranches.Contains(previous))
             {
                 sb.AppendLine($"{VariableEmptyPad}│ Info: Previous instruction:");
                 sb.Append($"{VariableEmptyPad}├ ").AppendLine(previous.ToString());
@@ -702,13 +707,16 @@ internal class InformationalInstruction(
     {
         while (true)
         {
-            collected.Add(instruction);
+            if (!collected.Add(instruction))
+            {
+                return;
+            }
 
             foreach (var branch in instruction.IncomingBranches)
                 CollectIncoming(branch, ref collected);
 
             var previous = instruction.PreviousChronological;
-            if (previous is null || collected.Contains(previous))
+            if (previous is null)
                 break;
 
             instruction = previous;
