@@ -66,7 +66,10 @@ public static partial class ILWeaverTryCatchTests
             typeof(Exception).GetConstructor([]) ?? throw new NullReferenceException();
 
         w.CurrentTo(w.Body.ExceptionHandlers.First().TryStart);
-        w.InsertBeforeCurrent(w.Create(OpCodes.Newobj, exceptionCtor), w.Create(OpCodes.Throw));
+        w.InsertBeforeCurrentStealLabels(
+            w.Create(OpCodes.Newobj, exceptionCtor),
+            w.Create(OpCodes.Throw)
+        );
     }
 
     static bool HasTryCatchAndReturnFalse()

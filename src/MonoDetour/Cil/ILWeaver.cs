@@ -23,6 +23,13 @@ namespace MonoDetour.Cil;
 
 public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
 {
+    private enum InsertType
+    {
+        BeforeAndStealLabels,
+        Before,
+        After,
+    }
+
     /// <inheritdoc cref="ILManipulationInfo"/>
     public ILManipulationInfo ManipulationInfo { get; } = il;
 
@@ -1242,7 +1249,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         return GetResult();
     }
 
-    ILWeaver InsertAtInternal(int index, Instruction instruction, bool insertAfterIndex)
+    ILWeaver InsertAtInternal(int index, Instruction instruction, InsertType insertType)
     {
         Helpers.ThrowIfNull(instruction);
 
@@ -1263,7 +1270,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
 
         // When inserting before a target instruction that is inside handler ranges,
         // include the inserted instruction inside the start range.
-        if (!insertAfterIndex)
+        if (insertType is InsertType.BeforeAndStealLabels)
         {
             foreach (var eh in Body.ExceptionHandlers)
             {
@@ -1281,23 +1288,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
                     eh.HandlerEnd = instruction;
             }
         }
-        // TODO: The following is actually terrible default behavior because
-        // hander end ranges are exclusive (end instruction is after leave instruction).
-        // Should this even be an option?
-        // // In this case we are inserting after a target instruction,
-        // // so we want our instruction to be inside the end range.
-        // // else
-        // // {
-        // //     foreach (var eh in Body.ExceptionHandlers)
-        // //     {
-        // //         if (eh.TryEnd == InstructionAtIndex)
-        // //             eh.TryEnd = instruction;
-        // //         if (eh.HandlerEnd == InstructionAtIndex)
-        // //             eh.HandlerEnd = instruction;
-        // //     }
-        // // }
-
-        if (insertAfterIndex)
+        else if (insertType is InsertType.After)
         {
             index += 1;
         }
@@ -1328,18 +1319,53 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     }
 
     /// <summary>
-    /// Insert instructions before the provided index.
+    /// Insert instructions before the provided index, stealing any labels.
     /// </summary>
     /// <remarks>
-    /// If the instruction at the provided index is inside the start of
-    /// a try, filter, or catch range, then the first inserted instruction
-    /// will become the new start of that range.
+    /// Stealing labels means that if the instruction at the provided index has
+    /// incoming <see cref="ILLabel"/>s or is inside the start of
+    /// a try, filter, catch, finally, or fault range, then the first inserted
+    /// instruction will become the new start of that range or label.
+    /// The same applies to the ends of these handler ranges because they are
+    /// exclusive, meaning that the inclusive end of a range is before the
+    /// instruction marked as the end.
     /// </remarks>
+    public ILWeaver InsertBeforeStealLabels(int index, params IEnumerable<Instruction> instructions)
+    {
+        foreach (var instruction in instructions)
+        {
+            InsertAtInternal(index, instruction, InsertType.BeforeAndStealLabels);
+            index++;
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Insert instructions before the provided instruction, stealing any labels.
+    /// </summary>
+    /// <inheritdoc cref="InsertBeforeStealLabels(int, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBeforeStealLabels(
+        Instruction target,
+        params IEnumerable<Instruction> instructions
+    ) => InsertBeforeStealLabels(Instructions.IndexOf(target), instructions);
+
+    /// <summary>
+    /// Insert instructions before this weaver's current position, stealing any labels.
+    /// Current target doesn't change.
+    /// </summary>
+    /// <inheritdoc cref="InsertBeforeStealLabels(int, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBeforeCurrentStealLabels(params IEnumerable<Instruction> instructions) =>
+        InsertBeforeStealLabels(Index, instructions);
+
+    /// <summary>
+    /// Insert instructions before the provided index.
+    /// </summary>
     public ILWeaver InsertBefore(int index, params IEnumerable<Instruction> instructions)
     {
         foreach (var instruction in instructions)
         {
-            InsertAtInternal(index, instruction, insertAfterIndex: false);
+            InsertAtInternal(index, instruction, InsertType.Before);
             index++;
         }
 
@@ -1349,11 +1375,6 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// <summary>
     /// Insert instructions before the provided instruction.
     /// </summary>
-    /// <remarks>
-    /// If the provided target instruction is inside the start of
-    /// a try, filter, or catch range, then the first inserted instruction
-    /// will become the new start of that range.
-    /// </remarks>
     public ILWeaver InsertBefore(
         Instruction target,
         params IEnumerable<Instruction> instructions
@@ -1361,29 +1382,18 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
 
     /// <summary>
     /// Insert instructions before this weaver's current position.
-    /// Current target doesn't change.
     /// </summary>
-    /// <remarks>
-    /// If <see cref="Current"/> is inside the start of
-    /// a try, filter, or catch range, then the first inserted instruction
-    /// will become the new start of that range.
-    /// </remarks>
     public ILWeaver InsertBeforeCurrent(params IEnumerable<Instruction> instructions) =>
         InsertBefore(Index, instructions);
 
     /// <summary>
     /// Insert instructions after the provided index.
     /// </summary>
-    /// <remarks>
-    /// If the instruction at the provided index is inside the end of
-    /// a try or a catch range, then the last inserted instruction
-    /// will become the new end of that range.
-    /// </remarks>
     public ILWeaver InsertAfter(int index, params IEnumerable<Instruction> instructions)
     {
         foreach (var instruction in instructions)
         {
-            InsertAtInternal(index, instruction, insertAfterIndex: true);
+            InsertAtInternal(index, instruction, InsertType.After);
             index++;
         }
 
@@ -1393,11 +1403,6 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// <summary>
     /// Insert instructions after the provided instruction.
     /// </summary>
-    /// <remarks>
-    /// If the provided target instruction is inside the end of
-    /// a try or a catch range, then the last inserted instruction
-    /// will become the new end of that range.
-    /// </remarks>
     public ILWeaver InsertAfter(Instruction target, params IEnumerable<Instruction> instructions) =>
         InsertAfter(Instructions.IndexOf(target), instructions);
 
@@ -1405,17 +1410,12 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// Insert instructions after this weaver's current position.
     /// Retargets Current to the last inserted instruction.
     /// </summary>
-    /// <remarks>
-    /// If <see cref="Current"/> is inside the end of
-    /// a try or a catch range, then the last inserted instruction
-    /// will become the new end of that range.
-    /// </remarks>
     public ILWeaver InsertAfterCurrent(params IEnumerable<Instruction> instructions)
     {
         int index = Index;
         foreach (var instruction in instructions)
         {
-            InsertAtInternal(index, instruction, insertAfterIndex: true);
+            InsertAtInternal(index, instruction, InsertType.After);
             CurrentTo(instruction);
             index++;
         }

@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using Mono.Cecil.Cil;
 using MonoDetour.Cil;
@@ -6,7 +5,6 @@ using MonoDetour.Cil.Analysis;
 using MonoDetour.DetourTypes.Manipulation;
 using MonoDetour.Logging;
 using MonoMod.Cil;
-using MonoMod.Utils;
 
 namespace MonoDetour.DetourTypes;
 
@@ -24,8 +22,6 @@ public class PrefixDetour : IMonoDetourHookApplier
         HookTargetRecords.HookTargetInfo info = HookTargetRecords.GetHookTargetInfo(il);
         ILWeaver w = new(new(il, Hook.Target));
         bool modifiesReturnValue = Hook.ModifiesControlFlow() && info.ReturnValue is not null;
-
-        w.InsertBeforeCurrent(w.Create(OpCodes.Nop));
 
         w.HandlerCreateCatch(null, out var handler);
         w.MarkLabelToFutureNextInsert(out var tryStart);
