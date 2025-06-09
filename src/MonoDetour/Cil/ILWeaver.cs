@@ -30,6 +30,13 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         After,
     }
 
+    private enum MatchPassType
+    {
+        StrictNoOriginalPass,
+        RelaxedAllowOriginalPass,
+        IsOriginalPass,
+    }
+
     /// <inheritdoc cref="ILManipulationInfo"/>
     public ILManipulationInfo ManipulationInfo { get; } = il;
 
@@ -855,8 +862,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         MatchInternal(
             allowMultipleMatches: false,
             null,
-            allowSecondPass: true,
-            secondPassMatchOriginalInstructions: false,
+            passType: MatchPassType.RelaxedAllowOriginalPass,
             predicates
         );
 
@@ -895,8 +901,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         MatchInternal(
             allowMultipleMatches: false,
             null,
-            allowSecondPass: false,
-            secondPassMatchOriginalInstructions: false,
+            passType: MatchPassType.StrictNoOriginalPass,
             predicates
         );
 
@@ -944,8 +949,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         MatchInternal(
             allowMultipleMatches: true,
             onMatch,
-            allowSecondPass: true,
-            secondPassMatchOriginalInstructions: false,
+            passType: MatchPassType.RelaxedAllowOriginalPass,
             predicates
         );
 
@@ -990,16 +994,14 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         MatchInternal(
             allowMultipleMatches: true,
             onMatch,
-            allowSecondPass: false,
-            secondPassMatchOriginalInstructions: false,
+            passType: MatchPassType.StrictNoOriginalPass,
             predicates
         );
 
     ILWeaverResult MatchInternal(
         bool allowMultipleMatches,
         Action<ILWeaver>? onMatched,
-        bool allowSecondPass,
-        bool secondPassMatchOriginalInstructions,
+        MatchPassType passType,
         params Predicate<Instruction>[] predicates
     )
     {
@@ -1012,11 +1014,13 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         Instruction singleMatchCurrent = Current;
 
         List<int> matchedIndexes = [];
+        List<Instruction> matchedInstructionsStart = [];
         List<(int count, int indexBeforeFailed)> bestAttempts = [(0, 0)];
 
-        IList<Instruction> instructions = secondPassMatchOriginalInstructions
-            ? ManipulationInfo.OriginalInstructions
-            : Instructions;
+        IList<Instruction> instructions =
+            passType is MatchPassType.IsOriginalPass
+                ? ManipulationInfo.OriginalInstructions
+                : Instructions;
 
         int predicatesMatched = 0;
         for (int i = 0; i < instructions.Count; i++)
@@ -1045,6 +1049,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
 
             predicatesMatched = 0;
             matchedIndexes.Add(i);
+            matchedInstructionsStart.Add(instructions[i - predicates.Length + 1]);
 
             // It's possible that the User didn't set Current in the matching predicates.
             // We don't want that to happen, but I don't like the idea of keeping state about
@@ -1058,7 +1063,9 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
 
             if (allowMultipleMatches)
             {
-                onMatched!(Clone());
+                // We don't execute `onMatched` until everything is matched
+                // because otherwise we would potentially be matching against
+                // newly inserted instructions in an infinite loop.
             }
             else
             {
@@ -1071,21 +1078,35 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
 
         if (allowMultipleMatches)
         {
-            // When matching multiple, keep original for this weaver in any case.
-            CurrentTo(originalCurrent);
-
             if (matchedIndexes.Count > 0)
             {
+                // Re-evaluate predicates so all variables set in them
+                // will be correct in the onMatched call.
+                foreach (var matchedInstruction in matchedInstructionsStart)
+                {
+                    int startIndex = instructions.IndexOf(matchedInstruction);
+                    int endIndex = startIndex + predicates.Length;
+
+                    for (int i = startIndex; i < endIndex; i++)
+                    {
+                        predicates[predicatesMatched](instructions[i]);
+                    }
+
+                    onMatched!(Clone());
+                }
+                // When matching multiple, keep original for this weaver in any case.
+                CurrentTo(originalCurrent);
                 return new ILWeaverResult(this, null);
             }
 
-            if (allowSecondPass && !secondPassMatchOriginalInstructions)
+            CurrentTo(originalCurrent);
+
+            if (passType is MatchPassType.RelaxedAllowOriginalPass)
             {
                 var secondPassResult = MatchInternal(
                     allowMultipleMatches,
                     onMatched,
-                    allowSecondPass,
-                    secondPassMatchOriginalInstructions: true,
+                    passType: MatchPassType.IsOriginalPass,
                     predicates
                 );
 
@@ -1104,13 +1125,12 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
                 return new ILWeaverResult(this, null);
             }
 
-            if (allowSecondPass && !secondPassMatchOriginalInstructions)
+            if (passType is MatchPassType.RelaxedAllowOriginalPass)
             {
                 var secondPassResult = MatchInternal(
                     allowMultipleMatches,
                     onMatched,
-                    allowSecondPass,
-                    secondPassMatchOriginalInstructions: true,
+                    passType: MatchPassType.IsOriginalPass,
                     predicates
                 );
 
@@ -1287,6 +1307,8 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
                 if (eh.HandlerEnd == instructionAtIndex)
                     eh.HandlerEnd = instruction;
             }
+
+            RetargetLabels(GetIncomingLabelsFor(instructionAtIndex), instruction);
         }
         else if (insertType is InsertType.After)
         {
