@@ -186,7 +186,11 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         return this;
     }
 
-    // TODO: Make variations like ILLabel DefineLabel
+    /// <summary>
+    /// Defines a new <see cref="ILLabel"/> to be targeted.
+    /// </summary>
+    /// <returns>The new <see cref="ILLabel"/>.</returns>
+    public ILLabel DefineLabel() => Context.DefineLabel();
 
     /// <summary>
     /// Defines a new <see cref="ILLabel"/> to be targeted.
@@ -217,11 +221,19 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// </summary>
     /// <param name="markedLabel">The marked label.</param>
     /// <returns>This <see cref="ILWeaver"/>.</returns>
-    public ILWeaver MarkLabelTo(Instruction target, out ILLabel markedLabel)
+    public ILWeaver DefineAndMarkLabelTo(Instruction target, out ILLabel markedLabel)
     {
         Helpers.ThrowIfNull(target);
         markedLabel = Context.DefineLabel(target);
         return this;
+    }
+
+    /// <returns>The new <see cref="ILLabel"/>.</returns>
+    ///<inheritdoc cref="DefineAndMarkLabelTo(Instruction, out ILLabel)"/>
+    public ILLabel DefineAndMarkLabelTo(Instruction target)
+    {
+        DefineAndMarkLabelTo(target, out var markedLabel);
+        return markedLabel;
     }
 
     /// <summary>
@@ -241,11 +253,19 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// </summary>
     /// <param name="futureMarkedLabel">The marked label.</param>
     /// <returns>This <see cref="ILWeaver"/>.</returns>
-    public ILWeaver MarkLabelToFutureNextInsert(out ILLabel futureMarkedLabel)
+    public ILWeaver DefineAndMarkLabelToFutureNextInsert(out ILLabel futureMarkedLabel)
     {
         futureMarkedLabel = Context.DefineLabel();
         pendingFutureNextInsertLabels.Add(futureMarkedLabel);
         return this;
+    }
+
+    /// <returns>The new <see cref="ILLabel"/>.</returns>
+    ///<inheritdoc cref="DefineAndMarkLabelToFutureNextInsert(out ILLabel)"/>
+    public ILLabel DefineAndMarkLabelToFutureNextInsert()
+    {
+        DefineAndMarkLabelToFutureNextInsert(out var futureMarkedLabel);
+        return futureMarkedLabel;
     }
 
     /// <summary>
@@ -272,17 +292,25 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// Targets <see cref="Current"/> as a placeholder.
     /// </summary>
     /// <remarks>
-    /// Prefer <see cref="MarkLabelToFutureNextInsert(out ILLabel)"/> if the label
+    /// Prefer <see cref="DefineAndMarkLabelToFutureNextInsert(out ILLabel)"/> if the label
     /// will always be redirected to an inserted instruction. Using this
     /// method will then show that there branches where a next instruction isn't inserted.
     /// </remarks>
     /// <param name="futureMarkedLabel">The marked label.</param>
     /// <returns>This <see cref="ILWeaver"/>.</returns>
-    public ILWeaver MarkLabelToCurrentOrFutureNextInsert(out ILLabel futureMarkedLabel)
+    public ILWeaver DefineAndMarkLabelToCurrentOrFutureNextInsert(out ILLabel futureMarkedLabel)
     {
         futureMarkedLabel = Context.DefineLabel(Current);
         pendingFutureNextInsertLabels.Add(futureMarkedLabel);
         return this;
+    }
+
+    /// <returns>The new <see cref="ILLabel"/>.</returns>
+    ///<inheritdoc cref="DefineAndMarkLabelToCurrentOrFutureNextInsert(out ILLabel)"/>
+    public ILLabel DefineAndMarkLabelToCurrentOrFutureNextInsert()
+    {
+        DefineAndMarkLabelToCurrentOrFutureNextInsert(out var futureMarkedLabel);
+        return futureMarkedLabel;
     }
 
     /// <summary>
@@ -302,10 +330,18 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// </summary>
     /// <param name="markedLabel">The marked label.</param>
     /// <returns>This <see cref="ILWeaver"/>.</returns>
-    public ILWeaver MarkLabelToCurrent(out ILLabel markedLabel)
+    public ILWeaver DefineAndMarkLabelToCurrent(out ILLabel markedLabel)
     {
         markedLabel = Context.DefineLabel(Current);
         return this;
+    }
+
+    /// <returns>The new <see cref="ILLabel"/>.</returns>
+    ///<inheritdoc cref="DefineAndMarkLabelToCurrent(out ILLabel)"/>
+    public ILLabel DefineAndMarkLabelToCurrent()
+    {
+        DefineAndMarkLabelToCurrent(out var markedLabel);
+        return markedLabel;
     }
 
     /// <summary>
@@ -328,10 +364,18 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// </summary>
     /// <param name="markedLabel">The marked label.</param>
     /// <inheritdoc cref="MarkLabelToCurrentPrevious(ILLabel)"/>
-    public ILWeaver MarkLabelToCurrentPrevious(out ILLabel markedLabel)
+    public ILWeaver DefineAndMarkLabelToCurrentPrevious(out ILLabel markedLabel)
     {
         markedLabel = Context.DefineLabel(Current.Previous);
         return this;
+    }
+
+    /// <returns>The new <see cref="ILLabel"/>.</returns>
+    ///<inheritdoc cref="DefineAndMarkLabelToCurrentPrevious(out ILLabel)"/>
+    public ILLabel DefineAndMarkLabelToCurrentPrevious()
+    {
+        DefineAndMarkLabelToCurrentPrevious(out var markedLabel);
+        return markedLabel;
     }
 
     /// <summary>
@@ -354,10 +398,18 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// </summary>
     /// <param name="markedLabel">The marked label.</param>
     /// <inheritdoc cref="MarkLabelToCurrentNext(ILLabel)"/>
-    public ILWeaver MarkLabelToCurrentNext(out ILLabel markedLabel)
+    public ILWeaver DefineAndMarkLabelToCurrentNext(out ILLabel markedLabel)
     {
         markedLabel = Context.DefineLabel(Current.Next);
         return this;
+    }
+
+    /// <returns>The new <see cref="ILLabel"/>.</returns>
+    ///<inheritdoc cref="DefineAndMarkLabelToCurrentNext(out ILLabel)"/>
+    public ILLabel DefineAndMarkLabelToCurrentNext()
+    {
+        DefineAndMarkLabelToCurrentNext(out var markedLabel);
+        return markedLabel;
     }
 
     public ILWeaver Replace(Instruction target, Instruction replacement)
@@ -1491,7 +1543,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
         ILLabel[] labels = new ILLabel[targets.Length];
         for (int i = 0; i < targets.Length; i++)
         {
-            MarkLabelTo(targets[i], out var label);
+            DefineAndMarkLabelTo(targets[i], out var label);
             labels[i] = label;
         }
         return IL.Create(opcode, targets);
@@ -1500,7 +1552,7 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, Instruction target)
     {
-        MarkLabelTo(target, out var label);
+        DefineAndMarkLabelTo(target, out var label);
         return IL.Create(opcode, label);
     }
 

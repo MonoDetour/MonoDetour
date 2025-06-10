@@ -24,7 +24,7 @@ public class PrefixDetour : IMonoDetourHookApplier
         bool modifiesReturnValue = Hook.ModifiesControlFlow() && info.ReturnValue is not null;
 
         w.HandlerCreateCatch(null, out var handler);
-        w.MarkLabelToFutureNextInsert(out var tryStart);
+        w.DefineAndMarkLabelToFutureNextInsert(out var tryStart);
         w.HandlerSetTryStart(tryStart, handler);
 
         if (modifiesReturnValue)
@@ -53,18 +53,18 @@ public class PrefixDetour : IMonoDetourHookApplier
                 setControlFlowSwitch
             );
 
-            w.MarkLabelToFutureNextInsert(out var hardReturn);
+            w.DefineAndMarkLabelToFutureNextInsert(out var hardReturn);
             if (info.ReturnValue is not null)
                 w.InsertBeforeCurrent(w.Create(OpCodes.Ldloc, info.ReturnValue));
             w.InsertBeforeCurrent(w.Create(OpCodes.Ret), w.Create(OpCodes.Ret));
 
-            w.MarkLabelToFutureNextInsert(out var softReturn);
+            w.DefineAndMarkLabelToFutureNextInsert(out var softReturn);
             w.InsertBeforeCurrent(
                 w.Create(OpCodes.Ldc_I4_1),
                 w.Create(OpCodes.Stloc, info.PrefixInfo.ControlFlow)
             );
 
-            w.MarkLabelToCurrentOrFutureNextInsert(out var none);
+            w.DefineAndMarkLabelToCurrentOrFutureNextInsert(out var none);
 
             setControlFlowSwitch.Operand = new ILLabel[] { none, softReturn, hardReturn };
         }
@@ -74,7 +74,7 @@ public class PrefixDetour : IMonoDetourHookApplier
             // Evaluate actual control flow value.
             info.PrefixInfo.SetControlFlowImplemented();
 
-            w.MarkLabelToCurrent(out var none);
+            w.DefineAndMarkLabelToCurrent(out var none);
 
             w.InsertBeforeCurrent(
                 w.Create(OpCodes.Ldloc, info.PrefixInfo.ControlFlow),

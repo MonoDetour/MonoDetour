@@ -103,7 +103,7 @@ public class PostfixDetour : IMonoDetourHookApplier
 
         var instructions = w.Body.Instructions;
         var last = w.Last;
-        w.MarkLabelTo(last, out var retLabel);
+        w.DefineAndMarkLabelTo(last, out var retLabel);
 
         bool hasRet = false;
         foreach (var ins in w.Body.Instructions.Where(ins => ins.MatchRet()))
