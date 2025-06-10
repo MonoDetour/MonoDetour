@@ -6,6 +6,9 @@
 bin/
 obj/
 
+# Ignore processed tcli config files
+.processed.toml
+
 # Add source files
 !/src/
 !/tests/

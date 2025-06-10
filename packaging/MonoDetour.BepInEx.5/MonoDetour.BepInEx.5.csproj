@@ -17,4 +17,7 @@
     <PackageReference Include="Mono.Cecil" Version="0.11.5" />
     <ProjectReference Include="$(SolutionRoot)src/MonoDetour/MonoDetour.csproj" />
   </ItemGroup>
+  <Target Name="ProcessTcliConfig" AfterTargets="Build">
+    <Exec Command="sed 's/__MonoDetour_Version__/$(Version)/' ./Thunderstore.toml &gt; ./.processed.toml" />
+  </Target>
 </Project>

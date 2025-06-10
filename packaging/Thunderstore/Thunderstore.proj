@@ -12,12 +12,12 @@
 
   <Target Name="PackThunderstore" AfterTargets="Build">
     <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)Thunderstore.toml&quot; --package-version $(Version)" />
-    <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5/Thunderstore.toml&quot; --package-version $(Version)" />
+    <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5/.processed.toml&quot; --package-version $(Version)" />
   </Target>
 
   <!-- Call with `dotnet build packaging/Thunderstore/ -target:PublishThunderstore` -->
   <Target Name="PublishThunderstore" DependsOnTargets="Build;PackThunderstore">
     <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)Thunderstore.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour-$(Version).zip&quot;" />
-    <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5/Thunderstore.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour_BepInEx_5-$(Version).zip&quot;" />
+    <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5/.processed.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour_BepInEx_5-$(Version).zip&quot;" />
   </Target>
 </Project>
