@@ -274,7 +274,7 @@ static class ILHookDMDManipulation
 
     static void AnalyzeMethodBody(InvalidProgramException ex, MethodBody body)
     {
-        InformationalMethodBody analysis;
+        IInformationalMethodBody analysis;
         try
         {
             analysis = body.CreateInformationalSnapshot().AnnotateErrors();

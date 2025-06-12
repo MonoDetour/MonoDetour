@@ -1,25 +1,205 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoDetour.Interop.MonoModUtils;
 using MonoMod.Cil;
+using static MonoDetour.Cil.Analysis.IInformationalInstruction;
 
 namespace MonoDetour.Cil.Analysis;
 
-internal class InformationalInstruction(
+/// <summary>
+/// A Mono.Cecil <see cref="Mono.Cecil.Cil.Instruction"/> wrapper
+/// which contains extra information about the instruction for analysis.
+/// </summary>
+public interface IInformationalInstruction
+{
+    /// <summary>
+    /// Incoming branches to this instruction.
+    /// </summary>
+    HashSet<IInformationalInstruction> IncomingBranches { get; }
+
+    /// <summary>
+    /// The previous instruction we got here from. This is not an incoming branch
+    /// unless if it's the only way to reach this instruction.
+    /// </summary>
+    IInformationalInstruction? PreviousChronological { get; }
+
+    /// <summary>
+    /// The next immediate instruction after this instruction.
+    /// </summary>
+    IInformationalInstruction? Next { get; }
+
+    /// <summary>
+    /// The Mono.Cecil <see cref="Mono.Cecil.Cil.Instruction"/> wrapped by this
+    /// <see cref="IInformationalInstruction"/>.
+    /// </summary>
+    Instruction Instruction { get; }
+
+    /// <summary>
+    /// The calculated stack size at the end of this instruction.
+    /// </summary>
+    int StackSize { get; }
+
+    /// <summary>
+    /// The stack size before we got to this instruction.
+    /// </summary>
+    int IncomingStackSize { get; }
+
+    /// <summary>
+    /// The total change to the stack size done by this instruction.
+    /// Calculated by summing up <see cref="StackPop"/> and <see cref="StackPush"/>.
+    /// </summary>
+    int StackDelta { get; }
+
+    /// <summary>
+    /// The pop behavior of this instruction.
+    /// </summary>
+    int StackPop { get; }
+
+    /// <summary>
+    /// The push behavior of this instruction.
+    /// </summary>
+    int StackPush { get; }
+
+    /// <summary>
+    /// The relative distance from the first instruction in the method body,
+    /// taking into account branching.
+    /// </summary>
+    /// <remarks>
+    /// Exception handlers are exceptional, which is why this distance has
+    /// to be relative.
+    /// </remarks>
+    int RelativeDistance { get; }
+
+    /// <summary>
+    /// If this instruction can be reached through following the control flow of the instructions.
+    /// </summary>
+    bool IsReachable { get; }
+
+    /// <summary>
+    /// A list of error annotations on this instruction.
+    /// </summary>
+    List<IAnnotation> ErrorAnnotations { get; }
+
+    /// <summary>
+    /// Whether or not this instruction has any error annotations.
+    /// </summary>
+    bool HasErrorAnnotations { get; }
+
+    /// <summary>
+    /// Exception handler information related to this instruction.
+    /// </summary>
+    ReadOnlyCollection<IHandlerInfo> HandlerInfos { get; }
+
+    /// <summary>
+    /// Collects all incoming instructions, excluding <see langword="this"/>
+    /// <see cref="IInformationalInstruction"/>.
+    /// </summary>
+    /// <returns>All incoming instructions.</returns>
+    HashSet<IInformationalInstruction> CollectIncoming();
+
+    /// <summary>
+    /// Returns a string presentation of this <see cref="IInformationalInstruction"/>.
+    /// </summary>
+    string ToString();
+
+    /// <summary>
+    /// Returns a string presentation of this <see cref="IInformationalInstruction"/>,
+    /// including error annotations.
+    /// </summary>
+    string ToStringWithAnnotations();
+
+    /// <summary>
+    /// An annotation.
+    /// </summary>
+    public interface IAnnotation;
+
+    /// <summary>
+    /// Exception handler information related to an <see cref="IInformationalInstruction"/>.
+    /// </summary>
+    public interface IHandlerInfo
+    {
+        /// <summary>
+        /// The handler part of this instruction.
+        /// </summary>
+        HandlerPart HandlerPart { get; }
+
+        /// <summary>
+        /// The handler type this instruction is a part of.
+        /// </summary>
+        ExceptionHandlerType HandlerType { get; }
+
+        /// <summary>
+        /// Deconstructs this <see cref="IHandlerInfo"/>.
+        /// </summary>
+        public void Deconstruct(out HandlerPart handlerPart, out ExceptionHandlerType handlerType);
+    }
+
+    /// <summary>
+    /// The handler part of an instruction.
+    /// </summary>
+    [Flags]
+    public enum HandlerPart
+    {
+        /// <summary>
+        /// This is not a part of any Exception handler block.
+        /// </summary>
+        None = 0,
+
+        /// <summary>
+        /// Start of a try block.
+        /// </summary>
+        TryStart = 1 << 0,
+
+        /// <summary>
+        /// End of a try block (exclusive).
+        /// </summary>
+        TryEnd = 1 << 1,
+
+        /// <summary>
+        /// Start of a filter block.
+        /// </summary>
+        FilterStart = 1 << 2,
+
+        /// <summary>
+        /// Start of a handler block.
+        /// </summary>
+        HandlerStart = 1 << 3,
+
+        /// <summary>
+        /// End of a try block (exclusive).
+        /// </summary>
+        HandlerEnd = 1 << 4,
+
+        /// <summary>
+        /// One instruction before the start of a  try block.
+        /// </summary>
+        BeforeTryStart = 1 << 5,
+
+        /// <summary>
+        /// End of a try or handler block (exclusive).
+        /// </summary>
+        TryOrHandlerEnd = TryEnd | HandlerEnd,
+
+        /// <summary>
+        /// Start of a filter or handler block.
+        /// </summary>
+        FilterOrHandlerStart = FilterStart | HandlerStart,
+    }
+}
+
+internal sealed class InformationalInstruction(
     Instruction instruction,
     int stackSize,
     int stackSizeDelta,
-    List<(
-        InformationalInstruction.HandlerPart handlerPart,
-        ExceptionHandlerType handlerType
-    )> handlerParts
-)
+    List<IHandlerInfo> handlerParts
+) : IInformationalInstruction
 {
-    public HashSet<InformationalInstruction> IncomingBranches { get; private set; } = [];
+    public HashSet<IInformationalInstruction> IncomingBranches { get; private set; } = [];
 
     /// <summary>
     /// The immediate previous instruction in the list or an incoming branch if
@@ -38,20 +218,22 @@ internal class InformationalInstruction(
     /// because the whole stack after that point is invalid and any stack size related
     /// error would be misleading.
     /// </remarks>
-    public InformationalInstruction? PreviousChronological { get; private set; }
-    public InformationalInstruction? Next { get; internal set; }
-    public Instruction Inst => instruction;
+    public IInformationalInstruction? PreviousChronological { get; private set; }
+    public IInformationalInstruction? Next => next;
+    internal InformationalInstruction? next;
+
+    public Instruction Instruction => instruction;
     public int StackSize
     {
         get => stackSize;
         private set => stackSize = value;
     }
-    public int StackSizeDelta
+    public int StackDelta
     {
         get => stackSizeDelta;
         private set => stackSizeDelta = value;
     }
-    public int StackSizeBefore =>
+    public int IncomingStackSize =>
         PreviousChronological?.StackSize
         ?? (
             HandlerParts.Any(x =>
@@ -66,19 +248,19 @@ internal class InformationalInstruction(
     /// <summary>
     /// The minimum distance from this instruction to the first instruction.
     /// </summary>
-    public int Distance { get; private set; }
+    public int RelativeDistance { get; private set; }
 
     /// <summary>
     /// True if this instruction can not be reached from anywhere in the method based
     /// on the OpCode of instructions. Instructions after conditional branches are
     /// evaluated and considered reachable.
     /// </summary>
-    public bool Unreachable => !explored;
+    public bool IsReachable => !explored;
 
-    public List<(HandlerPart HandlerPart, ExceptionHandlerType HandlerType)> HandlerParts =>
-        handlerParts;
+    public List<IHandlerInfo> HandlerParts => handlerParts;
+    public ReadOnlyCollection<IHandlerInfo> HandlerInfos => HandlerParts.AsReadOnly();
 
-    public List<Annotation> ErrorAnnotations { get; } = [];
+    public List<IAnnotation> ErrorAnnotations { get; } = [];
 
     public bool HasErrorAnnotations => ErrorAnnotations.Count != 0;
 
@@ -88,6 +270,20 @@ internal class InformationalInstruction(
     internal const string LeftWall = LongPipe;
     internal const string EmptyPad = $"{LeftWall}   ¦ ";
     internal static string VariableEmptyPad = $"{LeftWall}   ¦ ";
+
+    internal class HandlerInfo(HandlerPart handlerPart, ExceptionHandlerType handlerType)
+        : IHandlerInfo
+    {
+        public HandlerPart HandlerPart => handlerPart;
+
+        public ExceptionHandlerType HandlerType => handlerType;
+
+        public void Deconstruct(out HandlerPart part, out ExceptionHandlerType type)
+        {
+            part = HandlerPart;
+            type = HandlerType;
+        }
+    }
 
     public class AnnotationStackSizeMustBeX(string Message, AnnotationRange? Range)
         : Annotation(Message, Range)
@@ -169,7 +365,7 @@ internal class InformationalInstruction(
         }
     }
 
-    public class Annotation(string Message, AnnotationRange? Range)
+    public class Annotation(string Message, AnnotationRange? Range) : IAnnotation
     {
         public override string ToString()
         {
@@ -205,27 +401,13 @@ internal class InformationalInstruction(
     }
 
     public class AnnotationRangeWalkBack(
-        InformationalInstruction Instruction,
+        IInformationalInstruction Instruction,
         int RequiredStackSize
-    ) : AnnotationRange(Instruction.GetProblematicInstructionsWithWalkBack(RequiredStackSize));
+    ) : AnnotationRange(GetProblematicInstructionsWithWalkBack(Instruction, RequiredStackSize));
 
-    public class AnnotationRange(List<InformationalInstruction> Instructions)
+    public class AnnotationRange(List<IInformationalInstruction> Instructions)
     {
-        public List<InformationalInstruction> Instructions { get; } = Instructions;
-    }
-
-    [Flags]
-    public enum HandlerPart
-    {
-        None = 0,
-        TryStart = 1 << 0,
-        TryEnd = 1 << 1,
-        FilterStart = 1 << 2,
-        HandlerStart = 1 << 3,
-        HandlerEnd = 1 << 4,
-        BeforeTryStart = 1 << 5,
-        TryOrHandlerEnd = TryEnd | HandlerEnd,
-        FilterOrHandlerStart = FilterStart | HandlerStart,
+        public List<IInformationalInstruction> Instructions { get; } = Instructions;
     }
 
     public override string ToString() => ToStringInternal(withAnnotations: false);
@@ -265,18 +447,18 @@ internal class InformationalInstruction(
             }
         }
 
-        if (Unreachable)
-            sb.Append($"{LeftWall} - | {Inst}");
+        if (IsReachable)
+            sb.Append($"{LeftWall} - | {Instruction}");
         else
         {
             if (withAnnotations)
             {
                 TryAppendIncomingBranchesInfo(sb, IncomingBranches);
-                sb.Append($"{LeftWall}{StackSize, 2} | {Inst}");
+                sb.Append($"{LeftWall}{StackSize, 2} | {Instruction}");
             }
             else
             {
-                sb.Append($"{StackSize, 2} | {Inst}");
+                sb.Append($"{StackSize, 2} | {Instruction}");
             }
         }
 
@@ -304,14 +486,14 @@ internal class InformationalInstruction(
             else
             {
                 if (
-                    Inst.OpCode.FlowControl
+                    Instruction.OpCode.FlowControl
                         is FlowControl.Branch
                             or FlowControl.Cond_Branch
                             or FlowControl.Return
                             or FlowControl.Throw
                     && ( // get rid of space before the } bracket
                         (
-                            Next?.HandlerParts.Any(x =>
+                            Next?.HandlerInfos.Any(x =>
                                 (x.HandlerPart & HandlerPart.TryOrHandlerEnd) != HandlerPart.None
                             ) ?? true
                         ) == false
@@ -328,7 +510,7 @@ internal class InformationalInstruction(
 
     static void TryAppendIncomingBranchesInfo(
         StringBuilder sb,
-        IEnumerable<InformationalInstruction> incomingBranches
+        IEnumerable<IInformationalInstruction> incomingBranches
     )
     {
         if (incomingBranches.FirstOrDefault() == null)
@@ -341,7 +523,7 @@ internal class InformationalInstruction(
         foreach (var informational in incomingBranches)
         {
             sb.Append(" IL_");
-            sb.Append(informational.Inst.Offset.ToString("x4"));
+            sb.Append(informational.Instruction.Offset.ToString("x4"));
             sb.Append(";");
         }
         sb.AppendLine();
@@ -388,14 +570,14 @@ internal class InformationalInstruction(
         {
             if (enumerable.explored)
             {
-                if (enumerable.StackSizeBefore != stackSize)
+                if (enumerable.IncomingStackSize != stackSize)
                 {
                     if (!enumerable.HasErrorAnnotations)
                     {
                         enumerable.ErrorAnnotations.Add(
                             new AnnotationStackSizeMismatch(
                                 $"Error: Stack size mismatch; incoming stack size "
-                                    + $"is both {enumerable.StackSizeBefore}",
+                                    + $"is both {enumerable.IncomingStackSize}",
                                 enumerable
                             )
                         );
@@ -405,7 +587,7 @@ internal class InformationalInstruction(
                     return;
                 }
 
-                if (outsideExceptionHandler && distance < enumerable.Distance)
+                if (outsideExceptionHandler && distance < enumerable.RelativeDistance)
                 {
                     goto evaluateDistanceAndMoveNext;
                 }
@@ -419,7 +601,7 @@ internal class InformationalInstruction(
             // Important when rewriting distance
             stackSize = enumerable.StackSize;
 
-            enumerable.Distance = distance;
+            enumerable.RelativeDistance = distance;
             if (outsideExceptionHandler)
                 distance += 10_000;
             else
@@ -428,7 +610,7 @@ internal class InformationalInstruction(
             TryCrawlBranch(enumerable, map, stackSize, body, distance, outsideExceptionHandler);
 
             if (
-                enumerable.Inst.OpCode.FlowControl
+                enumerable.Instruction.OpCode.FlowControl
                 is FlowControl.Branch
                     or FlowControl.Throw
                     or FlowControl.Return
@@ -437,7 +619,7 @@ internal class InformationalInstruction(
                 return;
             }
             var previous = enumerable;
-            enumerable = enumerable.Next;
+            enumerable = enumerable.next;
 
             if (enumerable is null)
                 return;
@@ -455,7 +637,7 @@ internal class InformationalInstruction(
         bool outsideExceptionHandler
     )
     {
-        var instruction = informationalInstruction.Inst;
+        var instruction = informationalInstruction.Instruction;
 
         switch (instruction.OpCode.OperandType)
         {
@@ -542,7 +724,7 @@ internal class InformationalInstruction(
         MethodBody body
     )
     {
-        var instruction = informationalInstruction.Inst;
+        var instruction = informationalInstruction.Instruction;
         int oldStackSize = stackSize;
 
         switch (instruction.OpCode.FlowControl)
@@ -598,7 +780,7 @@ internal class InformationalInstruction(
         }
 
         informationalInstruction.StackSize = stackSize;
-        informationalInstruction.StackSizeDelta = stackSize - oldStackSize;
+        informationalInstruction.StackDelta = stackSize - oldStackSize;
     }
 
     static void ComputePopDelta(Instruction instruction, ref int stack_size)
@@ -652,20 +834,21 @@ internal class InformationalInstruction(
         }
     }
 
-    internal List<InformationalInstruction> GetProblematicInstructionsWithWalkBack(
+    internal static List<IInformationalInstruction> GetProblematicInstructionsWithWalkBack(
+        IInformationalInstruction instruction,
         int requiredStackSize
     )
     {
-        Stack<InformationalInstruction> walkBackInstructions = [];
+        Stack<IInformationalInstruction> walkBackInstructions = [];
 
         int walkBackStackSize = 0;
-        InformationalInstruction targetInstruction = this;
+        IInformationalInstruction targetInstruction = instruction;
 
         while (true)
         {
             walkBackInstructions.Push(targetInstruction);
 
-            walkBackStackSize += targetInstruction.StackSizeDelta;
+            walkBackStackSize += targetInstruction.StackDelta;
 
             if (walkBackStackSize == requiredStackSize)
                 break;
@@ -680,7 +863,7 @@ internal class InformationalInstruction(
             // already check for and do not evaluate errors after it.
             foreach (var branch in targetInstruction.IncomingBranches)
             {
-                if (branch.Distance < previous.Distance)
+                if (branch.RelativeDistance < previous.RelativeDistance)
                 {
                     previous = branch;
                 }
@@ -692,17 +875,17 @@ internal class InformationalInstruction(
         return [.. walkBackInstructions];
     }
 
-    public HashSet<InformationalInstruction> CollectIncoming()
+    public HashSet<IInformationalInstruction> CollectIncoming()
     {
-        HashSet<InformationalInstruction> collected = [];
+        HashSet<IInformationalInstruction> collected = [];
         CollectIncoming(this, ref collected);
         collected.Remove(this);
         return collected;
     }
 
     public static void CollectIncoming(
-        InformationalInstruction instruction,
-        ref HashSet<InformationalInstruction> collected
+        IInformationalInstruction instruction,
+        ref HashSet<IInformationalInstruction> collected
     )
     {
         while (true)

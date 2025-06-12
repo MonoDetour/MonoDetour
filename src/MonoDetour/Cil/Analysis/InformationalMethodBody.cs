@@ -1,31 +1,77 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using Mono.Cecil.Cil;
 using MonoMod.Utils;
+using static MonoDetour.Cil.Analysis.IInformationalInstruction;
 using static MonoDetour.Cil.Analysis.InformationalInstruction;
 
 namespace MonoDetour.Cil.Analysis;
 
-internal class InformationalMethodBody
+/// <summary>
+/// A Mono.Cecil <see cref="MethodBody"/> wrapper
+/// which contains a list of <see cref="IInformationalInstruction"/>
+/// in place of a Mono.Cecil <see cref="Instruction"/> list for easier analysis.
+/// </summary>
+public interface IInformationalMethodBody
 {
-    public MethodBody CecilMethodBody { get; }
-    public List<InformationalInstruction> Instructions { get; } = [];
+    /// <summary>
+    /// The original <see cref="MethodBody"/>.
+    /// </summary>
+    MethodBody Body { get; }
+
+    /// <summary>
+    /// The list of <see cref="IInformationalInstruction"/>s in the
+    /// <see cref="IInformationalMethodBody"/>.
+    /// </summary>
+    ReadOnlyCollection<IInformationalInstruction> InformationalInstructions { get; }
+
+    /// <summary>
+    /// Checks if <see cref="InformationalInstructions"/> contains error annotations.
+    /// </summary>
+    /// <returns>True if error annotations, otherwise false.</returns>
+    bool HasErrors();
+
+    /// <summary>
+    /// Returns a string presentation of this <see cref="IInformationalMethodBody"/>.
+    /// </summary>
+    string ToString();
+
+    /// <summary>
+    /// Returns a string presentation of this <see cref="IInformationalMethodBody"/>,
+    /// including error annotations.
+    /// </summary>
+    string ToStringWithAnnotations();
+
+    /// <summary>
+    /// Returns a string presentation of this <see cref="IInformationalMethodBody"/>
+    /// with only instructions with error annotations.
+    /// </summary>
+    string ToStringWithAnnotationsExclusive();
+}
+
+internal sealed class InformationalMethodBody : IInformationalMethodBody
+{
+    public MethodBody Body { get; }
+    public ReadOnlyCollection<IInformationalInstruction> InformationalInstructions { get; }
     public HashSet<Instruction> Duplicates { get; } = [];
     public bool HasDuplicates => Duplicates.Count != 0;
 
     private InformationalMethodBody(MethodBody body)
     {
-        CecilMethodBody = body;
+        Body = body;
+        List<IInformationalInstruction> informationalInstructions = [];
 
         var bodyInstructions = body.Instructions;
         if (bodyInstructions.Count == 0)
         {
+            InformationalInstructions = informationalInstructions.AsReadOnly();
             return;
         }
 
-        IList<Instruction> enumerableInstructions = bodyInstructions;
+        var enumerableInstructions = bodyInstructions;
         HashSet<Instruction> originalInstructions = [];
         HashSet<Instruction> originallyDuplicateInstructions = [];
         Dictionary<Instruction, Instruction> duplicateInstructionToCopy = [];
@@ -68,12 +114,14 @@ internal class InformationalMethodBody
         }
 
         Dictionary<Instruction, InformationalInstruction> map = [];
+        InformationalInstruction first = null!;
+        InformationalInstruction? previous = null;
 
         for (int i = 0; i < enumerableInstructions.Count; i++)
         {
             var cecilIns = enumerableInstructions[i];
 
-            List<(HandlerPart, ExceptionHandlerType)> handlerParts = [];
+            List<IHandlerInfo> handlerParts = [];
 
             foreach (var eh in body.ExceptionHandlers)
             {
@@ -96,11 +144,11 @@ internal class InformationalMethodBody
                 if (handlerPart == 0)
                     continue;
 
-                handlerParts.Add((handlerPart, eh.HandlerType));
+                handlerParts.Add(new HandlerInfo(handlerPart, eh.HandlerType));
             }
 
             InformationalInstruction ins = new(cecilIns, default, default, handlerParts);
-            Instructions.Add(ins);
+            informationalInstructions.Add(ins);
             map.Add(cecilIns, ins);
 
             if (originallyDuplicateInstructions.Contains(cecilIns))
@@ -108,14 +156,20 @@ internal class InformationalMethodBody
                 ins.ErrorAnnotations.Add(new AnnotationDuplicateInstance());
             }
 
-            if (i > 0)
+            if (previous is null)
             {
-                Instructions[i - 1].Next = ins;
+                first = ins;
             }
+            else
+            {
+                previous.next = ins;
+            }
+
+            previous = ins;
         }
 
         int stackSize = 0;
-        CrawlInstructions(Instructions[0], map, stackSize, body, distance: 0);
+        CrawlInstructions(first, map, stackSize, body, distance: 0);
 
         foreach (var eh in body.ExceptionHandlers)
         {
@@ -146,7 +200,7 @@ internal class InformationalMethodBody
                 map,
                 stackSize,
                 body,
-                map[handlerEnd].Distance - 9_000,
+                map[handlerEnd].RelativeDistance - 9_000,
                 outsideExceptionHandler: false
             );
 
@@ -165,66 +219,17 @@ internal class InformationalMethodBody
                 map,
                 stackSize,
                 body,
-                map[handlerEnd].Distance - 10_000 + 1,
+                map[handlerEnd].RelativeDistance - 10_000 + 1,
                 outsideExceptionHandler: false
             );
         }
+
+        InformationalInstructions = informationalInstructions.AsReadOnly();
     }
 
     public static InformationalMethodBody CreateInformationalSnapshot(MethodBody body) => new(body);
 
-    internal string ToErrorMessageString()
-    {
-        StringBuilder sb = new();
-        sb.AppendLine("An ILHook manipulation target method threw on compilation:");
-        sb.AppendLine(CecilMethodBody.Method.FullName);
-        sb.AppendLine("--- MonoDetour CIL Analysis Start Full Method ---");
-        sb.AppendLine();
-        sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
-        sb.AppendLine();
-
-        if (Instructions.Count == 0)
-        {
-            sb.AppendLine("Method has 0 instructions.");
-            goto analysisEnd;
-        }
-
-        sb.Append(ToStringWithAnnotations());
-
-        sb.AppendLine();
-        sb.AppendLine("--- MonoDetour CIL Analysis Summary ---");
-        sb.AppendLine();
-
-        if (!HasErrors())
-        {
-            sb.AppendLine("MonoDetour didn't catch any mistakes.")
-                .AppendLine("The errors may not be directly stack behavior related.")
-                .AppendLine("Operands or types on the stack aren't validated.")
-                .AppendLine("You can improve the analysis:")
-                .AppendLine(
-                    "https://github.com/MonoDetour/MonoDetour/blob/main/src/MonoDetour/Cil/Analysis/CilAnalyzer.cs"
-                );
-        }
-        else
-        {
-            sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
-            sb.AppendLine();
-
-            sb.Append(ToStringWithAnnotationsExclusive());
-
-            sb.AppendLine();
-            sb.AppendLine("Note: This analysis may not be perfect.");
-        }
-
-        analysisEnd:
-        sb.AppendLine();
-        sb.Append("--- MonoDetour CIL Analysis End ---");
-
-        return sb.ToString();
-    }
-
-    public override string ToString() =>
-        CecilMethodBody.Method.FullName + "\n" + ToStringWithAnnotations();
+    public override string ToString() => Body.Method.FullName + "\n" + ToStringWithAnnotations();
 
     /// <summary>
     /// To string with annotations.
@@ -233,7 +238,7 @@ internal class InformationalMethodBody
     {
         StringBuilder sb = new();
 
-        foreach (var instruction in Instructions)
+        foreach (var instruction in InformationalInstructions)
         {
             sb.AppendLine(instruction.ToStringWithAnnotations());
         }
@@ -248,7 +253,7 @@ internal class InformationalMethodBody
     {
         StringBuilder sb = new();
 
-        foreach (var instruction in Instructions.Where(x => x.HasErrorAnnotations))
+        foreach (var instruction in InformationalInstructions.Where(x => x.HasErrorAnnotations))
         {
             sb.AppendLine(instruction.ToStringWithAnnotations());
         }
@@ -263,7 +268,7 @@ internal class InformationalMethodBody
     public bool HasErrors()
     {
         // Technically duplicate instructions aren't errors, but they can cause them.
-        if (Duplicates.Count != 0 || Instructions.Any(x => x.HasErrorAnnotations))
+        if (Duplicates.Count != 0 || InformationalInstructions.Any(x => x.HasErrorAnnotations))
         {
             return true;
         }
@@ -285,5 +290,58 @@ internal class InformationalMethodBody
         {
             throw new Exception("Informational instructions had exception annotations.");
         }
+    }
+}
+
+internal static class IInformationalMethodBodyExtensions
+{
+    internal static string ToErrorMessageString(this IInformationalMethodBody informationalBody)
+    {
+        StringBuilder sb = new();
+        sb.AppendLine("An ILHook manipulation target method threw on compilation:");
+        sb.AppendLine(informationalBody.Body.Method.FullName);
+        sb.AppendLine("--- MonoDetour CIL Analysis Start Full Method ---");
+        sb.AppendLine();
+        sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
+        sb.AppendLine();
+
+        if (informationalBody.InformationalInstructions.Count == 0)
+        {
+            sb.AppendLine("Method has 0 instructions.");
+            goto analysisEnd;
+        }
+
+        sb.Append(informationalBody.ToStringWithAnnotations());
+
+        sb.AppendLine();
+        sb.AppendLine("--- MonoDetour CIL Analysis Summary ---");
+        sb.AppendLine();
+
+        if (!informationalBody.HasErrors())
+        {
+            sb.AppendLine("MonoDetour didn't catch any mistakes.")
+                .AppendLine("The errors may not be directly stack behavior related.")
+                .AppendLine("Operands or types on the stack aren't validated.")
+                .AppendLine("You can improve the analysis:")
+                .AppendLine(
+                    "https://github.com/MonoDetour/MonoDetour/blob/main/src/MonoDetour/Cil/Analysis/CilAnalyzer.cs"
+                );
+        }
+        else
+        {
+            sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
+            sb.AppendLine();
+
+            sb.Append(informationalBody.ToStringWithAnnotationsExclusive());
+
+            sb.AppendLine();
+            sb.AppendLine("Note: This analysis may not be perfect.");
+        }
+
+        analysisEnd:
+        sb.AppendLine();
+        sb.Append("--- MonoDetour CIL Analysis End ---");
+
+        return sb.ToString();
     }
 }

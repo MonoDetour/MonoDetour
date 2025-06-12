@@ -2,21 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Mono.Cecil.Cil;
+using static MonoDetour.Cil.Analysis.IInformationalInstruction;
 using static MonoDetour.Cil.Analysis.InformationalInstruction;
 
 namespace MonoDetour.Cil.Analysis;
 
 internal static class CilAnalyzer
 {
-    internal static InformationalMethodBody AnnotateErrors(
-        this InformationalMethodBody informationalBody
+    internal static IInformationalMethodBody AnnotateErrors(
+        this IInformationalMethodBody informationalBody
     )
     {
         // TODO: I realize that sorting by only distance is kinda flawed,
         // I optimally would check if the branch has previously ever gotten an error,
         // and then decide if I should show an error there.
-        var sorted = informationalBody.Instructions.ToList();
-        sorted.Sort((x, y) => x.Distance - y.Distance);
+        var sorted = informationalBody.InformationalInstructions.ToList();
+        sorted.Sort((x, y) => x.RelativeDistance - y.RelativeDistance);
         var analyzable = sorted;
 
         var firstStackSizeMismatch = sorted.FirstOrDefault(x =>
@@ -26,7 +27,7 @@ internal static class CilAnalyzer
         if (firstStackSizeMismatch is not null)
         {
             var mismatchBranch = firstStackSizeMismatch.CollectIncoming().ToList();
-            mismatchBranch.Sort((x, y) => x.Distance - y.Distance);
+            mismatchBranch.Sort((x, y) => x.RelativeDistance - y.RelativeDistance);
             analyzable = mismatchBranch;
         }
 
@@ -41,22 +42,22 @@ internal static class CilAnalyzer
     }
 
     static void AnalyzeAndAnnotateInstruction(
-        InformationalInstruction instruction,
+        IInformationalInstruction instruction,
         HashSet<Type> types
     )
     {
         var stackSize = instruction.StackSize;
-        var handlerParts = instruction.HandlerParts;
+        var handlerInfos = instruction.HandlerInfos;
 
         // Unreachable instructions seem to sometimes not be evaluated,
         // but sometimes they are evaluated anyways.
         // I think it's safer to ignore unreachable instructions for now.
-        if (instruction.Unreachable)
+        if (instruction.IsReachable)
         {
             return;
         }
 
-        if (instruction.StackPop > instruction.StackSizeBefore)
+        if (instruction.StackPop > instruction.IncomingStackSize)
         {
             if (types.Contains(typeof(AnnotationPoppingMoreThanStackSize)))
                 return;
@@ -65,13 +66,13 @@ internal static class CilAnalyzer
             instruction.ErrorAnnotations.Add(
                 new AnnotationPoppingMoreThanStackSize(
                     $"Error: Popping more than stack size; cannot pop {instruction.StackPop} "
-                        + $"value(s) when stack size was {instruction.StackSizeBefore}"
+                        + $"value(s) when stack size was {instruction.IncomingStackSize}"
                 )
             );
         }
         else if (
             stackSize != 0
-            && handlerParts.Any(x => x.HandlerPart.HasFlag(HandlerPart.BeforeTryStart))
+            && handlerInfos.Any(x => x.HandlerPart.HasFlag(HandlerPart.BeforeTryStart))
         )
         {
             if (types.Contains(typeof(AnnotationStackSizeMustBeX)))
@@ -86,7 +87,7 @@ internal static class CilAnalyzer
             );
         }
         // Apparently stack size doesn't matter on throw
-        else if (stackSize != 0 && instruction.Inst.OpCode.FlowControl == FlowControl.Return)
+        else if (stackSize != 0 && instruction.Instruction.OpCode.FlowControl == FlowControl.Return)
         {
             if (types.Contains(typeof(AnnotationStackSizeMustBeX)))
                 return;
