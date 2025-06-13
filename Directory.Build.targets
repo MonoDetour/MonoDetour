@@ -5,7 +5,7 @@
       Include="PolySharp"
       Version="1.15.0"
       PrivateAssets="all"
-      Condition="$(ImplicitPolySharpReference) != 'false'"
+      Condition="$(ReferencePolySharp) == 'true'"
     />
   </ItemGroup>
 </Project>

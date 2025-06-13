@@ -8,6 +8,7 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);CreateFiles</TargetsForTfmSpecificContentInPackage>
+    <ReferencePolySharp>true</ReferencePolySharp>
   </PropertyGroup>
   <!-- NuGet props -->
   <PropertyGroup>

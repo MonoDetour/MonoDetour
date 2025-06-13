@@ -8,7 +8,6 @@
     <ImplicitUsings>true</ImplicitUsings>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-    <ImplicitPolySharpReference>false</ImplicitPolySharpReference>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
