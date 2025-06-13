@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Mono.Cecil.Cil;
@@ -27,6 +28,14 @@ public interface IInformationalMethodBody
     /// <see cref="IInformationalMethodBody"/>.
     /// </summary>
     ReadOnlyCollection<IInformationalInstruction> InformationalInstructions { get; }
+
+    /// <summary>
+    /// Gets an <see cref="IInformationalInstruction"/> for the specified <see cref="Instruction"/>.
+    /// </summary>
+    /// <param name="instruction">The <see cref="Instruction"/> whose
+    /// <see cref="IInformationalInstruction"/> to get.</param>
+    /// <returns>An <see cref="IInformationalInstruction"/> for the instruction.</returns>
+    public IInformationalInstruction GetInformationalInstruction(Instruction instruction);
 
     /// <summary>
     /// Checks if <see cref="InformationalInstructions"/> contains error annotations.
@@ -58,6 +67,7 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
     public ReadOnlyCollection<IInformationalInstruction> InformationalInstructions { get; }
     public HashSet<Instruction> Duplicates { get; } = [];
     public bool HasDuplicates => Duplicates.Count != 0;
+    private readonly Dictionary<Instruction, InformationalInstruction> map = [];
 
     private InformationalMethodBody(MethodBody body)
     {
@@ -71,10 +81,7 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
             return;
         }
 
-        var enumerableInstructions = bodyInstructions;
         HashSet<Instruction> originalInstructions = [];
-        HashSet<Instruction> originallyDuplicateInstructions = [];
-        Dictionary<Instruction, Instruction> duplicateInstructionToCopy = [];
 
         foreach (var instruction in bodyInstructions)
         {
@@ -84,42 +91,14 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
             }
         }
 
-        if (HasDuplicates)
-        {
-            enumerableInstructions = [];
-            int offset = 0;
-            foreach (var instruction in bodyInstructions)
-            {
-                if (Duplicates.Contains(instruction))
-                {
-                    var newIns = Instruction.Create(OpCodes.Ret);
-                    newIns.OpCode = instruction.OpCode;
-                    newIns.Operand = instruction.Operand;
-                    newIns.Offset = offset;
-                    enumerableInstructions.Add(newIns);
-                    originallyDuplicateInstructions.Add(newIns);
-                    duplicateInstructionToCopy.Add(instruction, newIns);
-                }
-                else
-                {
-                    instruction.Offset = offset;
-                    enumerableInstructions.Add(instruction);
-                }
-                offset += instruction.GetSize();
-            }
-        }
-        else
-        {
-            body.Method.RecalculateILOffsets();
-        }
+        body.Method.RecalculateILOffsets();
 
-        Dictionary<Instruction, InformationalInstruction> map = [];
         InformationalInstruction first = null!;
         InformationalInstruction? previous = null;
 
-        for (int i = 0; i < enumerableInstructions.Count; i++)
+        for (int i = 0; i < bodyInstructions.Count; i++)
         {
-            var cecilIns = enumerableInstructions[i];
+            var cecilIns = bodyInstructions[i];
 
             List<IHandlerInfo> handlerParts = [];
 
@@ -149,9 +128,9 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
 
             InformationalInstruction ins = new(cecilIns, default, default, handlerParts);
             informationalInstructions.Add(ins);
-            map.Add(cecilIns, ins);
+            map[cecilIns] = ins;
 
-            if (originallyDuplicateInstructions.Contains(cecilIns))
+            if (Duplicates.Contains(cecilIns))
             {
                 ins.ErrorAnnotations.Add(new AnnotationDuplicateInstance());
             }
@@ -165,6 +144,7 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
                 previous.next = ins;
             }
 
+            ins.Previous = previous;
             previous = ins;
         }
 
@@ -185,15 +165,8 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
                 continue;
             }
 
-            if (!duplicateInstructionToCopy.TryGetValue(eh.HandlerStart, out var handlerStart))
-            {
-                handlerStart = eh.HandlerStart;
-            }
-
-            if (!duplicateInstructionToCopy.TryGetValue(eh.HandlerEnd, out var handlerEnd))
-            {
-                handlerEnd = eh.HandlerEnd;
-            }
+            var handlerStart = eh.HandlerStart;
+            var handlerEnd = eh.HandlerEnd;
 
             CrawlInstructions(
                 map[handlerStart],
@@ -209,10 +182,7 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
                 continue;
             }
 
-            if (!duplicateInstructionToCopy.TryGetValue(eh.FilterStart, out var filterStart))
-            {
-                filterStart = eh.FilterStart;
-            }
+            var filterStart = eh.FilterStart;
 
             CrawlInstructions(
                 map[filterStart],
@@ -228,6 +198,18 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
     }
 
     public static InformationalMethodBody CreateInformationalSnapshot(MethodBody body) => new(body);
+
+    public IInformationalInstruction GetInformationalInstruction(Instruction instruction)
+    {
+        if (map.TryGetValue(instruction, out var informationalInstruction))
+        {
+            return informationalInstruction;
+        }
+
+        throw new KeyNotFoundException(
+            $"The instruction '{instruction}' is not a part of the {nameof(IInformationalMethodBody)}."
+        );
+    }
 
     public override string ToString() => Body.Method.FullName + "\n" + ToStringWithAnnotations();
 

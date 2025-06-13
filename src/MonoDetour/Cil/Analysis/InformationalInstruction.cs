@@ -23,13 +23,36 @@ public interface IInformationalInstruction
     HashSet<IInformationalInstruction> IncomingBranches { get; }
 
     /// <summary>
-    /// The previous instruction we got here from. This is not an incoming branch
-    /// unless if it's the only way to reach this instruction.
+    /// The immediate previous instruction in the list or an incoming branch if
+    /// control flow stops at the immediate previous instruction.
     /// </summary>
+    /// <remarks>
+    /// In a case where there are multiple incoming branches,
+    /// this will point to the first evaluated incoming branch.<br/>
+    /// If you care about finding a previous incoming invalid stack size somewhere,
+    /// this will work fine.<br/>
+    /// <br/>
+    /// In a case where an incoming invalid stack size exists on a branch other than
+    /// what is found via backtracking with this, it's not a problem because the error
+    /// in that case is stack size mismatch which is evaluated during the CIL instruction
+    /// crawling phase. And in such a case we do NOT evaluate further errors after that point
+    /// because the whole stack after that point is invalid and any stack size related
+    /// error would be misleading.
+    /// </remarks>
     IInformationalInstruction? PreviousChronological { get; }
 
     /// <summary>
-    /// The next immediate instruction after this instruction.
+    /// The immediate instruction before this instruction.
+    /// </summary>
+    /// <remarks>
+    /// The previous instruction may be unreachable, in which case any of its
+    /// informational data not evaluated. If you want to get the "real" previous
+    /// instruction, use <see cref="PreviousChronological"/>.
+    /// </remarks>
+    IInformationalInstruction? Previous { get; }
+
+    /// <summary>
+    /// The immediate instruction after this instruction.
     /// </summary>
     IInformationalInstruction? Next { get; }
 
@@ -66,8 +89,8 @@ public interface IInformationalInstruction
     int StackPush { get; }
 
     /// <summary>
-    /// The relative distance from the first instruction in the method body,
-    /// taking into account branching.
+    /// The minimum relative distance from the first instruction in the method body,
+    /// taking branching into account.
     /// </summary>
     /// <remarks>
     /// Exception handlers are exceptional, which is why this distance has
@@ -77,6 +100,7 @@ public interface IInformationalInstruction
 
     /// <summary>
     /// If this instruction can be reached through following the control flow of the instructions.
+    /// Instructions after conditional branches are always evaluated and considered reachable.
     /// </summary>
     bool IsReachable { get; }
 
@@ -200,25 +224,8 @@ internal sealed class InformationalInstruction(
 ) : IInformationalInstruction
 {
     public HashSet<IInformationalInstruction> IncomingBranches { get; private set; } = [];
-
-    /// <summary>
-    /// The immediate previous instruction in the list or an incoming branch if
-    /// control flow stops at the immediate previous instruction.
-    /// </summary>
-    /// <remarks>
-    /// In a case where there are multiple incoming branches,
-    /// this will point to the first evaluated incoming branch.<br/>
-    /// If you care about finding a previous incoming invalid stack size somewhere,
-    /// this will work fine.<br/>
-    /// <br/>
-    /// In a case where an incoming invalid stack size exists on a branch other than
-    /// what is found via backtracking with this, it's not a problem because the error
-    /// in that case is stack size mismatch which is evaluated during the CIL instruction
-    /// crawling phase. And in such a case we do NOT evaluate further errors after that point
-    /// because the whole stack after that point is invalid and any stack size related
-    /// error would be misleading.
-    /// </remarks>
     public IInformationalInstruction? PreviousChronological { get; private set; }
+    public IInformationalInstruction? Previous { get; internal set; }
     public IInformationalInstruction? Next => next;
     internal InformationalInstruction? next;
 
@@ -244,19 +251,8 @@ internal sealed class InformationalInstruction(
         );
     public int StackPop { get; private set; }
     public int StackPush { get; private set; }
-
-    /// <summary>
-    /// The minimum distance from this instruction to the first instruction.
-    /// </summary>
     public int RelativeDistance { get; private set; }
-
-    /// <summary>
-    /// True if this instruction can not be reached from anywhere in the method based
-    /// on the OpCode of instructions. Instructions after conditional branches are
-    /// evaluated and considered reachable.
-    /// </summary>
-    public bool IsReachable => !explored;
-
+    public bool IsReachable => explored;
     public List<IHandlerInfo> HandlerParts => handlerParts;
     public ReadOnlyCollection<IHandlerInfo> HandlerInfos => HandlerParts.AsReadOnly();
 
@@ -297,7 +293,10 @@ internal sealed class InformationalInstruction(
     }
 
     public class AnnotationDuplicateInstance()
-        : Annotation($"Warning: Duplicate instruction instance; These may break the method.", null)
+        : Annotation(
+            $"Warning: Duplicate instruction instance; This may break the method and analysis.",
+            null
+        )
     {
         public override string ToString() => base.ToString();
     }
@@ -447,7 +446,7 @@ internal sealed class InformationalInstruction(
             }
         }
 
-        if (IsReachable)
+        if (!IsReachable)
             sb.Append($"{LeftWall} - | {Instruction}");
         else
         {

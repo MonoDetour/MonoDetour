@@ -52,7 +52,7 @@ internal static class CilAnalyzer
         // Unreachable instructions seem to sometimes not be evaluated,
         // but sometimes they are evaluated anyways.
         // I think it's safer to ignore unreachable instructions for now.
-        if (instruction.IsReachable)
+        if (!instruction.IsReachable)
         {
             return;
         }

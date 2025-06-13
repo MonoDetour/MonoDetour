@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoDetour.Cil.Analysis;
 using MonoDetour.Interop.MonoModUtils;
 using MonoDetour.Logging;
 using MonoMod.Cil;
@@ -21,7 +22,7 @@ namespace MonoDetour.Cil;
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 #pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
 
-public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
+public class ILWeaver : IMonoDetourLogSource
 {
     private enum InsertType
     {
@@ -38,10 +39,10 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     }
 
     /// <inheritdoc cref="ILManipulationInfo"/>
-    public ILManipulationInfo ManipulationInfo { get; } = il;
+    public ILManipulationInfo ManipulationInfo { get; }
 
     /// <inheritdoc cref="ILContext"/>
-    public ILContext Context { get; } = il.Context;
+    public ILContext Context { get; }
 
     /// <inheritdoc cref="ILContext.IL"/>
     public ILProcessor IL => Context.IL;
@@ -111,11 +112,18 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     public MonoDetourLogger.LogChannel LogFilter { get; set; } =
         MonoDetourLogger.LogChannel.Warning | MonoDetourLogger.LogChannel.Error;
 
-    Instruction current = il.Context.Instrs[0];
+    Instruction current;
 
     readonly List<ILLabel> pendingFutureNextInsertLabels = [];
 
     const string gotoMatchingDocsLink = "<insert documentation link here>";
+
+    public ILWeaver(ILManipulationInfo il)
+    {
+        ManipulationInfo = Helpers.ThrowIfNull(il);
+        Context = il.Context;
+        current = Context.Instrs[0];
+    }
 
     /// <summary>
     /// Create a new <see cref="ILWeaver"/> for the current <see cref="ILManipulationInfo"/>
@@ -633,6 +641,127 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     }
 
     /// <summary>
+    /// Wraps an area around <see cref="Current"/> where the stack size is non-zero
+    /// to a try block, catching exceptions of type <paramref name="catchType"/>.
+    /// The argument <paramref name="catchInstructions"/> is written as the catch block's instructions.<br/>
+    /// <br/>
+    /// After this method, <see cref="Current"/> will be on the instruction after
+    /// the catch block.
+    /// </summary>
+    /// <inheritdoc cref="HandlerWrapTryCatchStackSizeNonZero(Type?, Instruction, out Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver HandlerWrapTryCatchStackSizeNonZeroOnCurrent(
+        Type? catchType,
+        params IEnumerable<Instruction> catchInstructions
+    ) =>
+        HandlerWrapTryCatchStackSizeNonZeroOnCurrent(
+            catchType,
+            () =>
+            {
+                InsertAfterCurrent(catchInstructions);
+            }
+        );
+
+    /// <summary>
+    /// Wraps an area around <see cref="Current"/> where the stack size is non-zero
+    /// to a try block, catching exceptions of type <paramref name="catchType"/>.
+    /// Catching logic can be written in the <paramref name="writeCatch"/> callback, where
+    /// at the start <see cref="Current"/> is the inclusive end of the try block, and
+    /// at the end <see cref="Current"/> should be the end of the catch block.<br/>
+    /// <br/>
+    /// After this method, <see cref="Current"/> will be on the instruction after
+    /// the catch block.
+    /// </summary>
+    /// <inheritdoc cref="HandlerWrapTryCatchStackSizeNonZero(Type?, Instruction, out Instruction, Func{Instruction, Instruction})"/>
+    public ILWeaver HandlerWrapTryCatchStackSizeNonZeroOnCurrent(
+        Type? catchType,
+        Action writeCatch
+    ) =>
+        HandlerWrapTryCatchStackSizeNonZero(
+                catchType,
+                Current,
+                out var afterCatch,
+                tryEnd =>
+                {
+                    CurrentTo(tryEnd);
+                    writeCatch();
+                    return Current;
+                }
+            )
+            .CurrentTo(afterCatch);
+
+    /// <summary>
+    /// Wraps an area around <paramref name="origin"/> where the stack size is non-zero
+    /// to a try block, catching exceptions of type <paramref name="catchType"/>.
+    /// The argument <paramref name="catchInstructions"/> is written as the catch block's instructions.
+    /// </summary>
+    /// <param name="catchInstructions">The instructions to be written to the catch handler.</param>
+    /// <inheritdoc cref="HandlerWrapTryCatchStackSizeNonZero(Type?, Instruction, out Instruction, Func{Instruction, Instruction})"/>
+    public ILWeaver HandlerWrapTryCatchStackSizeNonZero(
+        Type? catchType,
+        Instruction origin,
+        out Instruction afterCatch,
+        params IEnumerable<Instruction> catchInstructions
+    )
+    {
+        HandlerWrapTryCatchStackSizeNonZero(
+            catchType,
+            origin,
+            out afterCatch,
+            tryEnd =>
+            {
+                InsertAfter(tryEnd, catchInstructions);
+                return catchInstructions.Last();
+            }
+        );
+
+        return this;
+    }
+
+    /// <summary>
+    /// Wraps an area around <paramref name="origin"/> where the stack size is non-zero
+    /// to a try block, catching exceptions of type <paramref name="catchType"/>.
+    /// Catching logic can be written in the <paramref name="writeCatch"/> callback, where
+    /// the <see cref="Instruction"/> parameter is the inclusive end of the try block, and
+    /// the return value is the end of the catch block.
+    /// </summary>
+    /// <param name="catchType">The types of Exceptions that should be catched.
+    /// If left null, <c>object</c> is used.</param>
+    /// <param name="origin">The instruction around which the area
+    /// where stack size is non-zero is selected.</param>
+    /// <param name="afterCatch">The instruction outside the written catch handler.</param>
+    /// <param name="writeCatch">The callback where catch logic is written.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver HandlerWrapTryCatchStackSizeNonZero(
+        Type? catchType,
+        Instruction origin,
+        out Instruction afterCatch,
+        Func<Instruction, Instruction> writeCatch
+    )
+    {
+        HandlerCreateCatch(catchType, out var handler);
+
+        var informationalBody = Body.CreateInformationalSnapshot();
+        HandlerSetTryStart(GetStackSizeZeroBeforeContinuous(origin, informationalBody), handler);
+
+        var tryEnd = GetStackSizeZeroAfterContinuous(origin, informationalBody);
+        HandlerSetTryEnd(tryEnd, handler);
+
+        var handlerEnd = writeCatch(tryEnd);
+        HandlerSetHandlerEnd(handlerEnd, handler);
+        afterCatch = handlerEnd.Next;
+
+        if (afterCatch is null)
+        {
+            afterCatch = Create(OpCodes.Nop);
+            InsertAfter(handlerEnd, afterCatch);
+        }
+
+        HandlerApply(handler);
+
+        return this;
+    }
+
+    /// <summary>
     /// Writes the leave instructions for try, catch or finally blocks and applies the
     /// provided <see cref="IWeaverExceptionHandler"/> to the method body.
     /// </summary>
@@ -876,6 +1005,77 @@ public class ILWeaver(ILManipulationInfo il) : IMonoDetourLogSource
     public ILWeaver CurrentToNext() => CurrentTo(Current.Next);
 
     public ILWeaver CurrentToPrevious() => CurrentTo(Current.Previous);
+
+    /// <summary>
+    /// Gets the first reachable instruction backward whose incoming stack size is 0,
+    /// without any branching.
+    /// </summary>
+    /// <param name="start">The instruction to start at searching.</param>
+    /// <param name="informationalBody">
+    /// The <see cref="IInformationalMethodBody"/> whose
+    /// <see cref="IInformationalInstruction"/>s' stack size to check.
+    /// An <see cref="IInformationalMethodBody"/> should not be reused after
+    /// the method has been modified.
+    /// </param>
+    public Instruction GetStackSizeZeroBeforeContinuous(
+        Instruction start,
+        IInformationalMethodBody? informationalBody = null
+    )
+    {
+        informationalBody ??= Body.CreateInformationalSnapshot();
+        var infoStart = informationalBody.GetInformationalInstruction(start);
+
+        var enumerable = infoStart;
+        while (true)
+        {
+            if (enumerable.IsReachable && enumerable.IncomingStackSize == 0)
+                break;
+
+            enumerable = enumerable.Previous;
+
+            if (enumerable is null)
+            {
+                // This should be unreachable because the first instruction in a method
+                // is always reachable and has incoming stack size 0.
+                throw new NullReferenceException("There was no previous empty stack.");
+            }
+        }
+
+        return enumerable.Instruction;
+    }
+
+    /// <summary>
+    /// Gets the first reachable instruction forward whose stack size is 0,
+    /// without any branching.
+    /// </summary>
+    /// <param name="start">The instruction to start at searching.</param>
+    /// <exception cref="NullReferenceException"></exception>
+    /// <inheritdoc cref="GetStackSizeZeroBeforeContinuous(Instruction, IInformationalMethodBody?)"/>
+    public Instruction GetStackSizeZeroAfterContinuous(
+        Instruction start,
+        IInformationalMethodBody? informationalBody = null
+    )
+    {
+        informationalBody ??= Body.CreateInformationalSnapshot();
+        var infoStart = informationalBody.GetInformationalInstruction(start);
+
+        var enumerable = infoStart;
+        while (true)
+        {
+            if (enumerable.IsReachable && enumerable.StackSize == 0)
+                break;
+
+            enumerable = enumerable.Next;
+
+            if (enumerable is null)
+            {
+                Console.WriteLine("threw");
+                throw new NullReferenceException("There was no next empty stack.");
+            }
+        }
+
+        return enumerable.Instruction;
+    }
 
     /// <summary>
     /// Attempts to match a set of predicates to find one specific
