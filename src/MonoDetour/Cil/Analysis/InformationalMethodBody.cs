@@ -197,7 +197,35 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
         InformationalInstructions = informationalInstructions.AsReadOnly();
     }
 
-    public static InformationalMethodBody CreateInformationalSnapshot(MethodBody body) => new(body);
+    public static InformationalMethodBody CreateInformationalSnapshotJIT(MethodBody body) =>
+        new(body);
+
+    public static InformationalMethodBody CreateInformationalSnapshotEvaluateAll(MethodBody body)
+    {
+        InformationalMethodBody informationalBody = new(body);
+
+        foreach (var ins in informationalBody.InformationalInstructions.Where(x => !x.IsReachable))
+        {
+            if (ins is not InformationalInstruction inf)
+            {
+                // This should be unreachable.
+                throw new InvalidCastException("Not IInformationalInstruction!");
+            }
+
+            // Make IncomingStackSize produce a valid stack size
+            inf.PreviousChronological = inf.Previous;
+
+            CrawlInstructions(
+                inf,
+                informationalBody.map,
+                stackSize: inf.Previous!.StackSize,
+                body,
+                int.MinValue
+            );
+        }
+
+        return informationalBody;
+    }
 
     public IInformationalInstruction GetInformationalInstruction(Instruction instruction)
     {

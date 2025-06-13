@@ -105,6 +105,13 @@ public interface IInformationalInstruction
     bool IsReachable { get; }
 
     /// <summary>
+    /// If this instruction was evaluated after it was created. This is the same as
+    /// <see cref="IsReachable"/> when unreachable instructions aren't evaluated such as when
+    /// using <see cref="MethodBodyExtensions.CreateInformationalSnapshotJIT(MethodBody)"/>
+    /// </summary>
+    bool IsEvaluated { get; }
+
+    /// <summary>
     /// A list of error annotations on this instruction.
     /// </summary>
     List<IAnnotation> ErrorAnnotations { get; }
@@ -224,7 +231,7 @@ internal sealed class InformationalInstruction(
 ) : IInformationalInstruction
 {
     public HashSet<IInformationalInstruction> IncomingBranches { get; private set; } = [];
-    public IInformationalInstruction? PreviousChronological { get; private set; }
+    public IInformationalInstruction? PreviousChronological { get; internal set; }
     public IInformationalInstruction? Previous { get; internal set; }
     public IInformationalInstruction? Next => next;
     internal InformationalInstruction? next;
@@ -252,7 +259,8 @@ internal sealed class InformationalInstruction(
     public int StackPop { get; private set; }
     public int StackPush { get; private set; }
     public int RelativeDistance { get; private set; }
-    public bool IsReachable => explored;
+    public bool IsReachable { get; private set; }
+    public bool IsEvaluated => explored;
     public List<IHandlerInfo> HandlerParts => handlerParts;
     public ReadOnlyCollection<IHandlerInfo> HandlerInfos => HandlerParts.AsReadOnly();
 
@@ -446,7 +454,7 @@ internal sealed class InformationalInstruction(
             }
         }
 
-        if (!IsReachable)
+        if (!IsEvaluated)
             sb.Append($"{LeftWall} - | {Instruction}");
         else
         {
@@ -571,7 +579,7 @@ internal sealed class InformationalInstruction(
             {
                 if (enumerable.IncomingStackSize != stackSize)
                 {
-                    if (!enumerable.HasErrorAnnotations)
+                    if (!enumerable.HasErrorAnnotations && distance >= 0)
                     {
                         enumerable.ErrorAnnotations.Add(
                             new AnnotationStackSizeMismatch(
@@ -586,7 +594,11 @@ internal sealed class InformationalInstruction(
                     return;
                 }
 
-                if (outsideExceptionHandler && distance < enumerable.RelativeDistance)
+                if (
+                    outsideExceptionHandler
+                    && distance >= 0
+                    && distance < enumerable.RelativeDistance
+                )
                 {
                     goto evaluateDistanceAndMoveNext;
                 }
@@ -595,6 +607,10 @@ internal sealed class InformationalInstruction(
 
             ComputeStackDelta(enumerable, ref stackSize, body);
             enumerable.explored = true;
+            if (distance >= 0)
+            {
+                enumerable.IsReachable = true;
+            }
 
             evaluateDistanceAndMoveNext:
             // Important when rewriting distance

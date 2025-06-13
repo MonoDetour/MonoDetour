@@ -277,7 +277,7 @@ static class ILHookDMDManipulation
         IInformationalMethodBody analysis;
         try
         {
-            analysis = body.CreateInformationalSnapshot().AnnotateErrors();
+            analysis = body.CreateInformationalSnapshotJIT().AnnotateErrors();
         }
         catch
         {

@@ -99,7 +99,7 @@ public class PrefixDetour : IMonoDetourHookApplier
             MonoDetourLogger.LogChannel.IL,
             () =>
             {
-                var body = w.Body.CreateInformationalSnapshot().AnnotateErrors();
+                var body = w.Body.CreateInformationalSnapshotJIT().AnnotateErrors();
                 return $"Manipulated by Prefix: {Hook.Manipulator.Name}:\n{body}";
             }
         );

@@ -128,7 +128,7 @@ static class Utils
         Mono.Cecil.Cil.MethodBody body
     )
     {
-        var informationalBody = body.CreateInformationalSnapshot().AnnotateErrors();
+        var informationalBody = body.CreateInformationalSnapshotJIT().AnnotateErrors();
         if (informationalBody.HasErrors())
         {
             hook.Owner.Log(

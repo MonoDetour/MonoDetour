@@ -740,7 +740,7 @@ public class ILWeaver : IMonoDetourLogSource
     {
         HandlerCreateCatch(catchType, out var handler);
 
-        var informationalBody = Body.CreateInformationalSnapshot();
+        var informationalBody = Body.CreateInformationalSnapshotEvaluateAll();
         HandlerSetTryStart(GetStackSizeZeroBeforeContinuous(origin, informationalBody), handler);
 
         var tryEnd = GetStackSizeZeroAfterContinuous(origin, informationalBody);
@@ -1022,13 +1022,13 @@ public class ILWeaver : IMonoDetourLogSource
         IInformationalMethodBody? informationalBody = null
     )
     {
-        informationalBody ??= Body.CreateInformationalSnapshot();
+        informationalBody ??= Body.CreateInformationalSnapshotEvaluateAll();
         var infoStart = informationalBody.GetInformationalInstruction(start);
 
         var enumerable = infoStart;
         while (true)
         {
-            if (enumerable.IsReachable && enumerable.IncomingStackSize == 0)
+            if (enumerable is { IsEvaluated: true, IncomingStackSize: 0 })
                 break;
 
             enumerable = enumerable.Previous;
@@ -1056,13 +1056,13 @@ public class ILWeaver : IMonoDetourLogSource
         IInformationalMethodBody? informationalBody = null
     )
     {
-        informationalBody ??= Body.CreateInformationalSnapshot();
+        informationalBody ??= Body.CreateInformationalSnapshotEvaluateAll();
         var infoStart = informationalBody.GetInformationalInstruction(start);
 
         var enumerable = infoStart;
         while (true)
         {
-            if (enumerable.IsReachable && enumerable.StackSize == 0)
+            if (enumerable is { IsEvaluated: true, StackSize: 0 })
                 break;
 
             enumerable = enumerable.Next;

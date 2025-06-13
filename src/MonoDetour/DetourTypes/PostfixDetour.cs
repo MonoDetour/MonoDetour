@@ -86,7 +86,7 @@ public class PostfixDetour : IMonoDetourHookApplier
             MonoDetourLogger.LogChannel.IL,
             () =>
             {
-                var body = w.Body.CreateInformationalSnapshot().AnnotateErrors();
+                var body = w.Body.CreateInformationalSnapshotJIT().AnnotateErrors();
                 return $"Manipulated by Postfix: {Hook.Manipulator.Name}:\n{body}";
             }
         );

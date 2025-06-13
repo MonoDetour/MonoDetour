@@ -9,59 +9,6 @@ namespace MonoDetour.UnitTests.FunctionalityTests;
 
 public static class CanAnalyzeStackSizeTests
 {
-    [Fact]
-    public static void CanAnalyzeWhenDuplicates()
-    {
-        using var dmd = new DynamicMethodDefinition("HasDuplicates", typeof(void), []);
-        {
-            var il = dmd.GetILProcessor();
-            var instrs = dmd.Definition.Body.Instructions;
-
-            il.Emit(Op.Nop);
-
-            il.Emit(Op.Ldc_I4_1);
-            il.Emit(Op.Ldnull);
-            il.Emit(Op.Throw);
-            il.Emit(Op.Ldc_I4_2);
-            il.Emit(Op.Pop);
-            il.Emit(Op.Pop);
-            il.Emit(Op.Nop);
-
-            il.Emit(Op.Ret);
-        }
-
-        MonoDetourLogger.Log(
-            MonoDetourLogger.LogChannel.Warning,
-            dmd.Definition.Body.CreateInformationalSnapshot().AnnotateErrors().ToString()
-        );
-
-        new ILContext(dmd.Definition).Invoke(il =>
-        {
-            ILManipulationInfo info = new(il, null, il.Instrs.AsReadOnly());
-            ILWeaver w = new(info);
-
-            w.MatchStrict(x => x.MatchLdcI4(2) && w.SetCurrentTo(x)).ThrowIfFailure();
-
-            w.HandlerWrapTryCatchStackSizeNonZeroOnCurrent(
-                typeof(Exception),
-                w.CreateCall(PrintException)
-            );
-        });
-
-        MonoDetourLogger.Log(
-            MonoDetourLogger.LogChannel.Warning,
-            dmd.Definition.Body.CreateInformationalSnapshot().AnnotateErrors().ToString()
-        );
-        var method = dmd.Generate();
-        PlatformTriple.Current.Compile(method);
-        method.Invoke(null, []);
-    }
-
-    static void PrintException(Exception ex)
-    {
-        Console.WriteLine(ex);
-    }
-
     /* [Fact]
     public static void CanAnalyzeStackSize()
     {

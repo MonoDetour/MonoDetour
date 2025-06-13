@@ -1,9 +1,58 @@
 using MonoDetour.Cil;
+using Op = Mono.Cecil.Cil.OpCodes;
 
 namespace MonoDetour.UnitTests.HookTests;
 
 public static class TryCatchStackTests
 {
+    static bool caught = false;
+
+    [Fact]
+    public static void CanWrapTryCatch()
+    {
+        using var dmd = new DynamicMethodDefinition("Throws", typeof(void), []);
+        {
+            var il = dmd.GetILProcessor();
+            var instrs = dmd.Definition.Body.Instructions;
+
+            il.Emit(Op.Nop);
+
+            il.Emit(Op.Ldc_I4_1);
+            il.Emit(Op.Ldnull);
+            il.Emit(Op.Throw);
+
+            il.Emit(Op.Ldc_I4_2);
+            il.Emit(Op.Pop);
+            il.Emit(Op.Pop);
+
+            il.Emit(Op.Nop);
+            il.Emit(Op.Ret);
+        }
+
+        new ILContext(dmd.Definition).Invoke(il =>
+        {
+            ILManipulationInfo info = new(il, null, il.Instrs.AsReadOnly());
+            ILWeaver w = new(info);
+
+            w.MatchStrict(x => x.MatchLdcI4(2) && w.SetCurrentTo(x)).ThrowIfFailure();
+
+            w.HandlerWrapTryCatchStackSizeNonZeroOnCurrent(
+                typeof(Exception),
+                w.CreateCall(CatchException)
+            );
+        });
+
+        var method = dmd.Generate();
+        method.Invoke(null, []);
+
+        Assert.True(caught);
+    }
+
+    static void CatchException(Exception ex)
+    {
+        caught = true;
+    }
+
     [Fact]
     public static void CanFixStackNotEmptyBeforePrefixTry()
     {
@@ -25,10 +74,7 @@ public static class TryCatchStackTests
         w.MatchMultipleStrict(
             (match) =>
             {
-                match.InsertBeforeCurrentStealLabels(
-                    w.Create(OpCodes.Ldc_I4_1),
-                    w.Create(OpCodes.Pop)
-                );
+                match.InsertBeforeCurrentStealLabels(w.Create(Op.Ldc_I4_1), w.Create(Op.Pop));
             },
             x => x.MatchRet() && w.SetCurrentTo(x)
         );
