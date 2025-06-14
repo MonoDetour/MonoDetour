@@ -1028,7 +1028,7 @@ public class ILWeaver : IMonoDetourLogSource
         var enumerable = infoStart;
         while (true)
         {
-            if (enumerable is { IsEvaluated: true, IncomingStackSize: 0 })
+            if (enumerable is { IsEvaluated: true, IncomingStackSize: <= 0 })
                 break;
 
             enumerable = enumerable.Previous;
@@ -1062,7 +1062,7 @@ public class ILWeaver : IMonoDetourLogSource
         var enumerable = infoStart;
         while (true)
         {
-            if (enumerable is { IsEvaluated: true, StackSize: 0 })
+            if (enumerable is { IsEvaluated: true, StackSize: <= 0 })
                 break;
 
             enumerable = enumerable.Next;

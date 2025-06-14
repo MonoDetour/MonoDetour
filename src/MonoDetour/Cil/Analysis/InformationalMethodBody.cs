@@ -153,48 +153,63 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
 
         foreach (var eh in body.ExceptionHandlers)
         {
-            stackSize = 0;
-
-            if (eh.HandlerType is ExceptionHandlerType.Filter or ExceptionHandlerType.Catch)
-            {
-                stackSize = 1;
-            }
-
-            if (eh.HandlerStart is null || eh.HandlerEnd is null)
+            if (!map.TryGetValue(eh.TryStart, out var tryStart))
             {
                 continue;
             }
 
-            var handlerStart = eh.HandlerStart;
-            var handlerEnd = eh.HandlerEnd;
-
-            CrawlInstructions(
-                map[handlerStart],
-                map,
-                stackSize,
-                body,
-                map[handlerEnd].RelativeDistance - 9_000,
-                outsideExceptionHandler: false
-            );
-
-            if (eh.FilterStart is null)
+            if (!tryStart.IsReachable)
             {
                 continue;
             }
 
-            var filterStart = eh.FilterStart;
-
-            CrawlInstructions(
-                map[filterStart],
-                map,
-                stackSize,
-                body,
-                map[handlerEnd].RelativeDistance - 10_000 + 1,
-                outsideExceptionHandler: false
-            );
+            CrawlExceptionHandler(eh);
         }
 
         InformationalInstructions = informationalInstructions.AsReadOnly();
+    }
+
+    public void CrawlExceptionHandler(ExceptionHandler handler)
+    {
+        int stackSize = 0;
+
+        if (handler.HandlerType is ExceptionHandlerType.Filter or ExceptionHandlerType.Catch)
+        {
+            stackSize = 1;
+        }
+
+        if (handler.HandlerStart is null || handler.HandlerEnd is null)
+        {
+            return;
+        }
+
+        var handlerStart = handler.HandlerStart;
+        var handlerEnd = handler.HandlerEnd;
+
+        CrawlInstructions(
+            map[handlerStart],
+            map,
+            stackSize,
+            Body,
+            map[handlerEnd].RelativeDistance - 9_000,
+            outsideExceptionHandler: false
+        );
+
+        if (handler.FilterStart is null)
+        {
+            return;
+        }
+
+        var filterStart = handler.FilterStart;
+
+        CrawlInstructions(
+            map[filterStart],
+            map,
+            stackSize,
+            Body,
+            map[handlerEnd].RelativeDistance - 10_000 + 1,
+            outsideExceptionHandler: false
+        );
     }
 
     public static InformationalMethodBody CreateInformationalSnapshotJIT(MethodBody body) =>
@@ -204,21 +219,41 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
     {
         InformationalMethodBody informationalBody = new(body);
 
+        foreach (var eh in body.ExceptionHandlers)
+        {
+            if (eh.HandlerEnd is null)
+            {
+                continue;
+            }
+
+            informationalBody.map[eh.HandlerEnd].RelativeDistance = int.MinValue + 100_000;
+            informationalBody.CrawlExceptionHandler(eh);
+        }
+
         foreach (var ins in informationalBody.InformationalInstructions.Where(x => !x.IsReachable))
         {
             if (ins is not InformationalInstruction inf)
             {
                 // This should be unreachable.
-                throw new InvalidCastException("Not IInformationalInstruction!");
+                throw new InvalidCastException("Not InformationalInstruction!");
             }
 
-            // Make IncomingStackSize produce a valid stack size
+            // Make IncomingStackSize produce a reasonable stack size
             inf.PreviousChronological = inf.Previous;
+
+            int startStackSize = inf.Previous!.StackSize;
+
+            // A negative stack size is almost definitely wrong which would happen
+            // if there is something like two ret instructions in a row for example.
+            if (startStackSize < 0)
+            {
+                startStackSize = 0;
+            }
 
             CrawlInstructions(
                 inf,
                 informationalBody.map,
-                stackSize: inf.Previous!.StackSize,
+                stackSize: startStackSize,
                 body,
                 int.MinValue
             );

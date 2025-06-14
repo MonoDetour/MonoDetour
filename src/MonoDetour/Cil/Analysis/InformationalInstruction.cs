@@ -258,7 +258,7 @@ internal sealed class InformationalInstruction(
         );
     public int StackPop { get; private set; }
     public int StackPush { get; private set; }
-    public int RelativeDistance { get; private set; }
+    public int RelativeDistance { get; internal set; }
     public bool IsReachable { get; private set; }
     public bool IsEvaluated => explored;
     public List<IHandlerInfo> HandlerParts => handlerParts;
