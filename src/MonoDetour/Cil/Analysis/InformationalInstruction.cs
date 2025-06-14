@@ -160,14 +160,14 @@ public interface IInformationalInstruction
         HandlerPart HandlerPart { get; }
 
         /// <summary>
-        /// The handler type this instruction is a part of.
+        /// The Mono.Cecil <see cref="ExceptionHandler"/> this instruction belongs to.
         /// </summary>
-        ExceptionHandlerType HandlerType { get; }
+        ExceptionHandler Handler { get; }
 
         /// <summary>
         /// Deconstructs this <see cref="IHandlerInfo"/>.
         /// </summary>
-        public void Deconstruct(out HandlerPart handlerPart, out ExceptionHandlerType handlerType);
+        public void Deconstruct(out HandlerPart handlerPart, out ExceptionHandler exceptionHandler);
     }
 
     /// <summary>
@@ -275,17 +275,16 @@ internal sealed class InformationalInstruction(
     internal const string EmptyPad = $"{LeftWall}   ¦ ";
     internal static string VariableEmptyPad = $"{LeftWall}   ¦ ";
 
-    internal class HandlerInfo(HandlerPart handlerPart, ExceptionHandlerType handlerType)
-        : IHandlerInfo
+    internal class HandlerInfo(HandlerPart handlerPart, ExceptionHandler handler) : IHandlerInfo
     {
         public HandlerPart HandlerPart => handlerPart;
 
-        public ExceptionHandlerType HandlerType => handlerType;
+        public ExceptionHandler Handler => handler;
 
-        public void Deconstruct(out HandlerPart part, out ExceptionHandlerType type)
+        public void Deconstruct(out HandlerPart part, out ExceptionHandler exceptionHandler)
         {
             part = HandlerPart;
-            type = HandlerType;
+            exceptionHandler = Handler;
         }
     }
 
@@ -427,16 +426,16 @@ internal sealed class InformationalInstruction(
 
         if (withAnnotations)
         {
-            foreach (var (handlerPart, handlerType) in HandlerParts)
+            foreach (var (handlerPart, handler) in HandlerParts)
             {
                 if (handlerPart.HasFlag(HandlerPart.TryEnd))
                     sb.AppendLine(EmptyPad + "} // end try");
 
                 if (handlerPart.HasFlag(HandlerPart.HandlerEnd))
-                    sb.AppendLine(HandlerTypeToStringEnd(handlerType));
+                    sb.AppendLine(HandlerTypeToStringEnd(handler.HandlerType));
             }
 
-            foreach (var (handlerPart, handlerType) in HandlerParts)
+            foreach (var (handlerPart, handler) in HandlerParts)
             {
                 if (handlerPart.HasFlag(HandlerPart.TryStart))
                     sb.AppendLine(EmptyPad + ".try\n" + EmptyPad + "{");
@@ -446,10 +445,12 @@ internal sealed class InformationalInstruction(
 
                 if (handlerPart.HasFlag(HandlerPart.HandlerStart))
                 {
-                    if (handlerType == ExceptionHandlerType.Filter)
+                    if (handler.HandlerType == ExceptionHandlerType.Filter)
                         sb.AppendLine(EmptyPad + "} // end filter");
 
-                    sb.AppendLine(HandlerTypeToStringStart(handlerType));
+                    sb.AppendLine(
+                        HandlerTypeToStringStart(handler.HandlerType, handler.CatchType?.ToString())
+                    );
                 }
             }
         }
@@ -531,17 +532,17 @@ internal sealed class InformationalInstruction(
         {
             sb.Append(" IL_");
             sb.Append(informational.Instruction.Offset.ToString("x4"));
-            sb.Append(";");
+            sb.Append(';');
         }
         sb.AppendLine();
     }
 
-    static string HandlerTypeToStringStart(ExceptionHandlerType handlerType)
+    static string HandlerTypeToStringStart(ExceptionHandlerType handlerType, string? catchType)
     {
         return handlerType switch
         {
-            ExceptionHandlerType.Catch => EmptyPad + "catch\n" + EmptyPad + "{",
-            ExceptionHandlerType.Filter => EmptyPad + "catch\n" + EmptyPad + "{",
+            ExceptionHandlerType.Catch => EmptyPad + $"catch ({catchType})\n" + EmptyPad + "{",
+            ExceptionHandlerType.Filter => EmptyPad + $"catch ({catchType})\n" + EmptyPad + "{",
             ExceptionHandlerType.Fault => EmptyPad + "fault\n" + EmptyPad + "{",
             ExceptionHandlerType.Finally => EmptyPad + "finally\n" + EmptyPad + "{",
             _ => throw new ArgumentOutOfRangeException(handlerType.ToString()),

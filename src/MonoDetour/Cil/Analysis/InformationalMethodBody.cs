@@ -123,7 +123,7 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
                 if (handlerPart == 0)
                     continue;
 
-                handlerParts.Add(new HandlerInfo(handlerPart, eh.HandlerType));
+                handlerParts.Add(new HandlerInfo(handlerPart, eh));
             }
 
             InformationalInstruction ins = new(cecilIns, default, default, handlerParts);
