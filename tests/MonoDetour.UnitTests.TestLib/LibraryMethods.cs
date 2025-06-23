@@ -58,6 +58,8 @@ public class LibraryMethods
     public void Overloaded() { }
 
     public void Overloaded(int num) { }
+
+    public void HasArgumentWithGenericType(IEnumerable<int> numbers) { }
 }
 #pragma warning restore CA1822 // Mark members as static
 #pragma warning restore IDE0079 // Remove unnecessary suppression

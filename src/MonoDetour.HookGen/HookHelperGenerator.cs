@@ -1167,7 +1167,10 @@ namespace MonoDetour.HookGen
                 .WriteLine(" Target()")
                 .OpenBlock();
 
-            if (type.Type.InnermostType.FqName.Contains('<'))
+            if (
+                type.Type.InnermostType.FqName.Contains('<')
+                && !type.Type.InnermostType.FqName.EndsWith(">")
+            )
             {
                 if (type.Type.InnermostType.AssemblyIdentityName is null)
                     throw new Exception(
@@ -1207,7 +1210,7 @@ namespace MonoDetour.HookGen
 
             foreach (var param in member.Signature.ParameterTypes.AsImmutableArray())
             {
-                if (param.FqName.Contains('<'))
+                if (param.FqName.Contains('<') && !param.FqName.EndsWith(">"))
                 {
                     if (param.AssemblyIdentityName is null)
                         throw new Exception(
