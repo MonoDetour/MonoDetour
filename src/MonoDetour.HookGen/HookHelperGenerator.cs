@@ -1291,6 +1291,7 @@ namespace MonoDetour.HookGen
         private static string SanitizeMdName(string v) =>
             v.Replace(".", "_")
                 .Replace("`", "_")
+                .Replace('|', '_')
                 .Replace("+", "_")
                 .Replace("<", "_")
                 .Replace(">", "_");
@@ -1931,6 +1932,7 @@ namespace MonoDetour.HookGen
 
             var result = name.Replace('.', '_')
                 .Replace('/', '_')
+                .Replace('|', '_')
                 .Replace('`', '_')
                 .Replace('+', '_')
                 .Replace('<', '_')
