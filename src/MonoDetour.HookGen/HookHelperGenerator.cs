@@ -76,8 +76,8 @@ namespace MonoDetour.HookGen
                 ///     MonoDetour.HookGen will generate hooks for the targetTypes specified
                 ///   </item>
                 ///   <item>
-                ///     <see cref="MonoDetourManager.InvokeHookInitializers()"/>
-                ///     will invoke static methods marked with <see cref="MonoDetourHookInitializeAttribute"/> in types with this attribute
+                ///     <see cref="global::MonoDetour.MonoDetourManager.InvokeHookInitializers(Assembly)"/>
+                ///     will invoke static methods marked with <see cref="global::MonoDetour.MonoDetourHookInitializeAttribute"/> in types with this attribute
                 ///   </item>
                 /// </list>
                 /// </summary>
