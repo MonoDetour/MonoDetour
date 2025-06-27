@@ -963,12 +963,13 @@ public class ILWeaver : IMonoDetourLogSource
     }
 
     /// <summary>
-    /// Set <see cref="Current"/> to a target instruction just like
-    /// <see cref="CurrentTo(Instruction)"/>, except this returns true
-    /// for use in <see cref="MatchRelaxed(Predicate{Instruction}[])"/> and other variations.
+    /// Set <see cref="Current"/> to a target instruction like
+    /// <see cref="CurrentTo(Instruction)"/>, except for use in
+    /// <see cref="MatchRelaxed(Predicate{Instruction}[])"/> and other variations.
     /// </summary>
     /// <param name="instruction">The instruction to set as current.</param>
-    /// <returns>true</returns>
+    /// <returns>Whether or not the <paramref name="instruction"/> exists in
+    /// the current method body.</returns>
     public bool SetCurrentTo(Instruction instruction)
     {
         // We might match 'original' instructions that don't exist anymore.
@@ -982,12 +983,13 @@ public class ILWeaver : IMonoDetourLogSource
     }
 
     /// <summary>
-    /// Set instruction to a target instruction and returns true
-    /// for use in <see cref="MatchRelaxed(Predicate{Instruction}[])"/> and other variations.
+    /// Set instruction to a target instruction for use in
+    /// <see cref="MatchRelaxed(Predicate{Instruction}[])"/> and other variations.
     /// </summary>
     /// <param name="toBeSet">The instruction to be set.</param>
     /// <param name="target">The instruction toBeSet will be set to.</param>
-    /// <returns>true</returns>
+    /// <returns>Whether or not the <paramref name="target"/> instruction exists in
+    /// the current method body.</returns>
     public bool SetInstructionTo([NotNull] ref Instruction? toBeSet, Instruction target)
     {
         Helpers.ThrowIfNull(target);
@@ -1263,7 +1265,6 @@ public class ILWeaver : IMonoDetourLogSource
             Helpers.ThrowIfNull(onMatched);
 
         Instruction originalCurrent = Current;
-        Instruction singleMatchCurrent = Current;
 
         List<int> matchedIndexes = [];
         List<Instruction> matchedInstructionsStart = [];
@@ -1313,19 +1314,12 @@ public class ILWeaver : IMonoDetourLogSource
             //
             // So I think the best solution is an analyzer that enforces setting Current.
 
-            if (allowMultipleMatches)
-            {
-                // We don't execute `onMatched` until everything is matched
-                // because otherwise we would potentially be matching against
-                // newly inserted instructions in an infinite loop.
-            }
-            else
-            {
-                // Capture Current because it's probably going
-                // to be overridden when testing against the rest
-                // of the instructions.
-                singleMatchCurrent = Current;
-            }
+            // if (allowMultipleMatches)
+            // {
+            //     We don't execute `onMatched` until everything is matched
+            //     because otherwise we would potentially be matching against
+            //     newly inserted instructions in an infinite loop.
+            // }
         }
 
         if (allowMultipleMatches)
@@ -1373,7 +1367,17 @@ public class ILWeaver : IMonoDetourLogSource
         {
             if (matchedIndexes.Count == 1)
             {
-                Current = singleMatchCurrent;
+                // Re-evaluate predicates also when matching once
+                var matchedInstruction = matchedInstructionsStart.First();
+
+                int startIndex = instructions.IndexOf(matchedInstruction);
+                int endIndex = startIndex + predicates.Length;
+
+                for (int i = startIndex; i < endIndex; i++)
+                {
+                    predicates[predicatesMatched](instructions[i]);
+                }
+
                 return new ILWeaverResult(this, null);
             }
 
