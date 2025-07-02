@@ -592,7 +592,7 @@ public class ILWeaver : IMonoDetourLogSource
     }
 
     /// <inheritdoc cref="HandlerSetFilterStart(ILLabel, WeaverExceptionFilterHandler)"/>
-    public ILWeaver FilterSetFilterStart(
+    public ILWeaver HandlerSetFilterStart(
         Instruction filterStart,
         WeaverExceptionFilterHandler handler
     )
