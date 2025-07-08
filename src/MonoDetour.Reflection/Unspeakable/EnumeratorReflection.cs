@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Reflection;
-using System.Reflection.Emit;
+using Mono.Cecil.Cil;
 using MonoMod.Utils;
 
 namespace MonoDetour.Reflection.Unspeakable;
@@ -242,7 +242,7 @@ public static class EnumeratorReflection
             typeof(T).MakeByRefType(),
             [typeof(object)]
         );
-        var il = dmd.GetILGenerator();
+        var il = dmd.GetILProcessor();
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Ldflda, fieldInfo);
         il.Emit(OpCodes.Ret);
