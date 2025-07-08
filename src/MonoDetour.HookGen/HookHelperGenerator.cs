@@ -972,7 +972,7 @@ namespace MonoDetour.HookGen
             cb.Write("public delegate void PostfixSignature(").IncreaseIndent();
             WriteDelegateTypes();
             WriteReturnValueIfExists();
-            cb.WriteLine(");").DecreaseIndent().WriteLine();
+            cb.WriteLine(");").DecreaseIndent();
 
             void WriteReturnValueIfExists()
             {
@@ -1005,7 +1005,7 @@ namespace MonoDetour.HookGen
                 {
                     cb.Write(", ").Write(type.Type.InnermostType.FqName);
                 }
-                cb.WriteLine("> self);").WriteLine();
+                cb.WriteLine("> self);");
 
                 if (member.GenerateControlFlowVariants)
                 {
@@ -1019,7 +1019,7 @@ namespace MonoDetour.HookGen
                     {
                         cb.Write(", ").Write(type.Type.InnermostType.FqName);
                     }
-                    cb.WriteLine("> self);").WriteLine();
+                    cb.WriteLine("> self, ref bool continueEnumeration);");
                 }
                 cb.Write("public delegate void PostfixMoveNextSignature(")
                     .Write(genericEnumerator)

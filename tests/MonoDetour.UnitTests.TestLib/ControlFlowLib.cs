@@ -1,3 +1,5 @@
+using System.Collections;
+
 namespace MonoDetour.UnitTests.TestLib;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
@@ -16,5 +18,10 @@ class ControlFlowLib
     public string ReturnHello()
     {
         return "hello";
+    }
+
+    public IEnumerator GetEnumerator()
+    {
+        yield break;
     }
 }
