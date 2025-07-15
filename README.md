@@ -2,7 +2,7 @@
 
 | MonoDetour | MonoDetour.HookGen | Community Support |
 |:-:|:-:|:-:|
-| [![MonoDetour](https://img.shields.io/nuget/v/MonoDetour?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/MonoDetour) | [![MonoDetour.HookGen](https://img.shields.io/nuget/v/MonoDetour.HookGen?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/MonoDetour.HookGen) | [![Discord](https://img.shields.io/discord/1377047282381361152?style=for-the-badge&label=Discord)](<https://discord.gg/Pt2BsA2cP4>) |
+| [![MonoDetour](https://img.shields.io/nuget/v/MonoDetour?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/MonoDetour) | [![MonoDetour.HookGen](https://img.shields.io/nuget/v/MonoDetour.HookGen?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/MonoDetour.HookGen) | [![Discord](https://img.shields.io/discord/1377047282381361152?style=for-the-badge&label=Discord)](<https://discord.gg/cYgJszjzPw>) |
 
 Easy and convenient .NET detouring library based around HookGen with C# source generators, powered by MonoMod.RuntimeDetour.
 
@@ -20,7 +20,7 @@ Easy and convenient .NET detouring library based around HookGen with C# source g
 ## Documentation
 
 - Website: <https://monodetour.github.io/>
-- Join the Discord server for further support: <https://discord.gg/Pt2BsA2cP4>
+- Join the Discord server for further support: <https://discord.gg/cYgJszjzPw>
 
 ## Features
 
