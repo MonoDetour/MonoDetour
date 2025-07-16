@@ -8,10 +8,17 @@ file static class CanSanitizeRefness
     {
         ReturnsTuple.Prefix(Prefix_ReturnsTuple);
         TakesRefDictionary.Prefix(Prefix_TakesRefDictionary);
-        TakeAndReturnInt.Postfix(Foo);
+
+        // Technically this doesn't belong in this file but eh
+        CausesConflictingParameterNames.Postfix(Post);
     }
 
-    private static void Foo(LibraryMethods self, ref int number, ref int returnValue)
+    private static void Post(
+        LibraryMethods self,
+        ref bool self1,
+        ref bool returnValue1,
+        ref bool returnValue
+    )
     {
         throw new NotImplementedException();
     }

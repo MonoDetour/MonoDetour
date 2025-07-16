@@ -162,6 +162,8 @@ namespace MonoDetour.HookGen
             () => new()
         );
 
+        private static readonly ObjectPool<HashSet<string>> takenParameterNamesPool = new(() => []);
+
         private static readonly IEqualityComparer<HashSet<string>> stringHashSetEqualityComparer =
             HashSet<string>.CreateSetComparer();
 
@@ -928,7 +930,7 @@ namespace MonoDetour.HookGen
             var sig = member.Signature;
             var parameters = sig.ParameterTypes.AsImmutableArray();
 
-            CodeBuilder WriteDelegateTypes()
+            CodeBuilder WriteDelegateTypes(HashSet<string> takenNames)
             {
                 if (sig.ThisType is { } thisType2)
                 {
@@ -945,17 +947,33 @@ namespace MonoDetour.HookGen
                         _ = cb.WriteLine(",");
                     }
 
+                    var mdName = SanitizeMdName(param.ParamName!);
+                    string paramName = mdName;
+                    int num = 0;
+
+                    while (takenNames.Contains(paramName))
+                    {
+                        num += 1;
+                        paramName = mdName + num;
+                    }
+
+                    takenNames.Add(paramName);
+
                     cb.Write("ref ")
                         .Write(SanitizeUnspeakableFqName(RemoveRefness(param.FqName)))
                         .Write(" @")
-                        .Write(SanitizeMdName(param.ParamName!));
+                        .Write(paramName);
                 }
 
                 return cb;
             }
 
+            var takenParameters = takenParameterNamesPool.Allocate();
+            takenParameters.Clear();
+            takenParameters.Add("self");
+            takenParameters.Add("returnValue");
             cb.Write("public delegate void PrefixSignature(").IncreaseIndent();
-            WriteDelegateTypes();
+            WriteDelegateTypes(takenParameters);
             cb.WriteLine(");").DecreaseIndent();
 
             if (member.GenerateControlFlowVariants)
@@ -964,13 +982,20 @@ namespace MonoDetour.HookGen
                         "public delegate global::MonoDetour.DetourTypes.ReturnFlow ControlFlowPrefixSignature("
                     )
                     .IncreaseIndent();
-                WriteDelegateTypes();
+                takenParameters.Clear();
+                takenParameters.Add("self");
+                takenParameters.Add("returnValue");
+                WriteDelegateTypes(takenParameters);
                 WriteReturnValueIfExists();
                 cb.WriteLine(");").DecreaseIndent();
             }
 
             cb.Write("public delegate void PostfixSignature(").IncreaseIndent();
-            WriteDelegateTypes();
+            takenParameters.Clear();
+            takenParameters.Add("self");
+            takenParameters.Add("returnValue");
+            WriteDelegateTypes(takenParameters);
+            takenParameterNamesPool.Free(takenParameters);
             WriteReturnValueIfExists();
             cb.WriteLine(");").DecreaseIndent();
 

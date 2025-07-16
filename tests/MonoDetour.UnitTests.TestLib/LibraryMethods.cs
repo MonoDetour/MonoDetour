@@ -67,7 +67,7 @@ public class LibraryMethods
 
     public void CSharpKeywordParameterName(object @object) { }
 
-    // public bool CausesConflictingParameterNames(bool self, bool returnValue) => true;
+    public bool CausesConflictingParameterNames(bool self, bool returnValue) => true;
 }
 #pragma warning restore CA1822 // Mark members as static
 #pragma warning restore IDE0079 // Remove unnecessary suppression
