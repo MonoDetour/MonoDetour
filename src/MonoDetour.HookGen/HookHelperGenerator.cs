@@ -947,7 +947,7 @@ namespace MonoDetour.HookGen
 
                     cb.Write("ref ")
                         .Write(SanitizeUnspeakableFqName(RemoveRefness(param.FqName)))
-                        .Write(' ')
+                        .Write(" @")
                         .Write(SanitizeMdName(param.ParamName!));
                 }
 
@@ -1063,7 +1063,7 @@ namespace MonoDetour.HookGen
                     !forMoveNext && member.Signature.IteratorStateMachine is not null;
 
                 if (warnIEnumerator)
-                    PrintIEnumeratorWarning("MoveNextPrefix");
+                    PrintIEnumeratorWarning("PrefixMoveNext");
 
                 cb.Write("public static ").Write(hookType);
                 if (forMoveNext)
@@ -1115,7 +1115,7 @@ namespace MonoDetour.HookGen
                 }
 
                 if (warnIEnumerator)
-                    PrintIEnumeratorWarning("MoveNextPostfix");
+                    PrintIEnumeratorWarning("PostfixMoveNext");
 
                 cb.Write("public static ").Write(hookType);
                 if (forMoveNext)
@@ -1287,7 +1287,20 @@ namespace MonoDetour.HookGen
 
         private static string SanitizeRefness(string v) => v.Replace(" ", "_");
 
-        private static string RemoveRefness(string v) => v.Split(' ')[^1];
+        private static string RemoveRefness(string v)
+        {
+            if (v.StartsWith("ref ") || v.StartsWith("out "))
+            {
+                return v[4..];
+            }
+
+            if (v.StartsWith("in "))
+            {
+                return v[3..];
+            }
+
+            return v;
+        }
 
         private static string SanitizeMdName(string v) =>
             v.Replace(".", "_")
@@ -1299,7 +1312,7 @@ namespace MonoDetour.HookGen
 
         private static string SanitizeUnspeakableFqName(string v)
         {
-            if (v.Contains('<') || v.Contains('>'))
+            if (v.Contains('<') && !v.EndsWith(">"))
                 return "object";
 
             return v;
