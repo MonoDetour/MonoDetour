@@ -1333,9 +1333,11 @@ public class ILWeaver : IMonoDetourLogSource
                     int startIndex = instructions.IndexOf(matchedInstruction);
                     int endIndex = startIndex + predicates.Length;
 
+                    int predicateIndex = 0;
                     for (int i = startIndex; i < endIndex; i++)
                     {
-                        predicates[predicatesMatched](instructions[i]);
+                        predicates[predicateIndex](instructions[i]);
+                        predicateIndex++;
                     }
 
                     onMatched!(Clone());
@@ -1373,9 +1375,11 @@ public class ILWeaver : IMonoDetourLogSource
                 int startIndex = instructions.IndexOf(matchedInstruction);
                 int endIndex = startIndex + predicates.Length;
 
+                int predicateIndex = 0;
                 for (int i = startIndex; i < endIndex; i++)
                 {
-                    predicates[predicatesMatched](instructions[i]);
+                    predicates[predicateIndex](instructions[i]);
+                    predicateIndex++;
                 }
 
                 return new ILWeaverResult(this, null);
