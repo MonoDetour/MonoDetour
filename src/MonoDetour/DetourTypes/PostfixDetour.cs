@@ -33,7 +33,7 @@ public class PostfixDetour : IMonoDetourHookApplier
         w.CurrentTo(w.Last);
 
         var firstPostfixInstructions = info.PostfixInfo.FirstPostfixInstructions;
-        var postfixStart = RedirectEarlyReturnsToLabel(w, firstPostfixInstructions);
+        var postfixStart = RedirectEarlyReturnsToLabel(w, info);
         var branches = w.GetIncomingLabelsFor(postfixStart.InteropGetTarget()!);
         w.MarkLabelToFutureNextInsert(postfixStart);
 
@@ -95,8 +95,14 @@ public class PostfixDetour : IMonoDetourHookApplier
     }
 
     // Taken and adapted from HarmonyX
-    private static ILLabel RedirectEarlyReturnsToLabel(ILWeaver w, List<Instruction> postfixes)
+    private static ILLabel RedirectEarlyReturnsToLabel(
+        ILWeaver w,
+        HookTargetRecords.HookTargetInfo info
+    )
     {
+        var postfixes = info.PostfixInfo.FirstPostfixInstructions;
+        var retValLocIndex = info.ReturnValue?.Index;
+
         if (w.Body.Instructions.Count == 0)
         {
             w.Body.Instructions.Add(w.Create(OpCodes.Nop));
@@ -111,7 +117,7 @@ public class PostfixDetour : IMonoDetourHookApplier
         {
             hasRet = true;
 
-            if (ins.Next is null)
+            if (ins.Next is not { } next)
             {
                 continue;
             }
@@ -119,10 +125,41 @@ public class PostfixDetour : IMonoDetourHookApplier
             // To allow intentional early returns,
             // we ignore cases where ret is called twice in a row.
             // But double ret at end of method is not early, and probably not intentional.
-            if (ins.Next.Next is not null)
+            if (retValLocIndex is { } retValIndex)
             {
-                if (ins.Next.OpCode == OpCodes.Ret || ins.Previous?.OpCode == OpCodes.Ret)
-                    continue;
+                // This code is not nice. Please rewrite. Optimally so that
+                // there is a single ILHook at the end that redirects all the ret instructions.
+
+                // ldloc <-- ins.Previous.Previous.Previous
+                // ret <-- ins.Previous.Previous
+                // ldloc <-- ins.Previous
+                // ret <-- ins
+                // ldloc <-- next
+                // ret <-- next.Next
+                // maybe null <-- next.Next.Next
+                if (next.Next?.Next is not null && ins.Previous?.MatchLdloc(retValIndex) is true)
+                {
+                    if (next.Next.OpCode == OpCodes.Ret && next.MatchLdloc(retValIndex))
+                    {
+                        continue;
+                    }
+
+                    if (
+                        ins.Previous.Previous?.OpCode == OpCodes.Ret
+                        && ins.Previous.Previous.Previous?.MatchLdloc(retValIndex) is true
+                    )
+                    {
+                        continue;
+                    }
+                }
+            }
+            else
+            {
+                if (next.Next is not null)
+                {
+                    if (next.OpCode == OpCodes.Ret || ins.Previous?.OpCode == OpCodes.Ret)
+                        continue;
+                }
             }
 
             bool targeted = false;

@@ -1,4 +1,5 @@
 using MonoDetour.Cil;
+using MonoDetour.DetourTypes.Manipulation;
 
 namespace MonoDetour.UnitTests.HookTests;
 
@@ -69,16 +70,24 @@ public static partial class HookBehaviorTests
             order.Enqueue(1);
         });
 
+        var targetInfo = HookTargetRecords.GetHookTargetInfo(info.Context);
+        var retValIndex = targetInfo.ReturnValue!.Index;
+
         c.Emit(OpCodes.Ldarg_1);
         c.Emit(OpCodes.Ldc_I4, 100);
         c.Emit(OpCodes.Add);
         c.Emit(OpCodes.Starg, 1);
         c.Emit(OpCodes.Ldarg_1);
+        c.Emit(OpCodes.Stloc, retValIndex);
+        c.Emit(OpCodes.Ldloc, retValIndex);
 
         c.Emit(OpCodes.Ret);
 
         if (iLHook2_emitRetTwiceToForceEarlyReturn)
+        {
+            c.Emit(OpCodes.Ldloc, retValIndex);
             c.Emit(OpCodes.Ret);
+        }
     }
 
     private static void ILHook3_3rd_Returns(ILManipulationInfo info)
