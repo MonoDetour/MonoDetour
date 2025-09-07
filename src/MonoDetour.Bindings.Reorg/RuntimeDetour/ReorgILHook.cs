@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
@@ -7,9 +9,28 @@ namespace MonoDetour.Bindings.Reorg.RuntimeDetour;
 
 static class ReorgILHook
 {
-    static readonly ConcurrentDictionary<IMonoDetourConfig, DetourConfig> interfaceToConfig = [];
-    static readonly ConcurrentDictionary<DetourConfig, DetourConfig> configToConfig = [];
-    static readonly ConcurrentDictionary<string, DetourConfig> idToConfig = [];
+    static readonly ConcurrentDictionary<IMonoDetourConfig, object> interfaceToConfig = [];
+    static readonly ConcurrentDictionary<object, object> configToConfig = [];
+    static readonly ConcurrentDictionary<string, object> idToConfig = [];
+
+    // This only exists because we shouldn't use DetourConfig type in fields because
+    // Assembly.GetTypes() would throw on this type, and games keep doing that
+    // and not handling it properly with try catch (because the API sucks).
+    static bool TryGetDetourConfig<TKey>(
+        this IDictionary<TKey, object> data,
+        TKey key,
+        [NotNullWhen(true)] out DetourConfig? value
+    )
+    {
+        if (data.TryGetValue(key, out var tmp))
+        {
+            value = (DetourConfig)tmp;
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
 
     /// <summary>
     /// Constructs a reorg ILHook, mapping MonoDetour's IDetourConfig to a real DetourConfig type.<br/>
@@ -28,7 +49,7 @@ static class ReorgILHook
             var contextConfig = DetourContext.GetDefaultConfig();
             if (contextConfig is null)
             {
-                if (!idToConfig.TryGetValue(id, out var idConfig))
+                if (!idToConfig.TryGetDetourConfig(id, out var idConfig))
                 {
                     idConfig = new(id: id, priority: 0);
                     idToConfig.TryAdd(id, idConfig);
@@ -41,7 +62,7 @@ static class ReorgILHook
                 return new(target, manipulator, contextConfig, applyByDefault: false);
             }
 
-            if (!configToConfig.TryGetValue(contextConfig, out var configWithPriority))
+            if (!configToConfig.TryGetDetourConfig(contextConfig, out var configWithPriority))
             {
                 configWithPriority = contextConfig.WithPriority(0);
                 configToConfig.TryAdd(contextConfig, configWithPriority);
@@ -50,7 +71,7 @@ static class ReorgILHook
             return new ILHook(target, manipulator, configWithPriority, applyByDefault: false);
         }
 
-        if (!interfaceToConfig.TryGetValue(config, out var realConfig))
+        if (!interfaceToConfig.TryGetDetourConfig(config, out var realConfig))
         {
             realConfig = new DetourConfig(
                 config.OverrideId ?? id,
