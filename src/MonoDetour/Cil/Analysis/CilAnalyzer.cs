@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using static MonoDetour.Cil.Analysis.IInformationalInstruction;
 using static MonoDetour.Cil.Analysis.InformationalInstruction;
@@ -63,12 +64,25 @@ internal static class CilAnalyzer
                 return;
             types.Add(typeof(AnnotationPoppingMoreThanStackSize));
 
-            instruction.ErrorAnnotations.Add(
-                new AnnotationPoppingMoreThanStackSize(
-                    $"Error: Popping more than stack size; cannot pop {instruction.StackPop} "
-                        + $"value(s) when stack size was {instruction.IncomingStackSize}"
-                )
-            );
+            int optionals = 0;
+            if (instruction.Instruction.Operand is IMethodSignature method)
+            {
+                foreach (var param in method.Parameters)
+                {
+                    if (param.IsOptional)
+                        optionals++;
+                }
+            }
+            string errorMessage =
+                $"Error: Popping more than stack size; cannot pop {instruction.StackPop} "
+                + $"value(s) when stack size was {instruction.IncomingStackSize}";
+
+            if (optionals > 0)
+            {
+                errorMessage +=
+                    ". Tip: Optional parameters are required in CIL - they are a C# compile-time feature.";
+            }
+            instruction.ErrorAnnotations.Add(new AnnotationPoppingMoreThanStackSize(errorMessage));
         }
         else if (
             stackSize != 0
