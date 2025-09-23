@@ -1814,18 +1814,25 @@ namespace MonoDetour.HookGen
             }
 
             // then, process type members
-            foreach (var attr in attrModels)
+            foreach (var nested in type.GetTypeMembers())
             {
-                var options = attr.Options;
+                bool processedThisTypeAlready = false;
 
-                if (!options.IncludeNested)
-                {
-                    continue;
-                }
-
-                foreach (var nested in type.GetTypeMembers())
+                foreach (var attr in attrModels)
                 {
                     token.ThrowIfCancellationRequested();
+
+                    if (processedThisTypeAlready)
+                    {
+                        break;
+                    }
+
+                    var options = attr.Options;
+
+                    if (!options.IncludeNested)
+                    {
+                        continue;
+                    }
 
                     if (!options.MatchesName(nested.Name))
                     {
@@ -1844,6 +1851,8 @@ namespace MonoDetour.HookGen
                         hasHook |= typeModel.HasHook;
                         hasIl |= typeModel.HasIl;
                     }
+
+                    processedThisTypeAlready = true;
                 }
             }
 

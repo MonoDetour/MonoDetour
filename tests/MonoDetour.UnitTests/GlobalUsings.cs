@@ -11,3 +11,6 @@ global using On.MonoDetour.UnitTests.TestLib.LibraryMethods;
 
 [assembly: MonoDetourTargets(typeof(LibraryMethods))]
 [assembly: MonoDetourTargets(typeof(SomeType))]
+
+// Test: duplicate attributes should NOT break HookGen
+[assembly: MonoDetourTargets(typeof(SomeType))]
