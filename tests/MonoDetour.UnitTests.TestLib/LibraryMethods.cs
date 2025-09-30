@@ -8,6 +8,16 @@ namespace MonoDetour.UnitTests.TestLib;
 #pragma warning disable CA1822 // Mark members as static
 public class LibraryMethods
 {
+    public class SubType
+    {
+        public class SubSubType
+        {
+            public void SubSubMethod() { }
+        }
+
+        public void SubMethod() { }
+    }
+
     int Number { get; set; }
 
     public int TakeAndReturnInt(int number)

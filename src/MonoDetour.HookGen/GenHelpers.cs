@@ -40,13 +40,20 @@ namespace MonoMod.SourceGen.Internal
             {
                 builder.Write("namespace ").WriteLine(Namespace).OpenBlock();
             }
-            for (var i = ContainingTypeDecls.AsImmutableArray().Length - 1; i >= 0; i--)
+
+            var length = ContainingTypeDecls.AsImmutableArray().Length - 1;
+            _ = builder.Write("namespace ").WriteLine(ContainingTypeDecls[length]).OpenBlock();
+
+            for (var i = length - 1; i >= 0; i--)
             {
                 if (!string.IsNullOrEmpty(additionalModifiers))
                 {
                     _ = builder.Write(additionalModifiers).Write(' ');
                 }
-                _ = builder.WriteLine(ContainingTypeDecls[i]).OpenBlock();
+                _ = builder
+                    .Write("internal static partial class ")
+                    .WriteLine(ContainingTypeDecls[i])
+                    .OpenBlock();
             }
         }
 
@@ -123,7 +130,7 @@ namespace MonoMod.SourceGen.Internal
                 var name = modifyName is not null
                     ? modifyName(innermostType.Name)
                     : innermostType.Name;
-                builder.Add($"{typeKind} {name}");
+                builder.Add(name);
 
                 innermostType = innermostType.ContainingType;
             }

@@ -521,6 +521,30 @@ namespace MonoDetour.HookGen
 
                         foreach (var type in types)
                         {
+                            AddMembersToLookup(memberNameToModel, type);
+                            AddMembersInSubTypesToLookup(memberNameToModel, type);
+                        }
+
+                        Dictionary<
+                            string,
+                            ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>
+                        > retMemberNameToModel = [];
+
+                        foreach (var kv in memberNameToModel)
+                        {
+                            retMemberNameToModel.Add(kv.Key, kv.Value.ToImmutableArray());
+                        }
+
+                        return retMemberNameToModel.ToImmutableDictionary();
+
+                        static void AddMembersToLookup(
+                            Dictionary<
+                                string,
+                                List<(GeneratableMemberModel, GeneratableTypeModel)>
+                            > memberNameToModel,
+                            GeneratableTypeModel type
+                        )
+                        {
                             foreach (var member in type.Members)
                             {
                                 string memberName;
@@ -546,17 +570,20 @@ namespace MonoDetour.HookGen
                             }
                         }
 
-                        Dictionary<
-                            string,
-                            ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>
-                        > retMemberNameToModel = [];
-
-                        foreach (var kv in memberNameToModel)
+                        static void AddMembersInSubTypesToLookup(
+                            Dictionary<
+                                string,
+                                List<(GeneratableMemberModel, GeneratableTypeModel)>
+                            > memberNameToModel,
+                            GeneratableTypeModel type
+                        )
                         {
-                            retMemberNameToModel.Add(kv.Key, kv.Value.ToImmutableArray());
+                            foreach (var subType in type.NestedTypes)
+                            {
+                                AddMembersToLookup(memberNameToModel, subType);
+                                AddMembersInSubTypesToLookup(memberNameToModel, subType);
+                            }
                         }
-
-                        return retMemberNameToModel.ToImmutableDictionary();
                     }
                 );
 
@@ -743,13 +770,11 @@ namespace MonoDetour.HookGen
                         .Write(SanitizeMdName(type.Type.FullContextName).Replace(' ', '_'))
                         .Write('.');
 
+                    nameCb.Write(SanitizeMdName(model.Name).Replace(' ', '_'));
+
                     if (model.HasOverloads)
                     {
                         AppendSignatureIdentifier(nameCb, model.Signature);
-                    }
-                    else
-                    {
-                        nameCb.Write(SanitizeMdName(model.Name).Replace(' ', '_'));
                     }
 
                     nameCb.Write(".g.cs");
@@ -857,7 +882,7 @@ namespace MonoDetour.HookGen
                     }
                 }
 
-                cb.Write("internal static ")
+                cb.Write("internal static partial class ")
                     .Write(nested.Type.ContainingTypeDecls[0])
                     .WriteLine()
                     .OpenBlock();
