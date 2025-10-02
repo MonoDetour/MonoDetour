@@ -21,7 +21,7 @@ public static class MatchTests
 
         new ILContext(dmd.Definition).Invoke(il =>
         {
-            ILManipulationInfo info = new(il, null, il.Instrs.AsReadOnly());
+            ILManipulationInfo info = new(il);
             ILWeaver w = new(info);
 
             Instruction firstNop = null!;

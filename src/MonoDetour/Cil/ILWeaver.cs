@@ -38,6 +38,13 @@ public class ILWeaver : IMonoDetourLogSource
         IsOriginalPass,
     }
 
+    private const string obsoleteMessageRemoveAt =
+        "Removing a range by count is prone to causing invalid IL if the "
+        + "target method's instructions have changed. "
+        + $"Use {nameof(ILWeaver)}.{nameof(InsertBranchOver)} instead "
+        + "as it doesn't have this design flaw. Note that these two methods behave "
+        + "slightly differently; please read the method's remarks in detail.";
+
     /// <inheritdoc cref="ILManipulationInfo"/>
     public ILManipulationInfo ManipulationInfo { get; }
 
@@ -172,7 +179,7 @@ public class ILWeaver : IMonoDetourLogSource
     /// </summary>
     /// <param name="labels">The labels to retarget.</param>
     /// <param name="target">The new target instruction for labels.</param>
-    /// <returns>this <see cref="ILWeaver"/></returns>
+    /// <returns>This <see cref="ILWeaver"/></returns>
     public ILWeaver RetargetLabels(IEnumerable<ILLabel> labels, Instruction target)
     {
         foreach (var label in labels)
@@ -439,6 +446,7 @@ public class ILWeaver : IMonoDetourLogSource
         return this;
     }
 
+    [Obsolete(obsoleteMessageRemoveAt)]
     public ILWeaver RemoveAt(int index, int instructions, out IEnumerable<ILLabel> orphanedLabels)
     {
         int endIndex = index + instructions - 1;
@@ -471,12 +479,15 @@ public class ILWeaver : IMonoDetourLogSource
         return this;
     }
 
+    [Obsolete(obsoleteMessageRemoveAt)]
     public ILWeaver RemoveAtCurrent(int instructions, out IEnumerable<ILLabel> orphanedLabels) =>
         RemoveAt(Index, instructions, out orphanedLabels);
 
     public ILWeaver Remove(Instruction instruction, out ILLabel? orphanedLabel)
     {
+#pragma warning disable CS0618 // Type or member is obsolete
         RemoveAt(Instructions.IndexOf(instruction), 1, out var orphanedLabels);
+#pragma warning restore CS0618 // Type or member is obsolete
         orphanedLabel = orphanedLabels.FirstOrDefault();
         return this;
     }
@@ -1476,9 +1487,7 @@ public class ILWeaver : IMonoDetourLogSource
         {
             CodeBuilder err = new(new StringBuilder(), 2);
 
-            err.Write(
-                    $"{nameof(ILWeaver)}.{nameof(MatchRelaxed)} couldn't match all predicates for method: "
-                )
+            err.Write($"{nameof(ILWeaver)} couldn't match all predicates for method: ")
                 .WriteLine(Context.Method.FullName)
                 // .WriteLine("HELP: Instruction matching predicates must match a valid pattern in the target method's instructions.")
                 // .WriteLine("| NOTE: Other ILHooks could have modified the target method's instructions. <<CONDITIONAL>>")
@@ -1719,6 +1728,93 @@ public class ILWeaver : IMonoDetourLogSource
             index++;
         }
 
+        return this;
+    }
+
+    private ILWeaver InsertBranchOverIfX(
+        Instruction start,
+        Instruction end,
+        OpCode opCode,
+        params IEnumerable<Instruction> condition
+    )
+    {
+        var startIndex = Instructions.IndexOf(start);
+        InsertBeforeStealLabels(startIndex, Create(opCode, end.Next));
+        InsertBeforeStealLabels(startIndex, condition);
+        return this;
+    }
+
+    /// <param name="range">A tuple of the first and last instructions to branch over.</param>
+    /// <inheritdoc cref="InsertBranchOverIfTrue(Instruction, Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBranchOverIfTrue(
+        (Instruction start, Instruction end) range,
+        params IEnumerable<Instruction> condition
+    ) => InsertBranchOverIfTrue(range.start, range.end, condition);
+
+    /// <summary>
+    /// Inserts a <c>brtrue</c> instruction before <paramref name="start"/> instruction
+    /// which, if the provided <paramref name="condition"/> returns true
+    /// (non-zero on the stack),
+    /// branches <b>OVER</b> the <paramref name="end"/> instruction,
+    /// thus the instruction after "<paramref name="end"/>" is branched to.
+    /// </summary>
+    /// <param name="condition">A list of instructions which end up leaving one (1)
+    /// value on the stack which represents either true (non-zero value, e.g. <c>ldc.i4.1</c>)
+    /// or false (zero e.g. <c>ldc.i4.0</c>) which will be evaluated by <c>brtrue</c>.</param>
+    /// <inheritdoc cref="InsertBranchOver(Instruction, Instruction)"/>
+    public ILWeaver InsertBranchOverIfTrue(
+        Instruction start,
+        Instruction end,
+        params IEnumerable<Instruction> condition
+    ) => InsertBranchOverIfX(start, end, OpCodes.Brtrue, condition);
+
+    /// <param name="range">A tuple of the first and last instructions to branch over.</param>
+    /// <inheritdoc cref="InsertBranchOverIfFalse(Instruction, Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBranchOverIfFalse(
+        (Instruction start, Instruction end) range,
+        params IEnumerable<Instruction> condition
+    ) => InsertBranchOverIfFalse(range.start, range.end, condition);
+
+    /// <summary>
+    /// Inserts a <c>brfalse</c> instruction before <paramref name="start"/> instruction
+    /// which, if the provided <paramref name="condition"/> returns false
+    /// (zero on the stack),
+    /// branches <b>OVER</b> the <paramref name="end"/> instruction,
+    /// thus the instruction after "<paramref name="end"/>" is branched to.
+    /// </summary>
+    /// <param name="condition">A list of instructions which end up leaving one (1)
+    /// value on the stack which represents either true (non-zero value, e.g. <c>ldc.i4.1</c>)
+    /// or false (zero e.g. <c>ldc.i4.0</c>) which will be evaluated by <c>brfalse</c>.</param>
+    /// <inheritdoc cref="InsertBranchOver(Instruction, Instruction)"/>
+    public ILWeaver InsertBranchOverIfFalse(
+        Instruction start,
+        Instruction end,
+        params IEnumerable<Instruction> condition
+    ) => InsertBranchOverIfX(start, end, OpCodes.Brfalse, condition);
+
+    /// <param name="range">A tuple of the first and last instructions to branch over.</param>
+    /// <inheritdoc cref="InsertBranchOver(Instruction, Instruction)"/>
+    public ILWeaver InsertBranchOver((Instruction start, Instruction end) range) =>
+        InsertBranchOver(range.start, range.end);
+
+    /// <summary>
+    /// Inserts a <c>br</c> instruction before <paramref name="start"/> instruction
+    /// which unconditionally branches <b>OVER</b> the <paramref name="end"/> instruction,
+    /// thus the instruction after "<paramref name="end"/>" is branched to.
+    /// </summary>
+    /// <remarks>
+    /// If control flow would fall or branch to <paramref name="start"/> instruction,
+    /// the inserted instruction runs. However if the <paramref name="start"/> instruction
+    /// is skipped in control flow, the inserted instruction is also skipped. This means
+    /// instructions after <paramref name="start"/> and up to <paramref name="end"/> are possible
+    /// to execute if they are directly branched to.
+    /// </remarks>
+    /// <param name="start">The first instruction to branch over.</param>
+    /// <param name="end">The last instruction to branch over.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver InsertBranchOver(Instruction start, Instruction end)
+    {
+        InsertBeforeStealLabels(start, Create(OpCodes.Br, end.Next));
         return this;
     }
 

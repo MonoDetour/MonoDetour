@@ -16,8 +16,8 @@ namespace MonoDetour.Cil;
 /// <param name="originalInstructions">The original instructions of the method.</param>
 public class ILManipulationInfo(
     ILContext il,
-    MethodBase? original,
-    ReadOnlyCollection<Instruction> originalInstructions
+    MethodBase? original = null,
+    ReadOnlyCollection<Instruction>? originalInstructions = null
 )
 {
     /// <summary>
@@ -49,7 +49,8 @@ public class ILManipulationInfo(
     /// meaning some may have been modified. For unmanipulated instructions, see
     /// <see cref="UnmanipulatedContext"/>.
     /// </remarks>
-    public ReadOnlyCollection<Instruction> OriginalInstructions { get; } = originalInstructions;
+    public ReadOnlyCollection<Instruction> OriginalInstructions { get; } =
+        originalInstructions ?? ReadOnlyCollection<Instruction>.Empty;
 
     /// <summary>
     /// Similar to <see cref="Context"/> except this is untouched and won't
