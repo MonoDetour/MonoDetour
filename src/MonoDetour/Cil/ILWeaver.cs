@@ -740,10 +740,8 @@ public class ILWeaver : IMonoDetourLogSource
     {
         HandlerCreateCatch(catchType, out var handler);
 
-        var informationalBody = Body.CreateInformationalSnapshotEvaluateAll();
-        HandlerSetTryStart(GetStackSizeZeroBeforeContinuous(origin, informationalBody), handler);
-
-        var tryEnd = GetStackSizeZeroAfterContinuous(origin, informationalBody);
+        var (tryStart, tryEnd) = GetStackSizeZeroAreaContinuous(origin);
+        HandlerSetTryStart(tryStart, handler);
         HandlerSetTryEnd(tryEnd, handler);
 
         var handlerEnd = writeCatch(tryEnd);
@@ -1012,7 +1010,7 @@ public class ILWeaver : IMonoDetourLogSource
     /// Gets the first reachable instruction backward whose incoming stack size is 0,
     /// without any branching.
     /// </summary>
-    /// <param name="start">The instruction to start at searching.</param>
+    /// <param name="start">The instruction to start searching at.</param>
     /// <param name="informationalBody">
     /// The <see cref="IInformationalMethodBody"/> whose
     /// <see cref="IInformationalInstruction"/>s' stack size to check.
@@ -1050,7 +1048,7 @@ public class ILWeaver : IMonoDetourLogSource
     /// Gets the first reachable instruction forward whose stack size is 0,
     /// without any branching.
     /// </summary>
-    /// <param name="start">The instruction to start at searching.</param>
+    /// <param name="start">The instruction to start searching at.</param>
     /// <exception cref="NullReferenceException"></exception>
     /// <inheritdoc cref="GetStackSizeZeroBeforeContinuous(Instruction, IInformationalMethodBody?)"/>
     public Instruction GetStackSizeZeroAfterContinuous(
@@ -1077,6 +1075,25 @@ public class ILWeaver : IMonoDetourLogSource
         }
 
         return enumerable.Instruction;
+    }
+
+    /// <summary>
+    /// Gets the both the first reachable instruction backward whose incoming stack size is 0,
+    /// and the first instruction forward whose stack size is 0, without any branching.
+    /// </summary>
+    /// <param name="start"></param>
+    /// <param name="informationalBody"></param>
+    /// <returns>A tuple with the start and end instructions.</returns>
+    /// <inheritdoc cref="GetStackSizeZeroBeforeContinuous(Instruction, IInformationalMethodBody?)"/>
+    public (Instruction start, Instruction end) GetStackSizeZeroAreaContinuous(
+        Instruction start,
+        IInformationalMethodBody? informationalBody = null
+    )
+    {
+        informationalBody ??= Body.CreateInformationalSnapshotEvaluateAll();
+        var before = GetStackSizeZeroBeforeContinuous(start, informationalBody);
+        var after = GetStackSizeZeroAfterContinuous(start, informationalBody);
+        return (before, after);
     }
 
     /// <summary>
