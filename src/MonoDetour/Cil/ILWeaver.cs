@@ -1121,7 +1121,7 @@ public class ILWeaver : IMonoDetourLogSource
     ///         x => x.MatchBrtrue(out _) && weaver.SetCurrentTo(x)
     ///     )
     ///     .ThrowIfFailure()
-    ///     .EmitBeforeCurrent(weaver.Create(OpCodes.Call, GetCustomNumber));
+    ///     .InsertBeforeCurrent(weaver.Create(OpCodes.Call, GetCustomNumber));
     /// ]]>
     /// </code>
     /// </example>
@@ -1162,7 +1162,7 @@ public class ILWeaver : IMonoDetourLogSource
     ///         x => x.MatchBrtrue(out _) && weaver.SetCurrentTo(x)
     ///     )
     ///     .ThrowIfFailure()
-    ///     .EmitBeforeCurrent(weaver.Create(OpCodes.Call, GetCustomNumber));
+    ///     .InsertBeforeCurrent(weaver.Create(OpCodes.Call, GetCustomNumber));
     /// ]]>
     /// </code>
     /// </example>
@@ -1197,7 +1197,7 @@ public class ILWeaver : IMonoDetourLogSource
     ///     .MatchMultipleRelaxed(
     ///         onMatch: matchWeaver =>
     ///         {
-    ///             matchWeaver.EmitBeforeCurrent(
+    ///             matchWeaver.InsertBeforeCurrent(
     ///                 matchWeaver.Create(OpCodes.Call, GetCustomNumber)
     ///             );
     ///         },
@@ -1245,7 +1245,7 @@ public class ILWeaver : IMonoDetourLogSource
     ///     .MatchMultipleStrict(
     ///         onMatch: matchWeaver =>
     ///         {
-    ///             matchWeaver.EmitBeforeCurrent(
+    ///             matchWeaver.InsertBeforeCurrent(
     ///                 matchWeaver.Create(OpCodes.Call, GetCustomNumber)
     ///             );
     ///         },
