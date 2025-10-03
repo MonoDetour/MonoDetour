@@ -50,7 +50,14 @@ public class ILManipulationInfo(
     /// <see cref="UnmanipulatedContext"/>.
     /// </remarks>
     public ReadOnlyCollection<Instruction> OriginalInstructions { get; } =
-        originalInstructions ?? ReadOnlyCollection<Instruction>.Empty;
+        originalInstructions
+#if NETSTANDARD2_0
+        ?? emptyCollection;
+
+    static readonly ReadOnlyCollection<Instruction> emptyCollection = new([]);
+#else
+        ?? ReadOnlyCollection<Instruction>.Empty;
+#endif
 
     /// <summary>
     /// Similar to <see cref="Context"/> except this is untouched and won't
