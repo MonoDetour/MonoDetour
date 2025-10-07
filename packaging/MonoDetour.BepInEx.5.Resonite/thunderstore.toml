@@ -46,4 +46,4 @@ communities = [
 
 [publish.categories]
 # https://thunderstore.io/api/experimental/community/resonite/category/
-resonite = [ "libraries", "bepinex" ]
+resonite = [ "libraries", ]
