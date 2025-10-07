@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyName>0.com.github.MonoDetour.BepInEx.5</AssemblyName>
+    <AssemblyName>0.com.github.MonoDetour.BepInEx.6</AssemblyName>
     <!-- Keep up with MonoDetour version -->
     <VersionPrefix>$(MonoDetourVersionPrefix)</VersionPrefix>
     <VersionSuffix>$(MonoDetourVersionSuffix)</VersionSuffix>
@@ -12,8 +12,10 @@
     </RestoreAdditionalProjectSources>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Hamunii.BepInEx.AutoPlugin" Version="2.0.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
-    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="BepInEx.Core" Version="6.0.0-pre.1" />
+    <PackageReference Include="BepInEx.Preloader.Core" Version="6.0.0-pre.1" />
     <PackageReference Include="Mono.Cecil" Version="0.11.5" />
     <ProjectReference Include="$(SolutionRoot)src/MonoDetour/MonoDetour.csproj" />
   </ItemGroup>

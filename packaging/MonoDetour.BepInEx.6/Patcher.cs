@@ -1,16 +1,16 @@
 using System;
-using System.Collections.Generic;
 using BepInEx.Logging;
-using Mono.Cecil;
+using BepInEx.Preloader.Core.Patching;
 using static MonoDetour.Logging.MonoDetourLogger;
 
 namespace MonoDetour.Logging;
 
-internal static class Patcher
+[PatcherAutoPlugin]
+internal partial class Patcher : BasePatcher
 {
-    internal static ManualLogSource Log = Logger.CreateLogSource("MonoDetour");
+    internal static new ManualLogSource Log = Logger.CreateLogSource("MonoDetour");
 
-    public static void Initialize()
+    public override void Initialize()
     {
         OnLog += LogHandler;
     }
@@ -33,9 +33,4 @@ internal static class Patcher
 
         Log.Log(logLevel, message);
     }
-
-    // Load us https://docs.bepinex.dev/articles/dev_guide/preloader_patchers.html
-    public static IEnumerable<string> TargetDLLs { get; } = [];
-
-    public static void Patch(AssemblyDefinition _) { }
 }

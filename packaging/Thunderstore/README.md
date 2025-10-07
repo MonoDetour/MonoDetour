@@ -10,7 +10,7 @@ Note: MonoDetour is a library for developers. By itself, it does the following o
 - `ILHook`s (includes HarmonyX transpilers) will get MonoDetour's CIL analysis on target method compilation when an `InvalidProgramException` is thrown
 - MonoMod's `ILLabel`s won't cause InvalidCastExceptions in some `Mono.Cecil.Cil.Instruction` methods, such as `ToString`.
 
-Note: do not depend on this package directly. Instead depend on `MonoDetour_BepInEx_5` as it will integrate MonoDetour's logger with BepInEx. Otherwise logs might not show up due to some BepInEx quirks with MonoDetour's colored logs.
+Note: do not depend on this package directly. Instead depend on `MonoDetour_BepInEx_5` or `MonoDetour_BepInEx_6` as it will integrate MonoDetour's logger with BepInEx and in the future it'll provide HarmonyX interop support. On BepInEx 5, MonoDetour's colored logs won't show up without BepInEx logger integration.
 
 ## Why Use MonoDetour?
 

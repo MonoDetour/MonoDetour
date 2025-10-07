@@ -38,3 +38,27 @@ target = "core/"
 [[build.copy]]
 source = "../../LICENSE"
 target = "/"
+
+[publish]
+# https://thunderstore.io/api/experimental/community/
+communities = [
+    # BepInEx 5
+    "lethal-company",
+    "repo",
+    "riskofrain2",
+    "peak",
+    "hollow-knight-silksong",
+    # Special BepInEx 5 and normal BepInEx 6
+    "resonite",
+    # BepInEx 6
+]
+
+[publish.categories]
+# https://thunderstore.io/api/experimental/community/lethal-company/category/
+lethal-company = [ "libraries", ]
+repo = [ "libraries", ]
+riskofrain2 = [ "libraries", ]
+peak = [ "libraries", ]
+hollow-knight-silksong = [ "libraries", ]
+
+resonite = [ "libraries", ]

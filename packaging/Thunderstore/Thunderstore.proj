@@ -8,21 +8,19 @@
 
   <ItemGroup>
     <ProjectReference Include="../MonoDetour.BepInEx.5/MonoDetour.BepInEx.5.csproj" />
+    <ProjectReference Include="../MonoDetour.BepInEx.6/MonoDetour.BepInEx.6.csproj" />
   </ItemGroup>
 
-  <Target Name="ProcessTcliConfig" BeforeTargets="Build">
-    <Exec Command="cp ./Thunderstore.toml ./.processed.toml" />
-    <Exec Command="cat ../Thunderstore/communities.toml &gt;&gt; ./.processed.toml" />
-  </Target>
-
   <Target Name="PackThunderstore" AfterTargets="Build">
-    <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir).processed.toml&quot; --package-version $(Version)" />
+    <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)thunderstore.toml&quot; --package-version $(Version)" />
     <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5/.processed.toml&quot; --package-version $(Version)" />
+    <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.6/.processed.toml&quot; --package-version $(Version)" />
   </Target>
 
   <!-- Call with `dotnet build packaging/Thunderstore/ -target:PublishThunderstore` -->
   <Target Name="PublishThunderstore" DependsOnTargets="Build;PackThunderstore">
-    <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir).processed.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour-$(Version).zip&quot;" />
+    <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)thunderstore.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour-$(Version).zip&quot;" />
     <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5/.processed.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour_BepInEx_5-$(Version).zip&quot;" />
+    <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.6/.processed.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour_BepInEx_6-$(Version).zip&quot;" />
   </Target>
 </Project>

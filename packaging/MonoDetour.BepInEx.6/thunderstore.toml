@@ -1,0 +1,38 @@
+[config]
+schemaVersion = "0.0.1"
+
+[general]
+repository = "https://thunderstore.io"
+
+[package]
+namespace = "MonoDetour"
+name = "MonoDetour_BepInEx_6"
+description = "Integrates MonoDetour's logger with BepInEx 6 and as a side effect initializes MonoDetour early. MonoDetour is an easy and convenient .NET detouring library, powered by MonoMod.RuntimeDetour."
+websiteUrl = "https://github.com/MonoDetour/MonoDetour"
+containsNsfwContent = false
+[package.dependencies]
+MonoDetour-MonoDetour = "__MonoDetour_Version__"
+
+[build]
+icon = "../../icon.png"
+readme = "./README.md"
+outdir = "../../artifacts/thunderstore/"
+
+[[build.copy]]
+source = "../../artifacts/bin/MonoDetour.BepInEx.6/release/0.com.github.MonoDetour.BepInEx.6.dll"
+target = "patchers/"
+
+[[build.copy]]
+source = "../../LICENSE"
+target = "/"
+
+[publish]
+# https://thunderstore.io/api/experimental/community/
+communities = [
+    "resonite",
+]
+
+[publish.categories]
+# https://thunderstore.io/api/experimental/community/lethal-company/category/
+resonite = [ "libraries", ]
+
