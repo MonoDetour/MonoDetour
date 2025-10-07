@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoDetour.BepInEx.5", "Mon
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoDetour.BepInEx.6", "MonoDetour.BepInEx.6\MonoDetour.BepInEx.6.csproj", "{0FB785F0-432B-4C0B-8E2E-9F47EA69B9A4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Thunderstore", "Thunderstore\Thunderstore.proj", "{1FB785F0-432B-4C0B-8E2E-9F47EA69B9A4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{0FB785F0-432B-4C0B-8E2E-9F47EA69B9A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0FB785F0-432B-4C0B-8E2E-9F47EA69B9A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0FB785F0-432B-4C0B-8E2E-9F47EA69B9A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1FB785F0-432B-4C0B-8E2E-9F47EA69B9A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1FB785F0-432B-4C0B-8E2E-9F47EA69B9A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1FB785F0-432B-4C0B-8E2E-9F47EA69B9A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1FB785F0-432B-4C0B-8E2E-9F47EA69B9A4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

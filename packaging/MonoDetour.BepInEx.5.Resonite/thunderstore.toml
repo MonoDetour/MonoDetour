@@ -6,11 +6,12 @@ repository = "https://thunderstore.io"
 
 [package]
 namespace = "MonoDetour"
-name = "MonoDetour"
-description = "Easy and convenient .NET detouring library, powered by MonoMod.RuntimeDetour."
+name = "MonoDetour_BepInEx_5_Resonite"
+description = "Full MonoDetour package (`MonoDetour` + `MonoDetour.BepInEx.5`) as a Resonite renderer preloader plugin. MonoDetour is an easy and convenient .NET detouring library, powered by MonoMod.RuntimeDetour."
 websiteUrl = "https://github.com/MonoDetour/MonoDetour"
 containsNsfwContent = false
 [package.dependencies]
+ResoniteModding-BepInExRenderer = "5.4.233001"
 
 [build]
 icon = "../../icon.png"
@@ -18,21 +19,20 @@ readme = "./README.md"
 outdir = "../../artifacts/thunderstore/"
 
 [[build.copy]]
+source = "../../artifacts/bin/MonoDetour.BepInEx.5/release/0.com.github.MonoDetour.BepInEx.5.dll"
+target = "Renderer/BepInEx/patchers/"
+
+[[build.copy]]
 source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.dll"
-target = "core/"
+target = "Renderer/BepInEx/core/"
 
 [[build.copy]]
 source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Reflection.dll"
-target = "core/"
+target = "Renderer/BepInEx/core/"
 
 [[build.copy]]
 source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Bindings.Reorg.dll"
-target = "core/"
-
-# TODO: Maybe add changelog?
-# [[build.copy]]
-# source = "../../CHANGELOG.md"
-# target = "/"
+target = "Renderer/BepInEx/core/"
 
 [[build.copy]]
 source = "../../LICENSE"
@@ -41,23 +41,9 @@ target = "/"
 [publish]
 # https://thunderstore.io/api/experimental/community/
 communities = [
-    # BepInEx 5
-    "lethal-company",
-    "repo",
-    "riskofrain2",
-    "peak",
-    "hollow-knight-silksong",
-    # Special BepInEx 5 layout and "normal" BepInEx 6
     "resonite",
-    # BepInEx 6
 ]
 
 [publish.categories]
-# https://thunderstore.io/api/experimental/community/lethal-company/category/
-lethal-company = [ "libraries", ]
-repo = [ "libraries", ]
-riskofrain2 = [ "libraries", ]
-peak = [ "libraries", ]
-hollow-knight-silksong = [ "libraries", ]
-
-resonite = [ "libraries", ]
+# https://thunderstore.io/api/experimental/community/resonite/category/
+resonite = [ "libraries", "bepinex" ]
