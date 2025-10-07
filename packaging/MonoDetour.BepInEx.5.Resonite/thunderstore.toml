@@ -11,7 +11,6 @@ description = "Full MonoDetour package (MonoDetour + MonoDetour.BepInEx.5) as a 
 websiteUrl = "https://github.com/MonoDetour/MonoDetour"
 containsNsfwContent = false
 [package.dependencies]
-ResoniteModding-BepInExRenderer = "5.4.233001"
 ResoniteModding-RenderiteHook = "1.1.1"
 
 [build]
