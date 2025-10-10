@@ -427,6 +427,33 @@ public class ILWeaver : IMonoDetourLogSource
         return markedLabel;
     }
 
+    /// <summary>
+    /// Declare a new local variable on the target method.<br/>
+    /// <br/>
+    /// A local variable can be assigned with a <c>stloc</c> instruction
+    /// and loaded using an <c>ldloc</c> instruction.
+    /// To assign or load this local variable, the returned
+    /// <see cref="VariableDefinition"/> or its index should be used
+    /// as the Operand.
+    /// </summary>
+    /// <param name="type">The type of the local variable.</param>
+    /// <returns>A new local variable.</returns>
+    public VariableDefinition DeclareVariable(Type type)
+    {
+        DeclareVariable(type, out var variable);
+        return variable;
+    }
+
+    /// <param name="variableDefinition">A new local variable.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    /// <inheritdoc cref="DeclareVariable(Type)"/>
+    public ILWeaver DeclareVariable(Type type, out VariableDefinition variableDefinition)
+    {
+        variableDefinition = new VariableDefinition(Context.Import(type));
+        Body.Variables.Add(variableDefinition);
+        return this;
+    }
+
     public ILWeaver Replace(Instruction target, Instruction replacement)
     {
         InsertAfter(target, replacement);
