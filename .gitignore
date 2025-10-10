@@ -23,6 +23,7 @@ obj/
 
 # Add root level files
 !/.csharpierignore
+!/.editorconfig
 !/.gitignore
 !/CONTRIBUTING.md
 !/Directory.Build.props

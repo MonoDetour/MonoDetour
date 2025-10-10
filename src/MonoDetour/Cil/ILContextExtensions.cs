@@ -3,6 +3,8 @@ using Mono.Cecil.Cil;
 using MonoDetour.Cil.Analysis;
 using MonoMod.Cil;
 
+namespace MonoDetour.Cil;
+
 /// <summary>
 /// Extension methods for <see cref="ILContext"/>.
 /// </summary>
