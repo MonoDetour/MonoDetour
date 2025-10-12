@@ -115,8 +115,8 @@ You can use the generated hooks like so:
 [MonoDetourTargets(typeof(SomeType))]
 class SomeTypeHooks
 {
-    [MonoDetourHookInit]
-    internal static void InitHooks()
+    [MonoDetourHookInitialize]
+    static void InitHooks()
     {
         // Note: this is using the default generated MonoDetourManager
         // MonoDetour.HookGen.DefaultMonoDetourManager.Instance by default.
