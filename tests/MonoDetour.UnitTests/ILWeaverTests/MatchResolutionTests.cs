@@ -1,3 +1,4 @@
+using HarmonyLib;
 using MonoDetour.Cil;
 
 namespace MonoDetour.UnitTests.ILWeaverTests;
@@ -10,20 +11,40 @@ public static class MatchResolutionTests
     public static void CanResolveMatchAfterSameInstructionsAreModified()
     {
         using var m = DefaultMonoDetourManager.New();
-        m.ILHook(CallStub, ILHook_IncrementNumber);
-        m.ILHook(CallStub, ILHook_IncrementNumber);
+        m.ILHook(CallStub, ILHook_IncrementNumber, new(1));
+        m.ILHook(CallStub, ILHook_IncrementNumber, new(-1));
 
         CallStub();
 
         Assert.Equal(2, runCount);
+        runCount = 0;
+
+        // HarmonyX would normally mess the resolution feature by rewriting all method
+        // instructions when a transpiler is written. Let's test HarmonyX interop.
+        Interop.HarmonyX.Initialize.Apply();
+
+        using (var scope = new DetourConfigContext(new(id: "detourContext", priority: 0)).Use())
+        {
+            using var harmony = new Harmony("test");
+            harmony.Patch(((Delegate)CallStub).Method, transpiler: new(Transpiler));
+
+            CallStub();
+        }
+
+        Interop.HarmonyX.Initialize.Undo();
+
+        Assert.Equal(2, runCount);
     }
+
+    static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
+        instructions;
 
     [Fact]
     public static void CanFailMatchAfterResolutionWhenImportantInstructionWasRemoved()
     {
         using var m = DefaultMonoDetourManager.New();
         m.ILHook(CallStub2, ILHook_RemoveStubCall, new(1));
-        m.ILHook(CallStub2, ILHook_IncrementNumberButIntendedToFail, new(0));
+        m.ILHook(CallStub2, ILHook_IncrementNumberButIntendedToFail, new(-1));
 
         // This should throw when the test fails.
         CallStub();
@@ -57,7 +78,7 @@ public static class MatchResolutionTests
 
         // We need to make sure we evaluate this test
         // when the stub call has actually been removed.
-        if (!w.MatchRelaxed(x => x.MatchLdstr("removed stub")).IsValid)
+        if (!w.MatchStrict(x => x.MatchLdstr("removed stub")).IsValid)
         {
             return;
         }

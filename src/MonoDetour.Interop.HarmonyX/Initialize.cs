@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
@@ -6,6 +5,7 @@ using HarmonyLib.Internal.Patching;
 using Mono.Cecil.Cil;
 using MonoDetour.Cil;
 using MonoDetour.DetourTypes.Manipulation;
+using MonoDetour.Interop.MonoModUtils;
 using MonoDetour.Logging;
 using MonoMod.Cil;
 
@@ -30,7 +30,18 @@ public static class Initialize
         initialized = true;
 
         var target = typeof(ILManipulator).GetMethod(nameof(ILManipulator.WriteTo));
+        if (target is null)
+        {
+            manager.Log(MonoDetourLogger.LogChannel.Error, "ILManipulator.WriteTo doesn't exist!");
+            return;
+        }
+
         manager.ILHook(target, ILHook_ILManipulator_WriteTo);
+    }
+
+    internal static void Undo()
+    {
+        manager.DisposeHooks();
     }
 
     // HarmonyX rewrites all instructions in the target method.
@@ -40,18 +51,50 @@ public static class Initialize
     {
         ILWeaver w = new(info);
 
-        // Match end of instruction loop
-        var result = w.MatchRelaxed(
-            x => x.MatchLdloc(2) && w.SetCurrentTo(x),
-            x => x.MatchCallvirt(out _),
-            x => x.MatchBrtrue(out _)
-        );
-
-        if (!result.IsValid)
+        // Get end of instruction loop
+        if (!w.Body.HasExceptionHandlers)
         {
-            manager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
+            manager.Log(
+                MonoDetourLogger.LogChannel.Error,
+                "ILManipulator.WriteTo has no Exception handlers!"
+            );
             return;
         }
+
+        if (!w.Body.ExceptionHandlers[0].TryStart.MatchBr(out var loopEndLabel))
+        {
+            manager.Log(
+                MonoDetourLogger.LogChannel.Error,
+                "ILManipulator.WriteTo first try block's first instruction is not br!"
+            );
+            return;
+        }
+
+        var loopEnd = loopEndLabel.InteropGetTarget()!;
+        w.CurrentTo(loopEnd);
+
+        if (!loopEnd.MatchLdloc(out int loopLocIdx))
+        {
+            manager.Log(
+                MonoDetourLogger.LogChannel.Error,
+                "ILManipulator.WriteTo first try block's first instruction's branch target is not Ldloc! "
+                    + $"Instead it is: '{loopEnd}'"
+            );
+            return;
+        }
+
+        int locIdxForCurrent;
+
+        // We want the 'Current' CodeInstruction being iterated.
+        // In older HarmonyX versions, the foreach loop is done on a tuple.
+        // In newer versions, it's directly done on CodeInstruction.
+        // If this is not a CodeInstruction, it's a tuple, and the next local
+        // index will be used for the first item in the tuple, which is what
+        // we are looking for.
+        if (w.Body.Variables[loopLocIdx].VariableType == w.Context.Import(typeof(CodeInstruction)))
+            locIdxForCurrent = loopLocIdx;
+        else
+            locIdxForCurrent = loopLocIdx + 1;
 
         var harmonyToCecil = w.DeclareVariable(
             typeof(Dictionary<CodeInstruction, (Instruction, bool)>)
@@ -75,7 +118,7 @@ public static class Initialize
 
         w.InsertBeforeCurrent(
             w.Create(OpCodes.Ldarg_1),
-            w.Create(OpCodes.Ldloc_3), // 'cur'; current instruction
+            w.Create(OpCodes.Ldloc, locIdxForCurrent),
             w.Create(OpCodes.Ldloc, harmonyToCecil),
             w.Create(OpCodes.Ldloc, newOriginalInstructions),
             w.Create(OpCodes.Ldloc, oldToNew),
