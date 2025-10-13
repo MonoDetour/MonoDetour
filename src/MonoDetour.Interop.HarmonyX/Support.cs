@@ -21,6 +21,7 @@ public static class Support
         initialized = true;
 
         TrackInstructions.Init();
+        TrackPatches.Init();
     }
 
     internal static void Dispose()

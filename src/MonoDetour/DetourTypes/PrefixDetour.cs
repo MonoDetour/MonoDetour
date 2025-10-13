@@ -103,6 +103,7 @@ public class PrefixDetour : IMonoDetourHookApplier
 
                     w.InsertBeforeCurrent(w.Create(OpCodes.Br, postfix));
                     foundPostfix = true;
+                    break;
                 }
 
                 if (!foundPostfix)
