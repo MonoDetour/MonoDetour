@@ -11,11 +11,8 @@ Easy and convenient .NET detouring library based around HookGen with C# source g
 >
 > - Bugs and missing functionality is expected
 > - Documentation may not reflect reality
->
-> Major things missing for you may be:
->
-> - Currently there is no HarmonyX interoperability
->   - Hooks that change control flow (HarmonyX prefix return false) will ignore MonoDetour/HarmonyX
+
+Note: MonoDetour implements interop support for HarmonyX. This means that MonoDetour prefix and postfix hooks are aware of HarmonyX prefix and postfix hooks, and they respect each other.
 
 ## Documentation
 
