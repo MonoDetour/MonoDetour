@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(MonoDetourTargetFrameworks)</TargetFrameworks>
+    <AssemblyName>com.github.MonoDetour.Interop.HarmonyX</AssemblyName>
+    <VersionPrefix>$(MonoDetourVersionPrefix)</VersionPrefix>
+    <VersionSuffix>$(MonoDetourVersionSuffix)</VersionSuffix>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MonoMod.RuntimeDetour" Version="$(RuntimeDetourVersion)" />
+  </ItemGroup>
+</Project>
