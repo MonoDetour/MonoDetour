@@ -12,17 +12,17 @@ using MonoMod.Cil;
 namespace MonoDetour.Interop.HarmonyX;
 
 /// <summary>
-/// Initialize HarmonyX interop for MonoDetour.
+/// HarmonyX interop support for MonoDetour.
 /// </summary>
-public static class Initialize
+public static class Support
 {
     static readonly MonoDetourManager manager = new("com.github.MonoDetour.Interop.HarmonyX");
     static bool initialized;
 
     /// <summary>
-    /// Initialize HarmonyX interop for MonoDetour.
+    /// Initialize and apply HarmonyX interop for MonoDetour.
     /// </summary>
-    public static void Apply()
+    public static void Initialize()
     {
         if (initialized)
             return;
@@ -39,9 +39,10 @@ public static class Initialize
         manager.ILHook(target, ILHook_ILManipulator_WriteTo);
     }
 
-    internal static void Undo()
+    internal static void Dispose()
     {
         manager.DisposeHooks();
+        initialized = false;
     }
 
     // HarmonyX rewrites all instructions in the target method.
