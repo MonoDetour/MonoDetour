@@ -45,27 +45,40 @@ public static class HookTargetRecords
         );
     }
 
-    /// <summary>
-    /// Gets a <see cref="HookTargetInfo"/> for a target <see cref="ILContext"/>.
-    /// </summary>
-    /// <param name="il">The target <see cref="ILContext"/>.</param>
-    /// <returns>A <see cref="HookTargetInfo"/> for the <see cref="ILContext"/>.</returns>
-    public static HookTargetInfo GetHookTargetInfo(ILContext il)
+    internal static void SwapOriginalInstructionsCollection(
+        MethodDefinition method,
+        ReadOnlyCollection<Instruction> replacement
+    )
     {
-        if (s_MethodToInfo.TryGetValue(il.Method, out HookTargetInfo? info))
+        ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions.Remove(method);
+        ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions.Add(method, replacement);
+    }
+
+    /// <param name="il">The <see cref="ILContext"/> for the target method.</param>
+    /// <inheritdoc cref="GetHookTargetInfo(MethodDefinition)"/>
+    public static HookTargetInfo GetHookTargetInfo(ILContext il) => GetHookTargetInfo(il.Method);
+
+    /// <summary>
+    /// Gets a <see cref="HookTargetInfo"/> for a target method.
+    /// </summary>
+    /// <param name="method">The target <see cref="MethodDefinition"/>.</param>
+    /// <returns>A <see cref="HookTargetInfo"/> for the target method.</returns>
+    public static HookTargetInfo GetHookTargetInfo(MethodDefinition method)
+    {
+        if (s_MethodToInfo.TryGetValue(method, out HookTargetInfo? info))
         {
             return info;
         }
 
         VariableDefinition? returnValue = null;
-        if (il.Method.ReturnType.MetadataType != MetadataType.Void)
+        if (method.ReturnType.MetadataType != MetadataType.Void)
         {
-            returnValue = new VariableDefinition(il.Method.ReturnType);
-            il.Body.Variables.Add(returnValue);
+            returnValue = new VariableDefinition(method.ReturnType);
+            method.Body.Variables.Add(returnValue);
         }
 
-        info = new(il, returnValue);
-        s_MethodToInfo.Add(il.Method, info);
+        info = new(method, returnValue);
+        s_MethodToInfo.Add(method, info);
         return info;
     }
 
@@ -74,9 +87,9 @@ public static class HookTargetRecords
     /// </summary>
     public class HookTargetInfo
     {
-        internal HookTargetInfo(ILContext Context, VariableDefinition? returnValue)
+        internal HookTargetInfo(MethodDefinition method, VariableDefinition? returnValue)
         {
-            PrefixInfo = new(Context);
+            PrefixInfo = new(method);
             ReturnValue = returnValue;
         }
 
@@ -97,10 +110,10 @@ public static class HookTargetRecords
     /// </summary>
     public class TargetPrefixInfo
     {
-        internal TargetPrefixInfo(ILContext Context)
+        internal TargetPrefixInfo(MethodDefinition method)
         {
-            ControlFlow = Context.DeclareVariable(typeof(int));
-            TemporaryControlFlow = Context.DeclareVariable(typeof(int));
+            ControlFlow = method.DeclareVariable(typeof(int));
+            TemporaryControlFlow = method.DeclareVariable(typeof(int));
         }
 
         /// <summary>
@@ -137,5 +150,12 @@ public static class HookTargetRecords
         /// The first instruction for each postfix.
         /// </summary>
         public List<Instruction> FirstPostfixInstructions { get; } = [];
+    }
+
+    static VariableDefinition DeclareVariable(this MethodDefinition method, Type type)
+    {
+        var varDef = new VariableDefinition(method.Module.ImportReference(type));
+        method.Body.Variables.Add(varDef);
+        return varDef;
     }
 }

@@ -4,8 +4,12 @@
     <AssemblyName>com.github.MonoDetour.Interop.HarmonyX</AssemblyName>
     <VersionPrefix>$(MonoDetourVersionPrefix)</VersionPrefix>
     <VersionSuffix>$(MonoDetourVersionSuffix)</VersionSuffix>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MonoMod.RuntimeDetour" Version="$(RuntimeDetourVersion)" />
+    <ProjectReference Include="../MonoDetour/MonoDetour.csproj" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" />
+    <!-- Version shipped by BepInEx 5 -->
+    <PackageReference Include="HarmonyX" Version="2.9.0" Publicize="true" />
   </ItemGroup>
 </Project>
