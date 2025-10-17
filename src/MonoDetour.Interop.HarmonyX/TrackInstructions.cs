@@ -13,19 +13,21 @@ namespace MonoDetour.Interop.HarmonyX;
 
 static class TrackInstructions
 {
+    internal static readonly MonoDetourManager instructionManager = new(Support.ManagerName);
+
     internal static void Init()
     {
         var target = typeof(ILManipulator).GetMethod(nameof(ILManipulator.WriteTo));
         if (target is null)
         {
-            Support.manager.Log(
+            instructionManager.Log(
                 MonoDetourLogger.LogChannel.Error,
                 "ILManipulator.WriteTo doesn't exist!"
             );
             return;
         }
 
-        Support.manager.ILHook(target, ILHook_ILManipulator_WriteTo);
+        instructionManager.ILHook(target, ILHook_ILManipulator_WriteTo);
     }
 
     // HarmonyX rewrites all instructions in the target method.
@@ -33,12 +35,14 @@ static class TrackInstructions
     // so we do this hacky workaround.
     private static void ILHook_ILManipulator_WriteTo(ILManipulationInfo info)
     {
+        // Set to false at end of method if everything ok.
+        Support.anyFailed = true;
         ILWeaver w = new(info);
 
         // Get end of instruction loop
         if (!w.Body.HasExceptionHandlers)
         {
-            Support.manager.Log(
+            instructionManager.Log(
                 MonoDetourLogger.LogChannel.Error,
                 "ILManipulator.WriteTo has no Exception handlers!"
             );
@@ -47,7 +51,7 @@ static class TrackInstructions
 
         if (!w.Body.ExceptionHandlers[0].TryStart.MatchBr(out var loopEndLabel))
         {
-            Support.manager.Log(
+            instructionManager.Log(
                 MonoDetourLogger.LogChannel.Error,
                 "ILManipulator.WriteTo first try block's first instruction is not br!"
             );
@@ -59,7 +63,7 @@ static class TrackInstructions
 
         if (!loopEnd.MatchLdloc(out int loopLocIdx))
         {
-            Support.manager.Log(
+            instructionManager.Log(
                 MonoDetourLogger.LogChannel.Error,
                 "ILManipulator.WriteTo first try block's first instruction's branch target is not Ldloc! "
                     + $"Instead it is: '{loopEnd}'"
@@ -116,6 +120,8 @@ static class TrackInstructions
             w.Create(OpCodes.Ldloc, oldToNew),
             w.CreateCall(UpdateOriginalInstructions)
         );
+
+        Support.anyFailed = false;
     }
 
     static Dictionary<CodeInstruction, (Instruction, bool)> MapInstructions(

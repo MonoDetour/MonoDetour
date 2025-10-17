@@ -1,3 +1,5 @@
+using MonoDetour.Logging;
+
 namespace MonoDetour.Interop.HarmonyX;
 
 /// <summary>
@@ -5,10 +7,9 @@ namespace MonoDetour.Interop.HarmonyX;
 /// </summary>
 public static class Support
 {
-    internal static readonly MonoDetourManager manager = new(
-        "com.github.MonoDetour.Interop.HarmonyX"
-    );
+    internal const string ManagerName = "com.github.MonoDetour.Interop.HarmonyX";
     static bool initialized;
+    internal static bool anyFailed;
 
     /// <summary>
     /// Initialize and apply HarmonyX interop for MonoDetour.
@@ -21,12 +22,32 @@ public static class Support
         initialized = true;
 
         TrackInstructions.Init();
+
+        if (anyFailed)
+        {
+            MonoDetourLogger.Log(
+                MonoDetourLogger.LogChannel.Error,
+                "HarmonyX interop module has completely failed to initialize."
+            );
+            return;
+        }
+
         TrackPatches.Init();
+
+        if (anyFailed)
+        {
+            MonoDetourLogger.Log(
+                MonoDetourLogger.LogChannel.Error,
+                "HarmonyX interop module has partly failed to initialize."
+            );
+            return;
+        }
     }
 
     internal static void Dispose()
     {
-        manager.DisposeHooks();
+        TrackInstructions.instructionManager.DisposeHooks();
+        TrackPatches.patchManager.DisposeHooks();
         initialized = false;
     }
 }

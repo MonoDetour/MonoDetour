@@ -12,6 +12,8 @@ namespace MonoDetour.Interop.HarmonyX;
 
 static class TrackPatches
 {
+    internal static readonly MonoDetourManager patchManager = new(Support.ManagerName);
+
     internal static void Init()
     {
         var writePrefixes = typeof(HarmonyManipulator).GetMethod(
@@ -20,7 +22,7 @@ static class TrackPatches
         );
         if (writePrefixes is null)
         {
-            Support.manager.Log(
+            patchManager.Log(
                 MonoDetourLogger.LogChannel.Error,
                 "HarmonyManipulator.WritePrefixes doesn't exist!"
             );
@@ -33,19 +35,33 @@ static class TrackPatches
         );
         if (writePostfixes is null)
         {
-            Support.manager.Log(
+            patchManager.Log(
                 MonoDetourLogger.LogChannel.Error,
                 "HarmonyManipulator.WritePostfixes doesn't exist!"
             );
             return;
         }
 
-        Support.manager.ILHook(writePrefixes, ILHook_HarmonyManipulator_WritePrefixes);
-        Support.manager.ILHook(writePostfixes, ILHook_HarmonyManipulator_WritePostfixes);
+        patchManager.ILHook(writePrefixes, ILHook_HarmonyManipulator_WritePrefixes);
+
+        if (Support.anyFailed)
+        {
+            patchManager.Dispose();
+            return;
+        }
+
+        patchManager.ILHook(writePostfixes, ILHook_HarmonyManipulator_WritePostfixes);
+
+        if (Support.anyFailed)
+        {
+            patchManager.Dispose();
+            return;
+        }
     }
 
     static void ILHook_HarmonyManipulator_WritePrefixes(ILManipulationInfo info)
     {
+        Support.anyFailed = true;
         ILWeaver w = new(info);
 
         Instruction ldarg0_ResultVar = null!;
@@ -76,8 +92,28 @@ static class TrackPatches
 
         if (!result.IsValid)
         {
-            Support.manager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
-            return;
+            // Let's try for older HarmonyX versions
+            result = w.MatchRelaxed(
+                x => x.MatchLdarg(0),
+                x => x.MatchLdfld(out _),
+                x => x.MatchLdsfld<HarmonyManipulator>(nameof(HarmonyManipulator.ResultVar)),
+                x => x.MatchLdloc(out _),
+                x => x.MatchLdtoken(out _),
+                x => x.MatchCall(out _),
+                x => x.MatchBeq(out _),
+                x => x.MatchLdarg(0) && w.SetInstructionTo(ref ldarg0_ResultVar, x),
+                x => x.MatchLdfld(out _) && w.SetInstructionTo(ref ilEmitterField, x),
+                x => x.MatchLdloc(out _),
+                x =>
+                    x.MatchCallvirt<ILEmitter>(nameof(ILEmitter.DeclareVariable))
+                    && w.SetInstructionTo(ref declareVar_ResultVar, x)
+            );
+
+            if (!result.IsValid)
+            {
+                patchManager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
+                return;
+            }
         }
 
         result = w.MatchRelaxed(
@@ -95,7 +131,7 @@ static class TrackPatches
 
         if (!result.IsValid)
         {
-            Support.manager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
+            patchManager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
             return;
         }
 
@@ -114,7 +150,7 @@ static class TrackPatches
 
         if (!result.IsValid)
         {
-            Support.manager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
+            patchManager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
             return;
         }
 
@@ -130,7 +166,7 @@ static class TrackPatches
 
         if (!result.IsValid)
         {
-            Support.manager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
+            patchManager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
             return;
         }
 
@@ -142,6 +178,9 @@ static class TrackPatches
             w.Create(OpCodes.Ldfld, ilEmitterField.Operand),
             w.CreateCall(GetRetVar)
         );
+        // Mono evaluates unreachable instructions, so let's balance the
+        // stack imbalance as the last instruction that is jumped over
+        w.InsertAfter(declareVar_ResultVar, w.Create(OpCodes.Pop));
 
         w.InsertBranchOver(ldarg0_RunOriginalParam, declareVar_RunOriginalParam);
 
@@ -151,6 +190,7 @@ static class TrackPatches
             w.Create(OpCodes.Ldfld, ilEmitterField.Operand),
             w.CreateCall(GetRunOriginalParamVar)
         );
+        w.InsertAfter(declareVar_RunOriginalParam, w.Create(OpCodes.Pop));
 
         w.InsertBranchOverIfTrue(
             start_RunOriginalParamLogic,
@@ -166,10 +206,13 @@ static class TrackPatches
             w.Create(OpCodes.Ldfld, ilEmitterField.Operand),
             w.CreateCall(ReturnLogic)
         );
+
+        Support.anyFailed = false;
     }
 
     static void ILHook_HarmonyManipulator_WritePostfixes(ILManipulationInfo info)
     {
+        Support.anyFailed = true;
         ILWeaver w = new(info);
 
         Instruction ldarg0_ResultVar = null!;
@@ -200,8 +243,28 @@ static class TrackPatches
 
         if (!result.IsValid)
         {
-            Support.manager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
-            return;
+            // Let's try for older HarmonyX versions
+            result = w.MatchRelaxed(
+                x => x.MatchLdarg(0),
+                x => x.MatchLdfld(out _),
+                x => x.MatchLdsfld<HarmonyManipulator>(nameof(HarmonyManipulator.ResultVar)),
+                x => x.MatchLdloc(out _),
+                x => x.MatchLdtoken(out _),
+                x => x.MatchCall(out _),
+                x => x.MatchBeq(out _),
+                x => x.MatchLdarg(0) && w.SetInstructionTo(ref ldarg0_ResultVar, x),
+                x => x.MatchLdfld(out _) && w.SetInstructionTo(ref ilEmitterField, x),
+                x => x.MatchLdloc(out _),
+                x =>
+                    x.MatchCallvirt<ILEmitter>(nameof(ILEmitter.DeclareVariable))
+                    && w.SetInstructionTo(ref declareVar_ResultVar, x)
+            );
+
+            if (!result.IsValid)
+            {
+                patchManager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
+                return;
+            }
         }
 
         result = w.MatchRelaxed(
@@ -219,12 +282,14 @@ static class TrackPatches
 
         if (!result.IsValid)
         {
-            Support.manager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
+            patchManager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
             return;
         }
 
         result = w.MatchRelaxed(
-            x => x.MatchAnd(),
+            x =>
+                x.MatchAnd() /* new HarmonyX */
+                || x.MatchLdloc(out _), /* old HarmonyX */
             x => x.MatchBrfalse(out _),
             x => x.MatchLdarg(0),
             x => x.MatchLdfld(out _),
@@ -237,7 +302,7 @@ static class TrackPatches
 
         if (!result.IsValid)
         {
-            Support.manager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
+            patchManager.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
             return;
         }
 
@@ -251,7 +316,7 @@ static class TrackPatches
 
         if (!result.IsValid)
         {
-            Support.manager.Log(MonoDetourLogger.LogChannel.Error, "3: " + result.FailureMessage);
+            patchManager.Log(MonoDetourLogger.LogChannel.Error, "3: " + result.FailureMessage);
             return;
         }
 
@@ -266,7 +331,7 @@ static class TrackPatches
 
         if (!result.IsValid)
         {
-            Support.manager.Log(MonoDetourLogger.LogChannel.Error, "4: " + result.FailureMessage);
+            patchManager.Log(MonoDetourLogger.LogChannel.Error, "4: " + result.FailureMessage);
             return;
         }
 
@@ -278,6 +343,7 @@ static class TrackPatches
             w.Create(OpCodes.Ldfld, ilEmitterField.Operand),
             w.CreateCall(GetRetVar)
         );
+        w.InsertAfter(declareVar_ResultVar, w.Create(OpCodes.Pop));
 
         w.InsertBranchOver(ldarg0_RunOriginalParam, declareVar_RunOriginalParam);
 
@@ -287,6 +353,7 @@ static class TrackPatches
             w.Create(OpCodes.Ldfld, ilEmitterField.Operand),
             w.CreateCall(GetRunOriginalParamVar)
         );
+        w.InsertAfter(declareVar_RunOriginalParam, w.Create(OpCodes.Pop));
 
         var labels = w.DeclareVariable(typeof(List<ILEmitter.Label>));
 
@@ -319,6 +386,8 @@ static class TrackPatches
             w.Create(OpCodes.Ldfld, ilEmitterField.Operand),
             w.CreateCall(LabelsToMonoDetourPostfixes)
         );
+
+        Support.anyFailed = false;
     }
 
     static void AddStlocToLabelList(ref List<ILEmitter.Label>? labels, ILEmitter il)
@@ -393,7 +462,7 @@ static class TrackPatches
             return;
         }
 
-        Support.manager.Log(
+        patchManager.Log(
             MonoDetourLogger.LogChannel.Warning,
             $"While applying HarmonyX Prefixes: "
                 + "No postfix labels found despite postfixes being applied on the method. "
