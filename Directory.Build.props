@@ -1,4 +1,5 @@
 <Project>
+  <Import Project="./Config.Build.user.props" Condition="Exists('./Config.Build.user.props')" />
   <!-- NuGet -->
   <PropertyGroup>
     <IsPackable>false</IsPackable>
