@@ -14,6 +14,11 @@ Easy and convenient .NET detouring library based around HookGen with C# source g
 
 Note: MonoDetour implements interop support for HarmonyX. This means that MonoDetour prefix and postfix hooks are aware of HarmonyX prefix and postfix hooks, and they respect each other.
 
+> [!NOTE]
+> MonoDetour.HookGen's default HookGen namespace used to be `On` in versions `< 0.7`. Since `>= 0.7`, the HookGen namespace is `Md` (which stands for "**M**ono**D**etour").
+>
+> This change was made due to an issue where if an API uses MonoDetour.HookGen with the `On` namespace, any consumers of that API who are also using MonoMod's own HookGen will get conflicts from a namespace with the same name as a type.
+
 ## Documentation
 
 - Website: <https://monodetour.github.io/>
@@ -21,7 +26,7 @@ Note: MonoDetour implements interop support for HarmonyX. This means that MonoDe
 
 ## Features
 
-- HookGen: Hooking any non-generic method is as easy as `On.Namespace.Type.Method.Prefix/Postfix/ILHook(MyHook);`
+- HookGen: Hooking any non-generic method is as easy as `Md.Namespace.Type.Method.Prefix/Postfix/ILHook(MyHook);`
   - Compiler generated unspeakable `IEnumerator` type instances are wrapped by a `SpeakableEnumerator` type, allowing easy access to standard fields; see [Hooking IEnumerators](<https://monodetour.github.io/hooking/ienumerators/>)
 - Prefix and Postfix hooks which throw will be caught and immediately disposed, including all of the owner MonoDetourManger's hooks
   - `MonoDetourManger` includes an event to gracefully disable your mod when any of its hooks throw
@@ -42,7 +47,7 @@ MonoDetour hooks are similar to Harmony patches:
 
 ```cs
 // Apply this hook somewhere
-On.Lib.TargetClass.TakeAndReturnInt.Prefix(Prefix_TakeAndReturnInt);
+Md.Lib.TargetClass.TakeAndReturnInt.Prefix(Prefix_TakeAndReturnInt);
 // ...
 static void Prefix_TakeAndReturnInt(TargetClass self, ref int number)
 {
@@ -73,8 +78,8 @@ Change the version number to optimally the newest:
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="MonoDetour.HookGen" Version="0.6.*" PrivateAssets="all" />
-  <PackageReference Include="MonoDetour" Version="0.6.*" />
+  <PackageReference Include="MonoDetour.HookGen" Version="0.7.*" PrivateAssets="all" />
+  <PackageReference Include="MonoDetour" Version="*" />
 </ItemGroup>
 ```
 
@@ -92,13 +97,13 @@ You can configure this setting yourself however you wish, such as replicating th
 </PropertyGroup>
 ```
 
-Having this setting enabled will be more expensive generation wise and intellisense may not keep up when writing hooks, e.g. Prefix, Postfix and ILHook methods may not immediately appear when typing `On.Namespace.Type.Method.` even if they have just been generated.
+Having this setting enabled will be more expensive generation wise and intellisense may not keep up when writing hooks, e.g. Prefix, Postfix and ILHook methods may not immediately appear when typing `Md.Namespace.Type.Method.` even if they have just been generated.
 
-If the default HookGen namespace `On` causes collisions or you just don't like it, you can set it with the following property:
+If the default HookGen namespace `Md` causes collisions or you just don't like it, you can set it with the following property:
 
 ```xml
 <PropertyGroup>
-  <MonoDetourHookGenNamespace>On</MonoDetourHookGenNamespace>
+  <MonoDetourHookGenNamespace>Md</MonoDetourHookGenNamespace>
 </PropertyGroup>
 ```
 
@@ -118,7 +123,7 @@ class SomeTypeHooks
         // Note: this is using the default generated MonoDetourManager
         // MonoDetour.HookGen.DefaultMonoDetourManager.Instance by default.
         // Use it for managing your hooks.
-        On.SomeNamespace.SomeType.SomeMethod.Prefix(Prefix_SomeType_SomeMethod);
+        Md.SomeNamespace.SomeType.SomeMethod.Prefix(Prefix_SomeType_SomeMethod);
     }
 
     static void Prefix_SomeType_SomeMethod(SomeType self)

@@ -10,6 +10,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Options;
 
 namespace MonoDetour.Analyzers;
 
@@ -41,25 +42,28 @@ public class MonoDetourHookClassRefactor : CodeRefactoringProvider
                 return;
             }
 
-            var typeReferences = root.DescendantNodes().OfType<IdentifierNameSyntax>().ToList();
+            var identifierSyntax = root.DescendantNodes()
+                .OfType<IdentifierNameSyntax>()
+                .LastOrDefault();
 
-            if (typeReferences.Count == 0)
+            if (identifierSyntax is null)
                 return;
 
-            var typeReference = typeReferences[^1]
-                .AncestorsAndSelf()
-                .OfType<MemberAccessExpressionSyntax>()
-                .FirstOrDefault();
+            var semanticModel = await context.Document.GetSemanticModelAsync(
+                context.CancellationToken
+            );
 
-            string typeName;
-            if (typeReference is null)
-            {
-                typeName = node.ToString().Trim();
-            }
-            else
-            {
-                typeName = typeReference.ToString();
-            }
+            string typeName = semanticModel
+                .GetTypeInfo(identifierSyntax)
+                .Type?.ToDisplayString(
+                    new SymbolDisplayFormat(
+                        globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Omitted,
+                        typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces
+                    )
+                )!;
+
+            if (typeName is null)
+                return;
 
             var codeAction = CodeAction.Create(
                 $"Complete MonoDetourTargets Hook class for type '{typeName}'",
@@ -112,10 +116,19 @@ public class MonoDetourHookClassRefactor : CodeRefactoringProvider
         var projectDir = Path.GetDirectoryName(project.FilePath);
         var docDir = Path.GetDirectoryName(document.FilePath);
 
-        var relativePath = GetRelativePath(projectDir, docDir)
-            .Replace(Path.DirectorySeparatorChar, '.');
+        string inferredNamespace;
 
-        var inferredNamespace = $"{project.Name}.{relativePath}";
+        if (projectDir == docDir)
+        {
+            inferredNamespace = project.Name;
+        }
+        else
+        {
+            var relativePath = GetRelativePath(projectDir, docDir)
+                .Replace(Path.DirectorySeparatorChar, '.');
+
+            inferredNamespace = $"{project.Name}.{relativePath}";
+        }
 
         var newHook =
             $@"
@@ -123,7 +136,7 @@ public class MonoDetourHookClassRefactor : CodeRefactoringProvider
 [MonoDetourTargets(typeof({hookType}))]
 static class {hookType}Hooks
 {{
-    [MonoDetourHookInit]
+    [MonoDetourHookInitialize]
     static void Init()
     {{
 
@@ -143,8 +156,25 @@ static class {hookType}Hooks
             );
         }
 
+        var globalOptions = context
+            .Document
+            .Project
+            .AnalyzerOptions
+            .AnalyzerConfigOptionsProvider
+            .GlobalOptions;
+
+        globalOptions.TryGetValue(
+            "build_property.MonoDetourHookGenNamespace",
+            out var hookGenNamespace
+        );
+
+        if (string.IsNullOrEmpty(hookGenNamespace))
+        {
+            hookGenNamespace = "Md";
+        }
+
         newRoot = newRoot.AddUsings(
-            SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("On." + typeName))
+            SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(hookGenNamespace + '.' + typeName))
         );
 
         newRoot = WrapInNamespace(newRoot, inferredNamespace);

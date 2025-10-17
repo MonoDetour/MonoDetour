@@ -283,7 +283,7 @@ public sealed class HookHelperAnalyzer : DiagnosticAnalyzer
             return;
 
         // Check if the hook registrar's delegate type parameter
-        // is defined in the "On" namespace
+        // is defined in the "Md" namespace
         var hookRegistrar = context.SemanticModel.GetSymbolInfo(memberAccess);
         if (hookRegistrar.Symbol is not IMethodSymbol hookRegistrarMethod)
             return;
@@ -303,7 +303,7 @@ public sealed class HookHelperAnalyzer : DiagnosticAnalyzer
 
         if (string.IsNullOrEmpty(hookGenNamespace))
         {
-            hookGenNamespace = "On";
+            hookGenNamespace = "Md";
         }
 
         while (namespaceSymbol is not null)

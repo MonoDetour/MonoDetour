@@ -490,7 +490,7 @@ namespace MonoDetour.HookGen
 
                         if (string.IsNullOrEmpty(hookGenNamespace))
                         {
-                            hookGenNamespace = "On";
+                            hookGenNamespace = "Md";
                         }
 
                         return (stripUnusedHooks, hookGenNamespace!);
