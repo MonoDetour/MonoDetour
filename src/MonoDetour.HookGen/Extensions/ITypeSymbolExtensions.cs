@@ -282,6 +282,11 @@ internal static class ITypeSymbolExtensions
                     builder.Add('+');
                     builder.AddRange(symbol.MetadataName.AsSpan());
                     break;
+
+                case IArrayTypeSymbol { ElementType: ITypeSymbol typeSymbol }:
+                    builder.AddRange("Array_".AsSpan());
+                    BuildFrom(typeSymbol, in builder);
+                    break;
                 default:
                     break;
             }
