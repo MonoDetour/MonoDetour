@@ -1,4 +1,5 @@
 <Project>
+  <Import Project="./Config.Build.user.props" Condition="Exists('./Config.Build.user.props')" />
   <!-- NuGet -->
   <PropertyGroup>
     <IsPackable>false</IsPackable>
@@ -30,10 +31,10 @@
     <RuntimeDetourVersion>[21.12.13.1,)</RuntimeDetourVersion>
     <SolutionRoot>$(MSBuildThisFileDirectory)</SolutionRoot>
     <!-- Release version main MonoDetour package -->
-    <MonoDetourVersionPrefix>0.7.0</MonoDetourVersionPrefix>
+    <MonoDetourVersionPrefix>0.7.1</MonoDetourVersionPrefix>
     <MonoDetourVersionSuffix></MonoDetourVersionSuffix>
     <!-- Release version for HookGen and Analyzers packages -->
-    <HookGenAndAnalyzersVersionPrefix>0.6.18</HookGenAndAnalyzersVersionPrefix>
+    <HookGenAndAnalyzersVersionPrefix>0.7.1</HookGenAndAnalyzersVersionPrefix>
     <HookGenAndAnalyzersVersionSuffix></HookGenAndAnalyzersVersionSuffix>
     <!-- I only target net9.0 to get documentation and better nullability annotations in the BCL. -->
     <MonoDetourTargetFrameworks>netstandard2.0;net9.0</MonoDetourTargetFrameworks>

@@ -20,11 +20,4 @@ public static class ILContextExtensions
     /// <returns>A rich string presentation of the method body's instructions.</returns>
     public static string ToAnalyzedString(this ILContext context) =>
         context.Body.CreateInformationalSnapshotJIT().AnnotateErrors().ToStringWithAnnotations();
-
-    internal static VariableDefinition DeclareVariable(this ILContext il, Type type)
-    {
-        var varDef = new VariableDefinition(il.Import(type));
-        il.Body.Variables.Add(varDef);
-        return varDef;
-    }
 }

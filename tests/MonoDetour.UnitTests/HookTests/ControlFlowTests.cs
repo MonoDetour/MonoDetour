@@ -1,6 +1,4 @@
-using MonoDetour.Cil;
-using MonoDetour.Cil.Analysis;
-using On.MonoDetour.UnitTests.TestLib.ControlFlowLib;
+using Md.MonoDetour.UnitTests.TestLib.ControlFlowLib;
 
 namespace MonoDetour.UnitTests.HookTests;
 

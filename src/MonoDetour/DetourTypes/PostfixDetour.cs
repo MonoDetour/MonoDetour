@@ -87,7 +87,7 @@ public class PostfixDetour : IMonoDetourHookApplier
             () =>
             {
                 var body = w.Body.CreateInformationalSnapshotJIT().AnnotateErrors();
-                return $"Manipulated by Postfix: {Hook.Manipulator.Name}:\n{body}";
+                return $"Manipulated by Postfix: {Hook.Manipulator.Name} ({Hook.Owner.Id}):\n{body}";
             }
         );
 

@@ -69,6 +69,10 @@ public class LibraryMethods
 
     public void Overloaded(int num) { }
 
+    public void Overloaded(int[] nums) { }
+
+    public void Overloaded(int[] nums, bool[] bools, bool flag) { }
+
     public void HasArgumentWithGenericType(IEnumerable<int> numbers) { }
 
     public void ReturnsTuple(out (bool, bool) tuple) => tuple = (true, true);

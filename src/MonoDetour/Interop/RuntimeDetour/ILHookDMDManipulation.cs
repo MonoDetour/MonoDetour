@@ -214,7 +214,7 @@ static class ILHookDMDManipulation
             return;
         }
 
-        var methodBody = info.Context.DeclareVariable(typeof(MethodBody));
+        var methodBody = w.DeclareVariable(typeof(MethodBody));
 
         w.InsertAfterCurrent(
             w.Create(OpCodes.Dup),

@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoDetour.UnitTests", "tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoDetour.Reflection", "src\MonoDetour.Reflection\MonoDetour.Reflection.csproj", "{5328F8AA-CD75-4461-A817-69872E4FA859}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoDetour.Interop.HarmonyX", "src\MonoDetour.Interop.HarmonyX\MonoDetour.Interop.HarmonyX.csproj", "{CBF56AEE-E757-43F1-AAB8-8E88B8E65C96}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,10 @@ Global
 		{5328F8AA-CD75-4461-A817-69872E4FA859}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5328F8AA-CD75-4461-A817-69872E4FA859}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5328F8AA-CD75-4461-A817-69872E4FA859}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBF56AEE-E757-43F1-AAB8-8E88B8E65C96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBF56AEE-E757-43F1-AAB8-8E88B8E65C96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBF56AEE-E757-43F1-AAB8-8E88B8E65C96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBF56AEE-E757-43F1-AAB8-8E88B8E65C96}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,5 +73,6 @@ Global
 		{D036A19C-9954-47DF-884D-1E42DF844E52} = {DB693293-44C1-4CEE-86B6-26B75CE1A394}
 		{84DBA5C0-A03A-4611-9AB4-88BED36FF186} = {DB693293-44C1-4CEE-86B6-26B75CE1A394}
 		{5328F8AA-CD75-4461-A817-69872E4FA859} = {4653E22C-E122-4B3F-BDF9-AFBAE05088D4}
+		{CBF56AEE-E757-43F1-AAB8-8E88B8E65C96} = {4653E22C-E122-4B3F-BDF9-AFBAE05088D4}
 	EndGlobalSection
 EndGlobal

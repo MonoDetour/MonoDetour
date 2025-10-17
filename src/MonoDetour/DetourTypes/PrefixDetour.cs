@@ -90,11 +90,33 @@ public class PrefixDetour : IMonoDetourHookApplier
             if (info.ReturnValue is not null)
                 w.InsertBeforeCurrent(w.Create(OpCodes.Ldloc, info.ReturnValue));
 
-            var firstPostfix = info.PostfixInfo.FirstPostfixInstructions.FirstOrDefault();
-            if (firstPostfix is not null)
-                w.InsertBeforeCurrent(w.Create(OpCodes.Br, firstPostfix));
-            else
+            if (info.PostfixInfo.FirstPostfixInstructions.FirstOrDefault() is null)
                 w.InsertBeforeCurrent(w.Create(OpCodes.Ret));
+            else
+            {
+                bool foundPostfix = false;
+
+                foreach (var postfix in info.PostfixInfo.FirstPostfixInstructions)
+                {
+                    if (!w.Body.Instructions.Contains(postfix))
+                        continue;
+
+                    w.InsertBeforeCurrent(w.Create(OpCodes.Br, postfix));
+                    foundPostfix = true;
+                    break;
+                }
+
+                if (!foundPostfix)
+                {
+                    Hook.Owner.Log(
+                        MonoDetourLogger.LogChannel.Warning,
+                        $"While applying Prefix: {Hook.Manipulator.Name} ({Hook.Owner.Id}): "
+                            + "No postfix labels found despite postfixes being applied on the method. "
+                            + $"Postfixes might not run on method '{Hook.Target}'. "
+                    );
+                    w.InsertBeforeCurrent(w.Create(OpCodes.Ret));
+                }
+            }
         }
 
         w.HandlerApply(handler);
@@ -104,7 +126,7 @@ public class PrefixDetour : IMonoDetourHookApplier
             () =>
             {
                 var body = w.Body.CreateInformationalSnapshotJIT().AnnotateErrors();
-                return $"Manipulated by Prefix: {Hook.Manipulator.Name}:\n{body}";
+                return $"Manipulated by Prefix: {Hook.Manipulator.Name} ({Hook.Owner.Id}):\n{body}";
             }
         );
 
