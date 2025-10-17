@@ -23,6 +23,10 @@ source = "../../artifacts/bin/MonoDetour.BepInEx.5/release/0.com.github.MonoDeto
 target = "Renderer/BepInEx/patchers/"
 
 [[build.copy]]
+source = "../../artifacts/bin/MonoDetour.Interop.HarmonyX/release/netstandard2.0/com.github.MonoDetour.Interop.HarmonyX.dll"
+target = "patchers/"
+
+[[build.copy]]
 source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.dll"
 target = "Renderer/BepInEx/core/"
 
