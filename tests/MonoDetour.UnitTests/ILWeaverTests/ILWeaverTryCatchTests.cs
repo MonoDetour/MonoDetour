@@ -82,6 +82,7 @@ public static partial class ILWeaverTryCatchTests
         {
             _ = "catching stuff";
         }
+        finally { }
         return false;
     }
 }

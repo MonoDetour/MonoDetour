@@ -780,10 +780,15 @@ internal sealed class InformationalInstruction(
                 break;
             }
             case FlowControl.Return:
-                if (body.Method.ReturnType.MetadataType != MetadataType.Void)
+                // Endfinally and Endfilter have FlowControl.Return:
+                // https://github.com/jbevain/cecil/blob/master/Mono.Cecil.Cil/OpCodes.cs
+                if (instruction.OpCode == OpCodes.Ret)
                 {
-                    stackSize--;
-                    informationalInstruction.StackPop = 1;
+                    if (body.Method.ReturnType.MetadataType != MetadataType.Void)
+                    {
+                        stackSize--;
+                        informationalInstruction.StackPop = 1;
+                    }
                 }
                 break;
             default:
