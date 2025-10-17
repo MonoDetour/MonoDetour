@@ -13,7 +13,9 @@ namespace MonoDetour.Interop.HarmonyX;
 
 static class TrackInstructions
 {
-    internal static readonly MonoDetourManager instructionManager = new(HarmonyXInterop.ManagerName);
+    internal static readonly MonoDetourManager instructionManager = new(
+        HarmonyXInterop.ManagerName
+    );
 
     internal static void Init()
     {
