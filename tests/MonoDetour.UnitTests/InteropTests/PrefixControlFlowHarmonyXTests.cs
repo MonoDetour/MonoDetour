@@ -16,7 +16,7 @@ public static class PrefixControlFlowHarmonyXTests
         using var m2 = DefaultMonoDetourManager.New();
         m2.Hook<PrefixDetour>(Stub, Prefix_Stub, new(-1));
 
-        Interop.HarmonyX.Support.Initialize();
+        Interop.HarmonyX.HarmonyXInterop.Initialize();
 
         var scope = new DetourConfigContext(new(id: "detourContext", priority: 0));
 
@@ -46,7 +46,7 @@ public static class PrefixControlFlowHarmonyXTests
 
         Assert.Equal(4, runCount);
 
-        Interop.HarmonyX.Support.Dispose();
+        Interop.HarmonyX.HarmonyXInterop.Dispose();
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public static class PrefixControlFlowHarmonyXTests
 
         var scope = new DetourConfigContext(new(id: "detourContext", priority: 2));
 
-        Interop.HarmonyX.Support.Initialize();
+        Interop.HarmonyX.HarmonyXInterop.Initialize();
 
         using (scope.Use())
         {
@@ -76,7 +76,7 @@ public static class PrefixControlFlowHarmonyXTests
 
         Assert.Equal(3, runCount2);
 
-        Interop.HarmonyX.Support.Dispose();
+        Interop.HarmonyX.HarmonyXInterop.Dispose();
     }
 
     static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>

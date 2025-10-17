@@ -5,7 +5,7 @@ namespace MonoDetour.Interop.HarmonyX;
 /// <summary>
 /// HarmonyX interop support for MonoDetour.
 /// </summary>
-public static class Support
+public static class HarmonyXInterop
 {
     internal const string ManagerName = "com.github.MonoDetour.Interop.HarmonyX";
     static bool initialized;

@@ -13,7 +13,7 @@ namespace MonoDetour.Interop.HarmonyX;
 
 static class TrackInstructions
 {
-    internal static readonly MonoDetourManager instructionManager = new(Support.ManagerName);
+    internal static readonly MonoDetourManager instructionManager = new(HarmonyXInterop.ManagerName);
 
     internal static void Init()
     {
@@ -36,7 +36,7 @@ static class TrackInstructions
     private static void ILHook_ILManipulator_WriteTo(ILManipulationInfo info)
     {
         // Set to false at end of method if everything ok.
-        Support.anyFailed = true;
+        HarmonyXInterop.anyFailed = true;
         ILWeaver w = new(info);
 
         // Get end of instruction loop
@@ -121,7 +121,7 @@ static class TrackInstructions
             w.CreateCall(UpdateOriginalInstructions)
         );
 
-        Support.anyFailed = false;
+        HarmonyXInterop.anyFailed = false;
     }
 
     static Dictionary<CodeInstruction, (Instruction, bool)> MapInstructions(

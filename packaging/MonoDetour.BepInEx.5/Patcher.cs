@@ -13,7 +13,7 @@ internal static class Patcher
     public static void Initialize()
     {
         OnLog += LogHandler;
-        Interop.HarmonyX.Support.Initialize();
+        Interop.HarmonyX.HarmonyXInterop.Initialize();
     }
 
     static void LogHandler(LogChannel channel, string message)

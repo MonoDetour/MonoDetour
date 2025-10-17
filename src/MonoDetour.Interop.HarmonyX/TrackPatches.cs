@@ -12,7 +12,7 @@ namespace MonoDetour.Interop.HarmonyX;
 
 static class TrackPatches
 {
-    internal static readonly MonoDetourManager patchManager = new(Support.ManagerName);
+    internal static readonly MonoDetourManager patchManager = new(HarmonyXInterop.ManagerName);
 
     internal static void Init()
     {
@@ -44,7 +44,7 @@ static class TrackPatches
 
         patchManager.ILHook(writePrefixes, ILHook_HarmonyManipulator_WritePrefixes);
 
-        if (Support.anyFailed)
+        if (HarmonyXInterop.anyFailed)
         {
             patchManager.Dispose();
             return;
@@ -52,7 +52,7 @@ static class TrackPatches
 
         patchManager.ILHook(writePostfixes, ILHook_HarmonyManipulator_WritePostfixes);
 
-        if (Support.anyFailed)
+        if (HarmonyXInterop.anyFailed)
         {
             patchManager.Dispose();
             return;
@@ -61,7 +61,7 @@ static class TrackPatches
 
     static void ILHook_HarmonyManipulator_WritePrefixes(ILManipulationInfo info)
     {
-        Support.anyFailed = true;
+        HarmonyXInterop.anyFailed = true;
         ILWeaver w = new(info);
 
         Instruction ldarg0_ResultVar = null!;
@@ -207,12 +207,12 @@ static class TrackPatches
             w.CreateCall(ReturnLogic)
         );
 
-        Support.anyFailed = false;
+        HarmonyXInterop.anyFailed = false;
     }
 
     static void ILHook_HarmonyManipulator_WritePostfixes(ILManipulationInfo info)
     {
-        Support.anyFailed = true;
+        HarmonyXInterop.anyFailed = true;
         ILWeaver w = new(info);
 
         Instruction ldarg0_ResultVar = null!;
@@ -387,7 +387,7 @@ static class TrackPatches
             w.CreateCall(LabelsToMonoDetourPostfixes)
         );
 
-        Support.anyFailed = false;
+        HarmonyXInterop.anyFailed = false;
     }
 
     static void AddStlocToLabelList(ref List<ILEmitter.Label>? labels, ILEmitter il)

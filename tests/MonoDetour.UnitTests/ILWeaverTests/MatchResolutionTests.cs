@@ -21,7 +21,7 @@ public static class MatchResolutionTests
 
         // HarmonyX would normally mess the resolution feature by rewriting all method
         // instructions when a transpiler is written. Let's test HarmonyX interop.
-        Interop.HarmonyX.Support.Initialize();
+        Interop.HarmonyX.HarmonyXInterop.Initialize();
 
         using (var scope = new DetourConfigContext(new(id: "detourContext", priority: 0)).Use())
         {
@@ -31,7 +31,7 @@ public static class MatchResolutionTests
             CallStub();
         }
 
-        Interop.HarmonyX.Support.Dispose();
+        Interop.HarmonyX.HarmonyXInterop.Dispose();
 
         Assert.Equal(2, runCount);
     }
