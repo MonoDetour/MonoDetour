@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoDetour.Bindings.Reorg;
 using MonoDetour.Cil.Analysis;
 using MonoDetour.Interop.MonoModUtils;
 using MonoDetour.Logging;
@@ -1952,15 +1953,86 @@ public class ILWeaver : IMonoDetourLogSource
     /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, object operand) => IL.Create(opcode, operand);
 
-#pragma warning disable CS1574 // XML comment has cref attribute that could not be resolved
     /// <remarks>
     /// If the delegate method isn't static, its instance must be pushed to the stack first.<br/>
     /// The delegate method must not be a lambda expression, as one requires an anonymous
-    /// instance to be loaded. If it is a lambda expression, use <see cref="CreateDelegate"/>.
+    /// instance to be loaded. If it is a lambda expression, use <see cref="CreateDelegateCall"/>
+    /// instead.
     /// </remarks>
     /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction CreateCall(Delegate method) => IL.Create(OpCodes.Call, method.Method);
-#pragma warning restore CS1574 // XML comment has cref attribute that could not be resolved
+
+    /// <summary>
+    /// Creates instructions to invoke a <see cref="Delegate"/> as if it were a method.
+    /// Stack behaviour matches the <c>call</c> OpCode.<br/>
+    /// <br/>
+    /// Normally a Delegate would need to be invoked by pushing the Delegate instance as
+    /// the first argument to the stack, after which every other argument is pushed.
+    /// Then, the Delegate is invoked with a <c>callvirt</c> instruction.<br/>
+    /// <br/>
+    /// With this method, the Delegate instance is automatically stored and loaded for you,
+    /// and you can simply push all arguments to the stack and then call this method emit the
+    /// required instructions to invoke the Delegate.
+    /// </summary>
+    /// <param name="delegate">The <see cref="Delegate"/> method to be invoked.</param>
+    /// <returns>
+    /// An <see cref="IEnumerable{T}"/> where T is <see cref="Instruction"/>, containing all the
+    /// instructions required to invoke the Delegate.
+    /// </returns>
+    public IEnumerable<Instruction> CreateDelegateCall<T>(T @delegate)
+        where T : Delegate
+    {
+        Helpers.ThrowIfNull(@delegate);
+
+        if (@delegate.GetInvocationList().Length == 1 && @delegate.Target == null)
+        {
+            yield return Create(OpCodes.Call, @delegate.Method);
+            yield break;
+        }
+
+        var info = @delegate.Method;
+        var paramTypes = @delegate.Method.GetParameters().Select(x => x.ParameterType).ToArray();
+
+        var invoker = InteropFastDelegateInvokers.GetDelegateInvoker(Context, @delegate.GetType());
+
+        int id;
+
+        if (invoker is { } pair)
+        {
+            IEnumerable<Instruction> instructions;
+
+            if (MonoModVersion.IsReorg)
+            {
+                Delegate cast = @delegate.CastDelegate(pair.Delegate);
+                id = InteropILContext.InteropAddReference(Context, cast);
+                instructions = InteropILContext.InteropGetReference(Context, this, id, cast);
+            }
+            else
+            {
+                // Yes, we really need the direct delegate reference for Legacy to work properly.
+                id = InteropILContext.InteropAddReference(Context, @delegate);
+                instructions = InteropILContext.InteropGetReference(Context, this, id, @delegate);
+            }
+
+            foreach (var instruction in instructions)
+                yield return instruction;
+
+            // Prevent the invoker from getting GC'd early, f.e. when it's a DynamicMethod.
+            InteropILContext.InteropAddReference(Context, pair.Invoker);
+            yield return Create(OpCodes.Call, pair.Invoker);
+        }
+        else
+        {
+            id = InteropILContext.InteropAddReference(Context, @delegate);
+
+            var instructions = InteropILContext.InteropGetReference(Context, this, id, @delegate);
+            foreach (var instruction in instructions)
+                yield return instruction;
+
+            var delInvoke = @delegate.GetType().GetMethod("Invoke")!;
+            yield return Create(OpCodes.Callvirt, delInvoke);
+        }
+    }
 
     /// <summary>
     /// Create a new instruction accessing a given member, to be emitted by

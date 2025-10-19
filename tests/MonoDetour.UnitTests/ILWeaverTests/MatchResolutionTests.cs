@@ -1,5 +1,4 @@
 using HarmonyLib;
-using MonoDetour.Cil;
 
 namespace MonoDetour.UnitTests.ILWeaverTests;
 

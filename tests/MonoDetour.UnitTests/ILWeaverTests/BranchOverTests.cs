@@ -1,4 +1,3 @@
-using MonoDetour.Cil;
 using Op = Mono.Cecil.Cil.OpCodes;
 
 namespace MonoDetour.UnitTests.ILWeaverTests;
@@ -27,9 +26,9 @@ public static class BranchOverTests
         Assert.Equal(1, method(false));
         Assert.Equal(2, method(true));
 
-        new ILContext(dmd.Definition).Invoke(il =>
+        dmd.Definition.ILWeave(info =>
         {
-            ILWeaver w = new(new(il));
+            ILWeaver w = new(info);
             w.InsertBranchOverIfFalse(start, end, w.Create(Op.Dup));
         });
 

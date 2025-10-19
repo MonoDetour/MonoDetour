@@ -1,4 +1,3 @@
-using MonoDetour.Cil;
 using Op = Mono.Cecil.Cil.OpCodes;
 
 namespace MonoDetour.UnitTests.ILWeaverTests;
@@ -19,9 +18,8 @@ public static class MatchTests
             il.Emit(Op.Ret);
         }
 
-        new ILContext(dmd.Definition).Invoke(il =>
+        dmd.Definition.ILWeave(info =>
         {
-            ILManipulationInfo info = new(il);
             ILWeaver w = new(info);
 
             Instruction firstNop = null!;

@@ -1,6 +1,3 @@
-using System.Runtime.CompilerServices;
-using MonoDetour.Cil;
-
 namespace MonoDetour.UnitTests.ILWeaverTests;
 
 public static partial class ILWeaverTryCatchTests
