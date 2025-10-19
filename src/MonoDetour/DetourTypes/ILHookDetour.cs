@@ -20,14 +20,16 @@ public class ILHookDetour : IMonoDetourHookApplier
         set
         {
             _hook = value;
-            invoker = (ILManipulationInfo.Manipulator)
-                Delegate.CreateDelegate(
-                    typeof(ILManipulationInfo.Manipulator),
-                    Hook.Manipulator as MethodInfo
-                        ?? throw new InvalidCastException(
-                            $"{nameof(Hook)} {nameof(Hook.Manipulator)} method is not {nameof(MethodInfo)}!"
-                        )
-                );
+            invoker =
+                (ILManipulationInfo.Manipulator?)_hook.ManipulatorDelegate
+                ?? (ILManipulationInfo.Manipulator)
+                    Delegate.CreateDelegate(
+                        typeof(ILManipulationInfo.Manipulator),
+                        Hook.Manipulator as MethodInfo
+                            ?? throw new InvalidCastException(
+                                $"{nameof(Hook)} {nameof(Hook.Manipulator)} method is not {nameof(MethodInfo)}!"
+                            )
+                    );
         }
     }
     IReadOnlyMonoDetourHook _hook = null!;

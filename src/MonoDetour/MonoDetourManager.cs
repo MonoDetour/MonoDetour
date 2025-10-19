@@ -153,7 +153,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
         bool applyByDefault = true
     )
     {
-        return Hook<ILHookDetour>(target, manipulator.Method, config, applyByDefault);
+        return Hook<ILHookDetour>(target, manipulator, config, applyByDefault);
     }
 
     /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
@@ -164,7 +164,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
         bool applyByDefault = true
     )
         where TApplier : class, IMonoDetourHookApplier =>
-        Hook<TApplier>(target.Method, manipulator.Method, config, applyByDefault);
+        Hook<TApplier>(target.Method, manipulator, config, applyByDefault);
 
     /// <inheritdoc cref="Hook(MethodBase, MethodBase, MonoDetourConfig, bool)"/>
     public MonoDetourHook Hook<TApplier>(
@@ -173,8 +173,11 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where TApplier : class, IMonoDetourHookApplier =>
-        Hook<TApplier>(target, manipulator.Method, config, applyByDefault);
+        where TApplier : class, IMonoDetourHookApplier
+    {
+        ThrowIfDisposed();
+        return MonoDetourHook.Create<TApplier>(target, manipulator, this, config, applyByDefault);
+    }
 
     /// <summary>
     /// Creates a MonoDetour Hook using the information defined.

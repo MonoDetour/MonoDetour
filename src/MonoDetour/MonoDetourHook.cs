@@ -22,6 +22,9 @@ public class MonoDetourHook : IMonoDetourHook
     public MethodBase Manipulator { get; }
 
     /// <inheritdoc/>
+    public Delegate? ManipulatorDelegate { get; }
+
+    /// <inheritdoc/>
     public MonoDetourManager Owner { get; }
 
     /// <inheritdoc cref="MonoDetourConfig"/>
@@ -47,6 +50,7 @@ public class MonoDetourHook : IMonoDetourHook
     /// </summary>
     /// <param name="target">The method to hook.</param>
     /// <param name="manipulator">The hook or manipulator method.</param>
+    /// <param name="manipulatorDelegate">A <see cref="Delegate"/> of the hook or manipulator method.</param>
     /// <param name="applierType">The <see cref="IMonoDetourHookApplier"/> type.</param>
     /// <param name="owner">The owner of this hook.</param>
     /// <param name="config">The config which defines how to apply and treat this hook.</param>
@@ -55,6 +59,7 @@ public class MonoDetourHook : IMonoDetourHook
     private MonoDetourHook(
         MethodBase target,
         MethodBase manipulator,
+        Delegate? manipulatorDelegate,
         Type applierType,
         MonoDetourManager owner,
         MonoDetourConfig? config = null,
@@ -64,6 +69,7 @@ public class MonoDetourHook : IMonoDetourHook
         Target = Helpers.ThrowIfNull(target);
         Manipulator = Helpers.ThrowIfNull(manipulator);
         Owner = Helpers.ThrowIfNull(owner);
+        ManipulatorDelegate = manipulatorDelegate;
         ApplierType = applierType;
         Config = config;
 
@@ -94,7 +100,26 @@ public class MonoDetourHook : IMonoDetourHook
     /// <returns>
     /// A new <see cref="MonoDetourHook"/>.
     /// </returns>
-    /// <inheritdoc cref="MonoDetourHook(MethodBase, MethodBase, Type, MonoDetourManager, MonoDetourConfig, bool)"/>
+    /// <inheritdoc cref="MonoDetourHook(MethodBase, MethodBase, Delegate, Type, MonoDetourManager, MonoDetourConfig, bool)"/>
+    public static MonoDetourHook Create<TApplier>(
+        MethodBase target,
+        Delegate manipulator,
+        MonoDetourManager owner,
+        MonoDetourConfig? config = null,
+        bool applyByDefault = true
+    )
+        where TApplier : class, IMonoDetourHookApplier =>
+        new(
+            target,
+            Helpers.ThrowIfNull(manipulator).Method,
+            manipulator,
+            typeof(TApplier),
+            owner,
+            config,
+            applyByDefault
+        );
+
+    /// <inheritdoc cref="Create{TApplier}(MethodBase, Delegate, MonoDetourManager, MonoDetourConfig?, bool)"/>
     public static MonoDetourHook Create<TApplier>(
         MethodBase target,
         MethodBase manipulator,
@@ -103,7 +128,7 @@ public class MonoDetourHook : IMonoDetourHook
         bool applyByDefault = true
     )
         where TApplier : class, IMonoDetourHookApplier =>
-        new(target, manipulator, typeof(TApplier), owner, config, applyByDefault);
+        new(target, manipulator, null, typeof(TApplier), owner, config, applyByDefault);
 
     /// <inheritdoc/>
     public void Apply() => Applier.Apply();
