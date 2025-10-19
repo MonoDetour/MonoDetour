@@ -62,7 +62,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
         if (OnHookThrew is null)
             return false;
 
-        OnHookThrew?.Invoke(hook);
+        OnHookThrew.Invoke(hook);
         return true;
     }
 
