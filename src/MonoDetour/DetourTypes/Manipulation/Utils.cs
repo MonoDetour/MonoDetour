@@ -138,7 +138,7 @@ static class Utils
             $"{nameof(IReadOnlyMonoDetourHook)}.{nameof(IReadOnlyMonoDetourHook.Manipulator)} "
                 + "is not static, and "
                 + $"{nameof(IReadOnlyMonoDetourHook)}.{nameof(IReadOnlyMonoDetourHook.ManipulatorDelegate)} "
-                + "is null. Please use a constructor which takes a Delegate instead"
+                + "is null. Please use a constructor which takes a Delegate instead "
                 + "of a MethodBase for Manipulator."
         );
     }

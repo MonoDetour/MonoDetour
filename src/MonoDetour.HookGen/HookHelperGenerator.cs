@@ -1132,7 +1132,7 @@ namespace MonoDetour.HookGen
                     cb.Write(".Hook<PrefixDetour>(StateMachineTarget()");
                 else
                     cb.Write(".Hook<PrefixDetour>(Target()");
-                cb.WriteLine(", hook.Method, config, applyByDefault);")
+                cb.WriteLine(", hook, config, applyByDefault);")
                     .DecreaseIndent()
                     .DecreaseIndent()
                     .WriteLine();
@@ -1158,7 +1158,7 @@ namespace MonoDetour.HookGen
                         cb.Write(".Hook<PrefixDetour>(StateMachineTarget()");
                     else
                         cb.Write(".Hook<PrefixDetour>(Target()");
-                    cb.WriteLine(", hook.Method, config, applyByDefault);")
+                    cb.WriteLine(", hook, config, applyByDefault);")
                         .DecreaseIndent()
                         .DecreaseIndent()
                         .WriteLine();
@@ -1184,7 +1184,7 @@ namespace MonoDetour.HookGen
                     cb.Write(".Hook<PostfixDetour>(StateMachineTarget()");
                 else
                     cb.Write(".Hook<PostfixDetour>(Target()");
-                cb.WriteLine(", hook.Method, config, applyByDefault);")
+                cb.WriteLine(", hook, config, applyByDefault);")
                     .DecreaseIndent()
                     .DecreaseIndent()
                     .WriteLine();
