@@ -212,6 +212,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
         }
 
         DisposeHooks();
+        GC.SuppressFinalize(this);
 
         isDisposed = true;
     }

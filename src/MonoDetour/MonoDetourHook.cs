@@ -122,6 +122,7 @@ public class MonoDetourHook : IMonoDetourHook
         }
 
         Applier.Dispose();
+        GC.SuppressFinalize(this);
 
         isDisposed = true;
     }
