@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Mono.Cecil.Cil;
 using MonoDetour.Cil;
@@ -14,7 +16,35 @@ namespace MonoDetour.DetourTypes;
 public class PrefixDetour : IMonoDetourHookApplier
 {
     /// <inheritdoc/>
-    public IReadOnlyMonoDetourHook Hook { get; set; } = null!;
+    public IReadOnlyMonoDetourHook Hook
+    {
+        get => hook;
+        set
+        {
+            hook = value;
+
+            hookId = prefixHooks.Count;
+            prefixHooks.Add(hook);
+
+            if (value.ManipulatorDelegate is { } manipulator)
+            {
+                delegateId = prefixDelegates.Count;
+                prefixDelegates.Add(manipulator);
+            }
+        }
+    }
+
+    IReadOnlyMonoDetourHook hook = null!;
+
+    static readonly List<Delegate> prefixDelegates = [];
+    static readonly List<IReadOnlyMonoDetourHook> prefixHooks = [];
+
+    int delegateId = -1;
+    int hookId = -1;
+
+    static Delegate GetDelegate(int id) => prefixDelegates[id];
+
+    static IReadOnlyMonoDetourHook GetHook(int id) => prefixHooks[id];
 
     /// <inheritdoc/>
     public void ApplierManipulator(ILContext il)
@@ -29,20 +59,25 @@ public class PrefixDetour : IMonoDetourHookApplier
         w.DefineAndMarkLabelToFutureNextInsert(out var tryStart);
         w.HandlerSetTryStart(tryStart, handler);
 
+        var callManipulator = Utils.GetCallMaybeInsertGetDelegate(w, Hook, delegateId, GetDelegate);
+
         if (modifiesReturnValue)
             w.EmitParamsAndReturnValueBeforeCurrent(info.ReturnValue!, Hook);
         else
             w.EmitParamsBeforeCurrent(Hook);
 
-        w.InsertBeforeCurrent(w.Create(OpCodes.Call, Hook.Manipulator));
+        w.InsertBeforeCurrent(callManipulator);
 
         if (Hook.ModifiesControlFlow())
             w.InsertBeforeCurrent(w.Create(OpCodes.Stloc, info.PrefixInfo.TemporaryControlFlow));
 
         w.HandlerSetTryEnd(w.Previous, handler);
 
-        w.EmitReferenceBeforeCurrent(Hook, out _);
-        w.InsertBeforeCurrent(w.CreateCall(Utils.DisposeBadHooks));
+        w.InsertBeforeCurrent(
+            w.Create(OpCodes.Ldc_I4, hookId),
+            w.CreateCall(GetHook),
+            w.CreateCall(Utils.DisposeBadHooks)
+        );
 
         w.HandlerSetHandlerEnd(w.Previous, handler);
 

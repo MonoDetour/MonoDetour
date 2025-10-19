@@ -17,7 +17,35 @@ namespace MonoDetour.DetourTypes;
 public class PostfixDetour : IMonoDetourHookApplier
 {
     /// <inheritdoc/>
-    public IReadOnlyMonoDetourHook Hook { get; set; } = null!;
+    public IReadOnlyMonoDetourHook Hook
+    {
+        get => hook;
+        set
+        {
+            hook = value;
+
+            hookId = postfixHooks.Count;
+            postfixHooks.Add(hook);
+
+            if (value.ManipulatorDelegate is { } manipulator)
+            {
+                delegateId = postfixDelegates.Count;
+                postfixDelegates.Add(manipulator);
+            }
+        }
+    }
+
+    IReadOnlyMonoDetourHook hook = null!;
+
+    static readonly List<Delegate> postfixDelegates = [];
+    static readonly List<IReadOnlyMonoDetourHook> postfixHooks = [];
+
+    int delegateId = -1;
+    int hookId = -1;
+
+    static Delegate GetDelegate(int id) => postfixDelegates[id];
+
+    static IReadOnlyMonoDetourHook GetHook(int id) => postfixHooks[id];
 
     /// <inheritdoc/>
     public void ApplierManipulator(ILContext il)
@@ -41,25 +69,31 @@ public class PostfixDetour : IMonoDetourHookApplier
         w.DefineLabel(out var tryStart);
         w.HandlerSetTryStart(tryStart, handler);
 
+        Instruction callManipulator;
+
         if (info.ReturnValue is not null)
         {
             w.InsertBeforeCurrent(w.Create(OpCodes.Stloc, info.ReturnValue));
             w.MarkLabelToFutureNextInsert(tryStart);
+            callManipulator = Utils.GetCallMaybeInsertGetDelegate(w, Hook, delegateId, GetDelegate);
             w.EmitParamsAndReturnValueBeforeCurrent(info.ReturnValue, Hook);
         }
         else
         {
             w.MarkLabelToFutureNextInsert(tryStart);
+            callManipulator = Utils.GetCallMaybeInsertGetDelegate(w, Hook, delegateId, GetDelegate);
             w.EmitParamsBeforeCurrent(Hook);
         }
 
-        w.InsertBeforeCurrent(w.Create(OpCodes.Call, Hook.Manipulator));
+        w.InsertBeforeCurrent(callManipulator);
 
         w.HandlerSetTryEnd(w.Previous, handler);
 
-        // w.InsertBeforeCurrent(w.Create(OpCodes.Pop));
-        w.EmitReferenceBeforeCurrent(Hook, out _);
-        w.InsertBeforeCurrent(w.CreateCall(Utils.DisposeBadHooks));
+        w.InsertBeforeCurrent(
+            w.Create(OpCodes.Ldc_I4, hookId),
+            w.CreateCall(GetHook),
+            w.CreateCall(Utils.DisposeBadHooks)
+        );
 
         w.HandlerSetHandlerEnd(w.Previous, handler);
 

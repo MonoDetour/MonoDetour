@@ -1,5 +1,6 @@
 global using Md.MonoDetour.UnitTests.TestLib.LibraryMethods;
 global using Mono.Cecil.Cil;
+global using MonoDetour.Cil;
 global using MonoDetour.DetourTypes;
 global using MonoDetour.HookGen;
 global using MonoDetour.Logging;

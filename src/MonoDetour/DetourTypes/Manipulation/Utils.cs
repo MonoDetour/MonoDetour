@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil.Cil;
@@ -120,6 +121,45 @@ static class Utils
         {
             hook.Owner.DisposeHooks();
         }
+    }
+
+    internal static void ThrowIfHookManipulatorDelegateIsNull(
+        IReadOnlyMonoDetourHook hook,
+        out Delegate manipulatorDelegate
+    )
+    {
+        if (hook.ManipulatorDelegate is { } @delegate)
+        {
+            manipulatorDelegate = @delegate;
+            return;
+        }
+
+        throw new NullReferenceException(
+            $"{nameof(IReadOnlyMonoDetourHook)}.{nameof(IReadOnlyMonoDetourHook.Manipulator)} "
+                + "is not static, and "
+                + $"{nameof(IReadOnlyMonoDetourHook)}.{nameof(IReadOnlyMonoDetourHook.ManipulatorDelegate)} "
+                + "is null. Please use a constructor which takes a Delegate instead"
+                + "of a MethodBase for Manipulator."
+        );
+    }
+
+    internal static Instruction GetCallMaybeInsertGetDelegate(
+        ILWeaver w,
+        IReadOnlyMonoDetourHook hook,
+        int id,
+        Func<int, Delegate> getDelegate
+    )
+    {
+        if (hook.Manipulator.IsStatic)
+        {
+            return w.Create(OpCodes.Call, hook.Manipulator);
+        }
+
+        ThrowIfHookManipulatorDelegateIsNull(hook, out var manipulatorDelegate);
+        w.InsertBeforeCurrent(w.Create(OpCodes.Ldc_I4, id), w.CreateCall(getDelegate));
+
+        var invoke = manipulatorDelegate.GetType().GetMethod("Invoke")!;
+        return w.Create(OpCodes.Callvirt, invoke);
     }
 
     [Conditional("DEBUG")]
