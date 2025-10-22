@@ -1990,9 +1990,6 @@ public class ILWeaver : IMonoDetourLogSource
             yield break;
         }
 
-        var info = @delegate.Method;
-        var paramTypes = @delegate.Method.GetParameters().Select(x => x.ParameterType).ToArray();
-
         var invoker = InteropFastDelegateInvokers.GetDelegateInvoker(Context, @delegate.GetType());
 
         int id;
