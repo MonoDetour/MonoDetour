@@ -170,6 +170,14 @@ static class TrackInstructions
             return;
 
         var newIns = body.Instructions[^1];
+
+        // TODO: Figure out a better way to track instructions
+        // that have been duplicated in a HarmonyX Transpiler.
+        // For now, we just take the first instance as real.
+        // This might completely mess up the "original instructions" list for ILWeaver.
+        if (oldToNew.ContainsKey(value.oldIns))
+            return;
+
         oldToNew.Add(value.oldIns, newIns);
 
         if (!value.original)
