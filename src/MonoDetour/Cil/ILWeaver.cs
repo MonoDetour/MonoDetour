@@ -1593,7 +1593,7 @@ public class ILWeaver : IMonoDetourLogSource
                 $"The index -1 or target instruction to be inserted at does not exist in the method body."
             );
         }
-        else if (index > Instructions.Count)
+        else if (index > Instructions.Count - 1)
         {
             throw new IndexOutOfRangeException(
                 $"The index to be inserted is out of range; index: {index} / instructions: {Instructions.Count}"
