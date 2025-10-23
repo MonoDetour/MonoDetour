@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>MonoDetour.Benchmark</RootNamespace>
+    <TargetFramework>net9.0</TargetFramework>
+  </PropertyGroup>
+  <!-- Package references -->
+  <ItemGroup>
+    <PackageReference Include="MonoMod.RuntimeDetour" Version="25.3.1" />
+    <PackageReference Include="HarmonyX" Version="2.15.0" />
+  </ItemGroup>
+  <!-- Local project references -->
+  <ItemGroup>
+    <ProjectReference Include="$(SolutionRoot)src/MonoDetour/MonoDetour.csproj" />
+    <ProjectReference Include="$(SolutionRoot)src/MonoDetour.Reflection/MonoDetour.Reflection.csproj" />
+    <ProjectReference Include="$(SolutionRoot)src/MonoDetour.Interop.HarmonyX/MonoDetour.Interop.HarmonyX.csproj" />
+    <ProjectReference
+      Include="$(SolutionRoot)src/MonoDetour.HookGen/MonoDetour.HookGen.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="true"
+    />
+    <ProjectReference
+      Include="$(SolutionRoot)src/MonoDetour.Analyzers/MonoDetour.Analyzers.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false"
+    />
+  </ItemGroup>
+  <Import Project="$(SolutionRoot)src/MonoDetour.HookGen/MonoDetour.HookGen.props" />
+</Project>
