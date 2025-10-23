@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using MonoDetour.Cil;
+using MonoDetour.Interop.RuntimeDetour;
 using MonoMod.Cil;
 
 namespace MonoDetour.DetourTypes.Manipulation;

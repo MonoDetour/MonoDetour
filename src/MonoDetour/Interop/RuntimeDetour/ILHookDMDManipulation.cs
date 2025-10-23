@@ -15,6 +15,8 @@ using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 
+namespace MonoDetour.Interop.RuntimeDetour;
+
 static class ILHookDMDManipulation
 {
     internal static readonly ConditionalWeakTable<
