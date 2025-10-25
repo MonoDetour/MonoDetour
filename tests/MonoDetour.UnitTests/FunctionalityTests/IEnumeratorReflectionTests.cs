@@ -2,7 +2,7 @@ namespace MonoDetour.UnitTests.FunctionalityTests;
 
 public class IEnumeratorReflectionTests
 {
-    public int Number { get; set; } = 0;
+    public int Number { get; set; }
 
     static EnumeratorFieldReferenceGetter<IEnumeratorReflectionTests> instanceRef = null!;
 

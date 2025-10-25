@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace MonoMod.SourceGen.Internal;
@@ -67,7 +68,7 @@ internal sealed class CodeBuilder
         didWriteIndent = true;
     }
 
-    public CodeBuilder Write(int i) => Write(i.ToString());
+    public CodeBuilder Write(int i) => Write(i.ToString(CultureInfo.InvariantCulture));
 
     public CodeBuilder Write(string s)
     {
@@ -83,7 +84,7 @@ internal sealed class CodeBuilder
         return this;
     }
 
-    public CodeBuilder WriteLine(int i) => WriteLine(i.ToString());
+    public CodeBuilder WriteLine(int i) => WriteLine(i.ToString(CultureInfo.InvariantCulture));
 
     public CodeBuilder WriteLine(string s)
     {

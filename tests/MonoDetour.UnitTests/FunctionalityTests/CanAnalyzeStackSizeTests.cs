@@ -1,9 +1,7 @@
 using MonoDetour.Cil;
 using MonoDetour.Cil.Analysis;
 using MonoMod.Core.Platforms;
-using Op = Mono.Cecil.Cil.OpCodes;
-
-// using Op = System.Reflection.Emit.OpCodes;
+using Op = System.Reflection.Emit.OpCodes;
 
 namespace MonoDetour.UnitTests.FunctionalityTests;
 
@@ -26,7 +24,6 @@ public static class CanAnalyzeStackSizeTests
         {
             var il = dmd.GetILGenerator();
 
-            // TODO: Maybe make it find the shortest path
             var l1 = il.DefineLabel();
             var l2 = il.DefineLabel();
             var l3 = il.DefineLabel();
@@ -63,9 +60,10 @@ public static class CanAnalyzeStackSizeTests
         }
 
         MonoDetourLogger.Log(
-            MonoDetourLogger.LogChannel.Info,
-            dmd.Definition.Body.Analyze().ToStringWithAnnotations()
+            MonoDetourLogger.LogChannel.Error,
+            dmd.Definition.Body.CreateInformationalSnapshotJIT().AnnotateErrors().ToString()
         );
+
         PlatformTriple.Current.Compile(dmd.Generate());
     } */
 

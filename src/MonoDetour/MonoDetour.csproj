@@ -5,7 +5,6 @@
     <VersionPrefix>$(MonoDetourVersionPrefix)</VersionPrefix>
     <VersionSuffix>$(MonoDetourVersionSuffix)</VersionSuffix>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <ReferencePolySharp>true</ReferencePolySharp>
   </PropertyGroup>
   <!-- NuGet props -->

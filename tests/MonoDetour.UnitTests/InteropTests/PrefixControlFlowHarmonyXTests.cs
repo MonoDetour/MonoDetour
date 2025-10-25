@@ -4,8 +4,8 @@ namespace MonoDetour.UnitTests.InteropTests;
 
 public static class PrefixControlFlowHarmonyXTests
 {
-    static int runCount = 0;
-    static int runCount2 = 0;
+    static int runCount;
+    static int runCount2;
 
     [Fact]
     public static void CanPrefixControlFlowWithHarmonyX()

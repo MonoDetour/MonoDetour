@@ -2,7 +2,7 @@ namespace MonoDetour.UnitTests.ILWeaverTests;
 
 public static partial class ILWeaverTryCatchTests
 {
-    static bool caught = false;
+    static bool caught;
 
     [Fact]
     public static void CanWriteTryCatch()

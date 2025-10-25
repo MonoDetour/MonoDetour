@@ -5,7 +5,7 @@ namespace MonoDetour.UnitTests.HookTests;
 
 public static class TryCatchStackTests
 {
-    static bool caught = false;
+    static bool caught;
 
     [Fact]
     public static void CanWrapTryCatch()

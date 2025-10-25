@@ -4,7 +4,7 @@ namespace MonoDetour.UnitTests.ILWeaverTests;
 
 public static class MatchResolutionTests
 {
-    static int runCount = 0;
+    static int runCount;
 
     [Fact]
     public static void CanResolveMatchAfterSameInstructionsAreModified()

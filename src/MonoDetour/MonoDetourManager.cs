@@ -47,7 +47,7 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     /// </summary>
     public event Action<IReadOnlyMonoDetourHook>? OnHookThrew;
 
-    bool isDisposed = false;
+    bool isDisposed;
 
     void ThrowIfDisposed()
     {

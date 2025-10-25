@@ -14,6 +14,7 @@
     <LangVersion>13</LangVersion>
     <Nullable>enable</Nullable>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisMode>Recommended</AnalysisMode>
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <ArtifactsPivots>$([System.String]::Copy('$(Configuration)').ToLower())/$(TargetFramework)</ArtifactsPivots>
     <Product>$(MSBuildProjectName)</Product>
@@ -37,6 +38,6 @@
     <HookGenAndAnalyzersVersionPrefix>0.7.3</HookGenAndAnalyzersVersionPrefix>
     <HookGenAndAnalyzersVersionSuffix></HookGenAndAnalyzersVersionSuffix>
     <!-- I only target net9.0 to get documentation and better nullability annotations in the BCL. -->
-    <MonoDetourTargetFrameworks>netstandard2.0;net9.0</MonoDetourTargetFrameworks>
+    <MonoDetourTargetFrameworks>net9.0;netstandard2.0</MonoDetourTargetFrameworks>
   </PropertyGroup>
 </Project>

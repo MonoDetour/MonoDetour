@@ -2,7 +2,7 @@ namespace MonoDetour.UnitTests.FunctionalityTests;
 
 public static partial class InvokeHookInitializersTests
 {
-    private static int count = 0;
+    private static int count;
 
     [Fact]
     public static void CanInvokeHookInitializersProperly()
@@ -19,7 +19,7 @@ public static partial class InvokeHookInitializersTests
     }
 
     [MonoDetourTargets]
-    private class HookInits
+    private sealed class HookInits
     {
         [MonoDetourHookInitialize]
         static void Init()
@@ -34,7 +34,7 @@ public static partial class InvokeHookInitializersTests
         }
     }
 
-    private class HookDoNotInitWithoutDirectReference
+    private sealed class HookDoNotInitWithoutDirectReference
     {
         [MonoDetourHookInitialize]
         static void Init()

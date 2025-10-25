@@ -167,7 +167,10 @@ public static class EnumeratorReflection
             2 => "<>2__current",
             3 => throw new ArgumentException("field id 3 is not constant."),
             4 => "<>4__this",
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(fieldId),
+                $"Valid values are 1, 2, and 4. The value provided was: {fieldId}"
+            ),
         };
 
         FieldInfo? field =

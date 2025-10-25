@@ -4,7 +4,7 @@ namespace MonoDetour.UnitTests.FunctionalityTests;
 
 public class SpeakableEnumeratorTests
 {
-    public int Number { get; set; } = 0;
+    public int Number { get; set; }
 
     [Fact]
     void CanUseSpeakableEnumerator()

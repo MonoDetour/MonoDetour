@@ -79,7 +79,7 @@ public class LibraryMethods
 
     public void TakesRefDictionary(ref Dictionary<bool, bool> dictionary) { }
 
-    public void CSharpKeywordParameterName(object @object) { }
+    public void CSharpKeywordParameterName(object obj) { }
 
     public bool CausesConflictingParameterNames(bool self, bool returnValue) => true;
 }

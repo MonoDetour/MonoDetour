@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using Mono.Cecil;
@@ -54,6 +55,11 @@ public interface IInformationalInstruction
     /// <summary>
     /// The immediate instruction after this instruction.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Naming",
+        "CA1716:Identifiers should not match keywords",
+        Justification = "I don't care about Visual Basic."
+    )]
     IInformationalInstruction? Next { get; }
 
     /// <summary>
@@ -268,11 +274,11 @@ internal sealed class InformationalInstruction(
 
     public bool HasErrorAnnotations => ErrorAnnotations.Count != 0;
 
-    private bool explored = false;
+    private bool explored;
 
-    internal const string LongPipe = "│";
-    internal const string LeftWall = LongPipe;
-    internal const string EmptyPad = $"{LeftWall}   ¦ ";
+    internal const char LongPipe = '│';
+    internal const char LeftWall = LongPipe;
+    internal const string EmptyPad = $"│   ¦ ";
     internal static string VariableEmptyPad = $"{LeftWall}   ¦ ";
 
     internal class HandlerInfo(HandlerPart handlerPart, ExceptionHandler handler) : IHandlerInfo
@@ -331,6 +337,7 @@ internal sealed class InformationalInstruction(
             sb.Append(message);
 
             var incomingBranches = MismatchInstruction.IncomingBranches;
+            var p = VariableEmptyPad;
 
             var last = incomingBranches.Last();
             foreach (var m in incomingBranches)
@@ -341,31 +348,31 @@ internal sealed class InformationalInstruction(
                 sb.Append(", ").Append(m.StackSize);
             }
 
-            sb.Append(" and ").AppendLine(last.StackSize.ToString());
+            sb.Append(" and ").AppendLine(last.StackSize.ToString(CultureInfo.InvariantCulture));
 
             var previous = MismatchInstruction.PreviousChronological;
             if (previous is null)
             {
-                sb.AppendLine($"{VariableEmptyPad}│ Info: Previous instruction:");
-                sb.Append($"{VariableEmptyPad}├ ").AppendLine($" 0 | <before method body>");
+                sb.Append(p).AppendLine("│ Info: Previous instruction:");
+                sb.Append(p).Append("├ ").AppendLine($" 0 | <before method body>");
             }
             else if (!incomingBranches.Contains(previous))
             {
-                sb.AppendLine($"{VariableEmptyPad}│ Info: Previous instruction:");
-                sb.Append($"{VariableEmptyPad}├ ").AppendLine(previous.ToString());
+                sb.Append(p).AppendLine("│ Info: Previous instruction:");
+                sb.Append(p).Append("├ ").AppendLine(previous.ToString());
             }
 
-            sb.AppendLine($"{VariableEmptyPad}│ Info: Incoming branches:");
+            sb.Append(p).AppendLine("│ Info: Incoming branches:");
 
             foreach (var incomingBranch in incomingBranches)
             {
                 if (incomingBranch == last)
                     break;
 
-                sb.Append($"{VariableEmptyPad}├ ").AppendLine(incomingBranch.ToString());
+                sb.Append(p).Append("├ ").AppendLine(incomingBranch.ToString());
             }
 
-            sb.Append($"{VariableEmptyPad}└ ").Append(last.ToString());
+            sb.Append(p).Append("└ ").Append(last.ToString());
 
             return sb.ToString();
         }
@@ -386,21 +393,22 @@ internal sealed class InformationalInstruction(
             var instructions = Range.Instructions;
             var start = 0;
             var end = instructions.Count - 1;
+            var p = VariableEmptyPad;
 
             sb.AppendLine();
-            sb.AppendLine($"{VariableEmptyPad}│ Info: Stack imbalance starts at:");
+            sb.Append(p).AppendLine("│ Info: Stack imbalance starts at:");
 
             if (start != end)
             {
-                sb.Append($"{VariableEmptyPad}├ ").AppendLine(instructions[start].ToString());
+                sb.Append(p).Append("├ ").AppendLine(instructions[start].ToString());
             }
 
             for (int i = start + 1; i < end; i++)
             {
-                sb.Append($"{VariableEmptyPad}│ ").AppendLine(instructions[i].ToString());
+                sb.Append(p).Append("│ ").AppendLine(instructions[i].ToString());
             }
 
-            sb.Append($"{VariableEmptyPad}└ ").Append(instructions[end].ToString());
+            sb.Append(p).Append("└ ").Append(instructions[end].ToString());
 
             return sb.ToString();
         }
@@ -456,17 +464,19 @@ internal sealed class InformationalInstruction(
         }
 
         if (!IsEvaluated)
-            sb.Append($"{LeftWall} - | {Instruction}");
+            sb.Append(LeftWall).Append(" - | ").Append(Instruction);
         else
         {
+            var stackSize = StackSize.ToString(CultureInfo.InvariantCulture).PadLeft(2);
+
             if (withAnnotations)
             {
                 TryAppendIncomingBranchesInfo(sb, IncomingBranches);
-                sb.Append($"{LeftWall}{StackSize, 2} | {Instruction}");
+                sb.Append(LeftWall).Append(stackSize).Append(" | ").Append(Instruction);
             }
             else
             {
-                sb.Append($"{StackSize, 2} | {Instruction}");
+                sb.Append(stackSize).Append(" | ").Append(Instruction);
             }
         }
 
@@ -481,11 +491,11 @@ internal sealed class InformationalInstruction(
                     sb.AppendLine();
                     if (annotation != last)
                     {
-                        sb.Append($"{LeftWall} ├ ");
+                        sb.Append(LeftWall).Append(" ├ ");
                     }
                     else
                     {
-                        sb.Append($"{LeftWall} └ ");
+                        sb.Append(LeftWall).Append(" └ ");
                         VariableEmptyPad = EmptyPad;
                     }
                     sb.Append(annotation.ToString());
@@ -531,7 +541,9 @@ internal sealed class InformationalInstruction(
         foreach (var informational in incomingBranches)
         {
             sb.Append(" IL_");
-            sb.Append(informational.Instruction.Offset.ToString("x4"));
+            sb.Append(
+                informational.Instruction.Offset.ToString("x4", CultureInfo.InvariantCulture)
+            );
             sb.Append(';');
         }
         sb.AppendLine();

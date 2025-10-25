@@ -42,7 +42,7 @@ public class MonoDetourHook : IMonoDetourHook
     /// </summary>
     public Type ApplierType { get; }
 
-    bool isDisposed = false;
+    bool isDisposed;
 
     /// <summary>
     /// Constructs a <see cref="MonoDetourHook"/> with <see cref="Applier"/> defined by

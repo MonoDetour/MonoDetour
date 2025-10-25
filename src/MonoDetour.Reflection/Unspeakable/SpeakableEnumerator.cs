@@ -65,6 +65,9 @@ public sealed class SpeakableEnumerator<TCurrent, TThis> : ISpeakableEnumerator
         getThisRef = type.EnumeratorFastFieldReferenceThis<TThis>();
     }
 
+#pragma warning disable CA1000 // Do not declare static members on generic types
+    // Justification: Convenient for getting method via reflection from type.
+
     /// <inheritdoc cref="SpeakableEnumerator{TCurrent}.PreBuildFieldReferenceGetters(Type)"/>
     public static void PreBuildFieldReferenceGetters(Type type)
     {
@@ -173,4 +176,5 @@ public sealed class SpeakableEnumerator<TCurrent> : ISpeakableEnumerator
         s_EnumeratorToSpeakable.Add(instance, value);
         return value;
     }
+#pragma warning restore CA1000 // Do not declare static members on generic types
 }

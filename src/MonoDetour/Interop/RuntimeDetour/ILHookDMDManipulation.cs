@@ -37,7 +37,7 @@ static class ILHookDMDManipulation
         typeof(ILHookDMDManipulation).Assembly.GetName().Name!
     );
 
-    static bool initialized = false;
+    static bool initialized;
 
     internal static void InitHook()
     {
