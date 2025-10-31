@@ -24,7 +24,7 @@ target = "Renderer/BepInEx/patchers/"
 
 [[build.copy]]
 source = "../../artifacts/bin/MonoDetour.Interop.HarmonyX/release/netstandard2.0/com.github.MonoDetour.Interop.HarmonyX.dll"
-target = "patchers/"
+target = "Renderer/BepInEx/patchers/"
 
 [[build.copy]]
 source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.dll"
