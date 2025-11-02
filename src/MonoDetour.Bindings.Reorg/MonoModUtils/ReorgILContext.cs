@@ -9,14 +9,7 @@ namespace MonoDetour.Bindings.Reorg.MonoModUtils;
 
 static class ReorgILContext
 {
-    private static readonly MethodInfo Self_GetValueT_ii =
-        typeof(DynamicReferenceManager).GetMethod(
-            "GetValueT",
-            BindingFlags.Static | BindingFlags.NonPublic,
-            null,
-            [typeof(int), typeof(int)],
-            null
-        ) ?? throw new InvalidOperationException("GetValueT doesn't exist?!?!?!?");
+    private static MethodInfo? Self_GetValueT_ii;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static int AddReference<T>(ILContext context, in T value) =>
@@ -25,6 +18,15 @@ static class ReorgILContext
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static IEnumerable<Instruction> GetReference(Type type, ILContext context, int id)
     {
+        Self_GetValueT_ii ??=
+            typeof(DynamicReferenceManager).GetMethod(
+                "GetValueT",
+                BindingFlags.Static | BindingFlags.NonPublic,
+                null,
+                [typeof(int), typeof(int)],
+                null
+            ) ?? throw new InvalidOperationException("GetValueT doesn't exist?!?!?!?");
+
         // Dirty workaround to avoid TypeLoadExceptions
         object cellRef = context.GetReferenceCell(id);
         var il = context.IL;
