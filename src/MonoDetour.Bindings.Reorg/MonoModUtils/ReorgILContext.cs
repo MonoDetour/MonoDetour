@@ -25,11 +25,12 @@ static class ReorgILContext
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static IEnumerable<Instruction> GetReference(Type type, ILContext context, int id)
     {
-        var cellRef = context.GetReferenceCell(id);
+        // Dirty workaround to avoid TypeLoadExceptions
+        object cellRef = context.GetReferenceCell(id);
         var il = context.IL;
 
-        yield return il.Create(OpCodes.Ldc_I4, cellRef.Index);
-        yield return il.Create(OpCodes.Ldc_I4, cellRef.Hash);
+        yield return il.Create(OpCodes.Ldc_I4, ((DynamicReferenceCell)cellRef).Index);
+        yield return il.Create(OpCodes.Ldc_I4, ((DynamicReferenceCell)cellRef).Hash);
         yield return il.Create(
             OpCodes.Call,
             il.Body.Method.Module.ImportReference(Self_GetValueT_ii.MakeGenericMethod(type))
