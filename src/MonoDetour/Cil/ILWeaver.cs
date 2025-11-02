@@ -1632,8 +1632,27 @@ public class ILWeaver : IMonoDetourLogSource
         RetargetLabels(pendingFutureNextInsertLabels, instruction);
         pendingFutureNextInsertLabels.Clear();
 
+        InstructionOperandToILLabel(instruction);
         Instructions.Insert(index, instruction);
         return this;
+    }
+
+    // MonoMod's instruction matching extensions expect ILLabel[] or ILLabel.
+    private void InstructionOperandToILLabel(Instruction instruction)
+    {
+        if (instruction.Operand is Instruction target)
+        {
+            instruction.Operand = DefineAndMarkLabelTo(target);
+        }
+        else if (instruction.Operand is Instruction[] targets)
+        {
+            ILLabel[] labels = new ILLabel[targets.Length];
+            for (int i = 0; i < targets.Length; i++)
+            {
+                labels[i] = DefineAndMarkLabelTo(targets[i]);
+            }
+            instruction.Operand = labels;
+        }
     }
 
     /// <summary>
@@ -1641,6 +1660,7 @@ public class ILWeaver : IMonoDetourLogSource
     /// </summary>
     ILWeaver GhostInsertBefore(Instruction target, Instruction instruction)
     {
+        InstructionOperandToILLabel(instruction);
         Instructions.Insert(Instructions.IndexOf(target), instruction);
         return this;
     }
@@ -1650,6 +1670,7 @@ public class ILWeaver : IMonoDetourLogSource
     /// </summary>
     ILWeaver GhostInsertAfter(Instruction target, Instruction instruction)
     {
+        InstructionOperandToILLabel(instruction);
         Instructions.Insert(Instructions.IndexOf(target) + 1, instruction);
         return this;
     }
@@ -1658,8 +1679,8 @@ public class ILWeaver : IMonoDetourLogSource
     /// Insert instructions before the provided index, stealing any labels.
     /// </summary>
     /// <remarks>
-    /// Stealing labels means that if the instruction at the provided index has
-    /// incoming <see cref="ILLabel"/>s or is inside the start of
+    /// Stealing labels means that if the instruction at the provided instruction
+    /// or index has incoming <see cref="ILLabel"/>s or is inside the start of
     /// a try, filter, catch, finally, or fault range, then the first inserted
     /// instruction will become the new start of that range or label.
     /// The same applies to the ends of these handler ranges because they are
@@ -1668,9 +1689,16 @@ public class ILWeaver : IMonoDetourLogSource
     /// </remarks>
     public ILWeaver InsertBeforeStealLabels(int index, params IEnumerable<Instruction> instructions)
     {
-        foreach (var instruction in instructions)
+        var first = instructions.FirstOrDefault();
+        if (first is null)
+            return this;
+
+        InsertAtInternal(index, first, InsertType.BeforeAndStealLabels);
+        index++;
+
+        foreach (var instruction in instructions.Skip(1))
         {
-            InsertAtInternal(index, instruction, InsertType.BeforeAndStealLabels);
+            InsertAtInternal(index, instruction, InsertType.Before);
             index++;
         }
 
@@ -1889,20 +1917,23 @@ public class ILWeaver : IMonoDetourLogSource
     /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, Instruction[] targets)
     {
-        ILLabel[] labels = new ILLabel[targets.Length];
-        for (int i = 0; i < targets.Length; i++)
-        {
-            DefineAndMarkLabelTo(targets[i], out var label);
-            labels[i] = label;
-        }
+        // Note: We want our created instructions to contain ILLabel[]
+        // instead of Instruction[] as MonoMod's matching extensions expect this.
+
+        // However, if we were to do so here, GetIncomingLabels can find the labels
+        // even before the instructions have been inserted into the method.
+        // In certain cases, this is problematic when InsertBeforeStealLabels is used.
+
+        // The test: ./tests/MonoDetour.UnitTests/ILWeaverTests/StealLabelsTests.cs
+        // should catch this and shows in which context it can happen.
         return IL.Create(opcode, targets);
     }
 
     /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
     public Instruction Create(OpCode opcode, Instruction target)
     {
-        DefineAndMarkLabelTo(target, out var label);
-        return IL.Create(opcode, label);
+        // See comment for Instruction Create(OpCode opcode, Instruction[] targets)
+        return IL.Create(opcode, target);
     }
 
     /// <inheritdoc cref="Create(OpCode, ParameterDefinition)"/>
@@ -1983,11 +2014,12 @@ public class ILWeaver : IMonoDetourLogSource
         where T : Delegate
     {
         Helpers.ThrowIfNull(@delegate);
+        List<Instruction> instrs = [];
 
         if (@delegate.GetInvocationList().Length == 1 && @delegate.Target == null)
         {
-            yield return Create(OpCodes.Call, @delegate.Method);
-            yield break;
+            instrs.Add(Create(OpCodes.Call, @delegate.Method));
+            return instrs;
         }
 
         var invoker = InteropFastDelegateInvokers.GetDelegateInvoker(Context, @delegate.GetType());
@@ -1996,39 +2028,33 @@ public class ILWeaver : IMonoDetourLogSource
 
         if (invoker is { } pair)
         {
-            IEnumerable<Instruction> instructions;
-
             if (MonoModVersion.IsReorg)
             {
                 Delegate cast = @delegate.CastDelegate(pair.Delegate);
                 id = InteropILContext.InteropAddReference(Context, cast);
-                instructions = InteropILContext.InteropGetReference(Context, this, id, cast);
+                instrs.AddRange(InteropILContext.InteropGetReference(Context, this, id, cast));
             }
             else
             {
                 // Yes, we really need the direct delegate reference for Legacy to work properly.
                 id = InteropILContext.InteropAddReference(Context, @delegate);
-                instructions = InteropILContext.InteropGetReference(Context, this, id, @delegate);
+                instrs.AddRange(InteropILContext.InteropGetReference(Context, this, id, @delegate));
             }
-
-            foreach (var instruction in instructions)
-                yield return instruction;
 
             // Prevent the invoker from getting GC'd early, f.e. when it's a DynamicMethod.
             InteropILContext.InteropAddReference(Context, pair.Invoker);
-            yield return Create(OpCodes.Call, pair.Invoker);
+            instrs.Add(Create(OpCodes.Call, pair.Invoker));
         }
         else
         {
             id = InteropILContext.InteropAddReference(Context, @delegate);
+            instrs.AddRange(InteropILContext.InteropGetReference(Context, this, id, @delegate));
 
-            var instructions = InteropILContext.InteropGetReference(Context, this, id, @delegate);
-            foreach (var instruction in instructions)
-                yield return instruction;
-
-            var delInvoke = @delegate.GetType().GetMethod("Invoke")!;
-            yield return Create(OpCodes.Callvirt, delInvoke);
+            var delInvoke = typeof(T).GetMethod("Invoke")!;
+            instrs.Add(Create(OpCodes.Callvirt, delInvoke));
         }
+
+        return instrs;
     }
 
     /// <summary>
