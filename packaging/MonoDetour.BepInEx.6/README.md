@@ -1,6 +1,10 @@
 # MonoDetour BepInEx 6
 
-This plugin provides BepInEx logger integration for MonoDetour and as a side effect causes MonoDetour to initialize early.
+This plugin provides:
+
+- BepInEx logger integration for MonoDetour
+- HarmonyX interop for MonoDetour
+- Initializes MonoDetour early as a side effect
 
 MonoDetour initializing early means that everyone after will get the following:
 

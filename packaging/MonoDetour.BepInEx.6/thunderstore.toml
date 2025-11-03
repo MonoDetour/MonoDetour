@@ -7,7 +7,7 @@ repository = "https://thunderstore.io"
 [package]
 namespace = "MonoDetour"
 name = "MonoDetour_BepInEx_6"
-description = "Integrates MonoDetour's logger with BepInEx 6 and as a side effect initializes MonoDetour early. MonoDetour is an easy and convenient .NET detouring library, powered by MonoMod.RuntimeDetour."
+description = "HarmonyX interop & BepInEx 6 logger integration for MonoDetour. Initializes MonoDetour early as a side effect."
 websiteUrl = "https://github.com/MonoDetour/MonoDetour"
 containsNsfwContent = false
 [package.dependencies]
