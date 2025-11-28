@@ -18,8 +18,12 @@
     <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.6/.processed.toml&quot; --package-version $(Version)" />
   </Target>
 
-  <!-- Call with `dotnet build packaging/Thunderstore/ -target:PublishThunderstore` -->
-  <Target Name="PublishThunderstore" DependsOnTargets="Build;PackThunderstore">
+  <!--
+    We build and publish the TS packages separately because we want all packages to build before
+    any are published to make sure that either everything successfully publishes or nothing does.
+  -->
+  <!-- Call with `dotnet build ./packaging/ -c Release -property:PublishMonoDetour=true` -->
+  <Target Name="PublishThunderstore" AfterTargets="PackThunderstore" Condition="'$(PublishMonoDetour)' == 'true'" >
     <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)thunderstore.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour-$(Version).zip&quot;" />
     <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5/.processed.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour_BepInEx_5-$(Version).zip&quot;" />
     <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5.Resonite/thunderstore.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour_BepInEx_5_Resonite-$(Version).zip&quot;" />
