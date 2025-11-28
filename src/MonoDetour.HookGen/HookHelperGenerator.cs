@@ -1771,7 +1771,7 @@ namespace MonoDetour.HookGen
             // first, process non-type members
             foreach (var member in type.GetMembers())
             {
-                if (member.Kind is not SymbolKind.Method or SymbolKind.Property)
+                if (member.Kind is not SymbolKind.Method)
                 {
                     continue;
                 }
@@ -1799,27 +1799,10 @@ namespace MonoDetour.HookGen
                         continue;
                     }
 
-                    GeneratableMemberModel? model = null;
-
                     // the member matched, do our processing
-                    if (member.Kind is SymbolKind.Property)
-                    {
-                        var prop = (IPropertySymbol)member;
 
-                        if (prop.GetMethod is { } getMethod)
-                        {
-                            model = GetModelForMember(getMethod, options, hasOverloads);
-                        }
-                        if (prop.SetMethod is { } setMethod)
-                        {
-                            model = GetModelForMember(setMethod, options, hasOverloads);
-                        }
-                    }
-                    else if (member.Kind is SymbolKind.Method)
-                    {
-                        var method = (IMethodSymbol)member;
-                        model = GetModelForMember(method, options, hasOverloads);
-                    }
+                    var method = (IMethodSymbol)member;
+                    var model = GetModelForMember(method, options, hasOverloads);
 
                     if (model is not null)
                     {
