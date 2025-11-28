@@ -22,7 +22,6 @@ obj/
 !/.github/
 
 # Add root level files
-!/.csharpierignore
 !/.editorconfig
 !/.gitignore
 !/CONTRIBUTING.md

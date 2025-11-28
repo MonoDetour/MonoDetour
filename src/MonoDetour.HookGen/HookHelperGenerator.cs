@@ -151,7 +151,8 @@ namespace MonoDetour.HookGen
 
         private static readonly ObjectPool<HashSet<string>> stringHashSetPool = new(() => new());
         private static readonly ObjectPool<HashSet<MethodSignature>> methodSigHashSetPool = new(
-            () => new()
+            () =>
+                new()
         );
         private static readonly ObjectPool<HashSet<TypeRef>> typeRefHashSetPool = new(() => new());
         private static readonly ObjectPool<
@@ -159,7 +160,8 @@ namespace MonoDetour.HookGen
         > membersToGenerateForTypesPool = new(() => new());
 
         private static readonly ObjectPool<Queue<GeneratableTypeModel>> genTypeModelQueuePool = new(
-            () => new()
+            () =>
+                new()
         );
 
         private static readonly ObjectPool<HashSet<string>> takenParameterNamesPool = new(() => []);
