@@ -30,5 +30,5 @@ obj/
 !/Directory.Build.targets
 !/icon.png
 !/LICENSE
-!/MonoDetour.sln
+!/MonoDetour.slnx
 !/README.md

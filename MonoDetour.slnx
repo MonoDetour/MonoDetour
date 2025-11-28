@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MonoDetour.Analyzers/MonoDetour.Analyzers.csproj" />
+    <Project Path="src/MonoDetour.Bindings.Reorg/MonoDetour.Bindings.Reorg.csproj" />
+    <Project Path="src/MonoDetour.HookGen/MonoDetour.HookGen.csproj" />
+    <Project Path="src/MonoDetour.Interop.HarmonyX/MonoDetour.Interop.HarmonyX.csproj" />
+    <Project Path="src/MonoDetour.Reflection/MonoDetour.Reflection.csproj" />
+    <Project Path="src/MonoDetour/MonoDetour.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MonoDetour.UnitTests.TestLib/MonoDetour.UnitTests.TestLib.csproj" />
+    <Project Path="tests/MonoDetour.UnitTests/MonoDetour.UnitTests.csproj" />
+  </Folder>
+</Solution>

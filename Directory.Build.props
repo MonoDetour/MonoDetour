@@ -11,7 +11,7 @@
   </PropertyGroup>
   <!-- Main configuration -->
   <PropertyGroup>
-    <LangVersion>13</LangVersion>
+    <LangVersion>14</LangVersion>
     <Nullable>enable</Nullable>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisMode>Recommended</AnalysisMode>
@@ -21,6 +21,8 @@
     <AssemblyTitle>$(MSBuildProjectName)</AssemblyTitle>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
+    <!-- Make Release config not mean Debug for projects outside the current solution. -->
+    <ShouldUnsetParentConfigurationAndPlatform>false</ShouldUnsetParentConfigurationAndPlatform>
   </PropertyGroup>
   <!-- Substitute full path to project directory with ./, hiding it from debug symbols. -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">

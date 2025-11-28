@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="MonoDetour.BepInEx.5/MonoDetour.BepInEx.5.csproj" />
+  <Project Path="MonoDetour.BepInEx.6/MonoDetour.BepInEx.6.csproj" />
+  <Project Path="Thunderstore/Thunderstore.proj" Type="C#" />
+</Solution>
