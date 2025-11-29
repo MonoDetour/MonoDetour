@@ -113,6 +113,11 @@ public class ILWeaver : IMonoDetourLogSource
     public int Index
     {
         get => Instructions.IndexOf(Current);
+        [Obsolete(
+            "Offsetting the index is error-prone; see https://github.com/MonoDetour/MonoDetour/issues/10\n"
+                + "If you know what you are doing, use ILWeaver.CurrentTo(int) directly.",
+            true
+        )]
         set => CurrentTo(value);
     }
 
