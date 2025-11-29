@@ -99,18 +99,10 @@ namespace MonoDetour.HookGen
                     /// </summary>
                     public global::System.Type? TargetType { get; } = targetType;
 
-                    // public DetourKind Kind { get; set; } = DetourKind.Hook;
-
                     /// <summary>
                     /// Whether to generate helpers for nested types. Defaults to <see langword="true"/>.
                     /// </summary>
                     public bool IncludeNestedTypes { get; set; } = true;
-
-                    /// <summary>
-                    /// Whether to differentiate between overloaded members by putting their (sanitized) signature in the generated name.
-                    /// Defaults to <see langword="false"/>.
-                    /// </summary>
-                    public bool DistinguishOverloadsByName { get; set; }
 
                     /// <summary>
                     /// A list of members to generate hook helpers for in the target type, by exact name.
@@ -942,7 +934,7 @@ namespace MonoDetour.HookGen
 
             cb.Write("internal static partial class ").Write(SanitizeName(member.Name));
 
-            if (member.HasOverloads || member.DistinguishByName)
+            if (member.DistinguishByName)
             {
                 AppendSignatureIdentifier(cb, member.Signature);
             }
@@ -1576,7 +1568,7 @@ namespace MonoDetour.HookGen
                 return null;
 
             var includeNested = true;
-            var distinguishOverloads = false;
+            var distinguishOverloads = true;
             bool generateControlFlowVariants = false;
             var kind = DetourKind.Hook;
             HashSet<string>? explicitMembers = null;
