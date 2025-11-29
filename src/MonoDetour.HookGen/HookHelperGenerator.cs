@@ -54,7 +54,7 @@ namespace MonoDetour.HookGen
             #if DEBUG
                     /// <summary>
                     /// The default MonoDetourManager instance generated for this assembly.<br/>
-                    /// This automatically used when none is specified.
+                    /// This is automatically used when none is specified in generated hook helpers.
                     /// </summary>
             #endif
                     internal static global::MonoDetour.MonoDetourManager Instance { get; } = New();
@@ -73,7 +73,7 @@ namespace MonoDetour.HookGen
                 /// Specifies that:
                 /// <list type="bullet">
                 ///   <item>
-                ///     MonoDetour.HookGen will generate hooks for the targetTypes specified
+                ///     MonoDetour.HookGen will generate hook helpers for the <paramref name="targetType"/>
                 ///   </item>
                 ///   <item>
                 ///     <see cref="global::MonoDetour.MonoDetourManager.InvokeHookInitializers(Assembly)"/>
@@ -83,7 +83,8 @@ namespace MonoDetour.HookGen
                 /// </summary>
                 /// <param name="targetType">The type to generate hook helpers for.</param>
                 /// <remarks>
-                /// Non-public members of the type may or may not be included.
+                /// Non-public members of the <paramref name="targetType"/> may or may not be included
+                /// in generated hook helpers.
                 /// It is recommended to use a publicizer with MonoDetour's hook generator.
                 /// </remarks>
             #endif
@@ -123,7 +124,7 @@ namespace MonoDetour.HookGen
                     public string[]? MemberNameSuffixes { get; set; }
 
                     /// <summary>
-                    /// Whether or not MonoDetour will generate variants of the hooks which can affect control flow of
+                    /// Whether or not MonoDetour will generate hook helper variants which can affect control flow of
                     /// the target methods. Defaults to <see langword="false"/>.
                     /// </summary>
                     public bool GenerateControlFlowVariants { get; set; }
