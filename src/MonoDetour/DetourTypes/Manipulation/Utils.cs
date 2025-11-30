@@ -89,13 +89,14 @@ static class Utils
         MethodBase manipulator = hook.Manipulator;
         MethodBase target = hook.Target;
         string? targetTypeName = target.DeclaringType?.FullName;
+        int hooksCount = hook.Owner.Hooks.Count;
 
         hook.Owner.Log(
             MonoDetourLogger.LogChannel.Error,
             () =>
-                $"Hook '{manipulator}' targeting method '{target}' from type '{targetTypeName}'"
-                + $" threw an exception, and its {nameof(MonoDetourManager)}'s hooks will be disposed.\n"
-                + $"The Exception that was thrown: {ex}"
+                $"Exception caught in a hook belonging to {nameof(MonoDetourManager)} '{hook.Owner.Id}'"
+                + $" (disposing all {hooksCount} of its hooks in an attempt to minimize potential damage):\n"
+                + ex
         );
         try
         {
@@ -107,6 +108,8 @@ static class Utils
                     MonoDetourLogger.LogChannel.Warning,
                     () =>
                         $"No disposal event handler for the {nameof(MonoDetourManager)} was registered."
+                        + " You can subscribe to the MonoDetourManager.OnHookThrew event to clean up the"
+                        + " rest of your resources."
                 );
             }
         }

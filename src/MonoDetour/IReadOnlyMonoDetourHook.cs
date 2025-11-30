@@ -33,4 +33,14 @@ public interface IReadOnlyMonoDetourHook
 
     /// <inheritdoc cref="MonoDetourConfig"/>
     public MonoDetourConfig? Config { get; }
+
+    /// <summary>
+    /// Gets whether or not this hook is valid and can be used.
+    /// </summary>
+    public bool IsValid { get; }
+
+    /// <summary>
+    /// Gets whether or not this hook is applied.
+    /// </summary>
+    public bool IsApplied { get; }
 }

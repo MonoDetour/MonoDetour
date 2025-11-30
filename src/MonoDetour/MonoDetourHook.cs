@@ -42,6 +42,12 @@ public class MonoDetourHook : IMonoDetourHook
     /// </summary>
     public Type ApplierType { get; }
 
+    /// <inheritdoc/>
+    public bool IsValid => Applier.IsValid;
+
+    /// <inheritdoc/>
+    public bool IsApplied => Applier.IsApplied;
+
     bool isDisposed;
 
     /// <summary>
