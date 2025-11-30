@@ -31,6 +31,22 @@ public static class MatchTests
                 .ThrowIfFailure();
 
             w.InsertAfter(firstNop, w.Create(Op.Ldc_I4_0));
+
+            // MonoDetourLogger.Log(
+            //     MonoDetourLogger.LogChannel.Error,
+            //     w.MatchStrict(
+            //         x => x.MatchNop(),
+            //         x =>
+            //             x.MatchCall(out var y)
+            //             && y.Name.StartsWith("Foo", StringComparison.InvariantCulture)
+            //             && w.SetCurrentTo(x)
+            //     ).FailureMessage!
+            // );
+
+            // MonoDetourLogger.Log(
+            //     MonoDetourLogger.LogChannel.Error,
+            //     w.MatchStrict(x => x.MatchNop()).FailureMessage!
+            // );
         });
 
         var method = dmd.Generate().CreateDelegate<Action>();

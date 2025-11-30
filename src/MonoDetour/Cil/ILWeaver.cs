@@ -129,7 +129,7 @@ public class ILWeaver : IMonoDetourLogSource
 
     readonly List<ILLabel> pendingFutureNextInsertLabels = [];
 
-    const string gotoMatchingDocsLink = "<insert documentation link here>";
+    const string gotoMatchingDocsLink = "<documentation link will be here once it exists>";
 
     public ILWeaver(ILManipulationInfo il)
     {
@@ -1480,44 +1480,53 @@ public class ILWeaver : IMonoDetourLogSource
 
         string GetMatchedTooManyError()
         {
+            Method.RecalculateILOffsets();
+
             CodeBuilder err = new(new StringBuilder(), 2);
 
             err.WriteLine(
-                    $"- {nameof(ILWeaver)}.{nameof(MatchRelaxed)} matched all predicates more than once in the target method."
+                    $"{nameof(ILWeaver)} matched all predicates more than once in the target method."
                 )
-                .IncreaseIndent()
-                .Write("- Total matches: ")
-                .WriteLine(matchedIndexes.Count)
-                .IncreaseIndent();
+                .Write("Total matches: ")
+                .WriteLine(matchedIndexes.Count);
 
+            int i = 0;
             foreach (var match in matchedIndexes)
-                err.Write("- at indexes: ")
+            {
+                i++;
+
+                err.Write(i)
+                    .Write(". At indexes: ")
                     .Write(match - predicates.Length + 1)
                     .Write(" to ")
-                    .WriteLine(match);
+                    .Write(match)
+                    .Write(" (")
+                    .Write(instructions[match - predicates.Length + 1].ToString())
+                    .Write(" to ")
+                    .Write(instructions[match].ToString())
+                    .WriteLine(")");
+            }
 
-            err.DecreaseIndent()
-                .WriteLine("- HELP: Add more predicates to find a unique match.")
-                .IncreaseIndent()
-                .WriteLine($"- Documentation: {gotoMatchingDocsLink}")
-                .DecreaseIndent()
-                .WriteLine(
-                    $"- INFO: Use {nameof(ILWeaver)}.GotoMatchMultiple if you intend to match multiple instances."
+            err.WriteLine(
+                    "Help: Add more predicates to find a unique match."
+                        + $" Documentation: {gotoMatchingDocsLink}"
                 )
                 .WriteLine(
-                    $"- INFO: Use {nameof(ILWeaver)}.GotoNext if you intend to only match the first valid instance."
+                    $"Info: Use {nameof(ILWeaver)}.MatchMultiple* methods if you intend to match multiple instances."
                 );
 
             err.RemoveIndent()
                 .WriteLine()
                 .WriteLine("This message originates from:")
-                .WriteLine(new StackTrace().ToString());
+                .WriteLine(new StackTrace(true).ToString());
 
             return err.ToString();
         }
 
         string GetNotMatchedAllError()
         {
+            Method.RecalculateILOffsets();
+
             CodeBuilder err = new(new StringBuilder(), 2);
 
             err.Write($"{nameof(ILWeaver)} couldn't match all predicates for method: ")
@@ -1536,41 +1545,95 @@ public class ILWeaver : IMonoDetourLogSource
             }
             else
             {
+                var failedPredicate = predicates[bestAttempts[0].count];
+
+                // It'd be helpful to know our predicate method contents, so we
+                // take all method calls and use that. It's simple but effective enough.
+                string? failedPredicateCallName = null;
+
+                // If the predicate method isn't compiler generated, let's just use that.
+                // This case is pretty rare though, but it's better to have it anyways.
+#if NETSTANDARD2_0
+                if (!failedPredicate.Method.Name.StartsWith("<", StringComparison.InvariantCulture))
+#else
+                if (!failedPredicate.Method.Name.StartsWith('<'))
+#endif
+                {
+                    failedPredicateCallName = failedPredicate.Method.Name;
+                }
+                else
+                {
+                    using var dmd = new DynamicMethodDefinition(failedPredicate.Method);
+                    List<string> methodCalls = [];
+
+                    var calls = dmd.Definition.Body.Instructions.Where(x =>
+                        x.MatchCallOrCallvirt(out _)
+                    );
+
+                    foreach (var call in calls)
+                    {
+                        if (call.Operand is not MethodReference method)
+                            continue;
+
+                        methodCalls.Add(method.Name);
+                    }
+
+                    if (methodCalls.Count > 0)
+                    {
+                        failedPredicateCallName = string.Join(", ", methodCalls);
+                    }
+                }
+                err.Write("The first predicate which failed is at index ") // consists of the method calls: ")
+                    .Write(bestAttempts[0].count)
+                    .WriteLine(", failing to match any of the following instructions:");
+
+                if (failedPredicateCallName is not null)
+                {
+                    err.Write("(The predicate consists of the method calls: ")
+                        .Write(failedPredicateCallName)
+                        .WriteLine(')');
+                }
+
                 for (int i = 0; i < bestAttempts.Count; i++)
                 {
                     var (count, indexBeforeFailed) = bestAttempts[i];
-                    var nextInstruction = Instructions[indexBeforeFailed + 1];
+                    var nextInstruction = instructions[indexBeforeFailed + 1];
+
                     err.RemoveIndent()
                         .WriteLine()
                         .Write(i + 1)
-                        .Write(". Matched predicates: ")
-                        .Write(count)
-                        .Write(" (at: ")
+                        .Write(". Matched a range: (")
                         .Write(indexBeforeFailed - count + 1)
                         .Write(" to ")
                         .Write(indexBeforeFailed)
-                        .WriteLine(')')
+                        .Write(" | ")
+                        .Write(instructions[indexBeforeFailed - count + 1].ToString())
+                        .Write(" to ")
+                        .Write(instructions[indexBeforeFailed].ToString())
+                        .WriteLine(") but failed to match the next instruction:")
                         .IncreaseIndent()
-                        .WriteLine("- next predicate didn't match instruction:")
-                        .IncreaseIndent()
-                        .Write("- ")
+                        .Write(' ')
                         .Write(indexBeforeFailed + 1)
                         .Write(' ')
-                        .WriteLine(nextInstruction.ToString())
-                        .WriteLine(
-                            "- this instruction could be matched with any of the following predicates:"
-                        )
-                        .IncreaseIndent()
-                        .WriteLine("- ignore OpCode and Operand:")
-                        .IncreaseIndent()
-                        .WriteLine("x => true");
+                        .WriteLine(nextInstruction.ToString());
                 }
             }
 
             err.RemoveIndent()
-                .WriteLine()
-                .WriteLine("This message originates from:")
-                .WriteLine(new StackTrace().ToString());
+                .WriteLine(
+                    $"\nHelp: Use MonoMod's {nameof(ILPatternMatchingExt)} extension methods."
+                        + "\nThe general format is 'Match{OpCode}' and the methods have overloads"
+                        + " for matching just the OpCode or also the Operand.\n"
+                        + "  Example 1: x => x.MatchLdarg(0) // Match Ldarg with Operand 0\n"
+                        + "  Example 2: x => x.MatchLdfld(out _) // Match Ldfld with any Operand"
+                        + " and discard 'out' Operand value\n"
+                        + "  Example 3: x => x.MatchBrtrue(out branchTarget) // Match Brtrue and"
+                        + " store Operand value to a local variable\n"
+                        + "  Example 4: x => x.MatchCall(out var method) && method.Name.StartsWith(\"<Foo>\")"
+                        + " // Match Call with any method starting with '<Foo>'\n\n"
+                        + "This message originates from:"
+                )
+                .WriteLine(new StackTrace(true).ToString());
 
             return err.ToString();
         }

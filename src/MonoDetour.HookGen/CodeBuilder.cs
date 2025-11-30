@@ -70,7 +70,7 @@ internal sealed class CodeBuilder
 
     public CodeBuilder Write(int i) => Write(i.ToString(CultureInfo.InvariantCulture));
 
-    public CodeBuilder Write(string s)
+    public CodeBuilder Write(string? s)
     {
         WriteIndentIfNeeded();
         sb.Append(s);
