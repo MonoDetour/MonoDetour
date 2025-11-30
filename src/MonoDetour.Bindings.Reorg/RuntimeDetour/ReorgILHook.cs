@@ -1,35 +1,121 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
+using MonoMod.Utils;
 
 namespace MonoDetour.Bindings.Reorg.RuntimeDetour;
 
 static class ReorgILHook
 {
+    delegate ILHook ILHookConstructor(
+        MethodBase source,
+        ILContext.Manipulator manip,
+        object? config,
+        bool applyByDefault
+    );
+
+    delegate object DetourConfigConstructor(
+        string id,
+        int? priority = null,
+        IEnumerable<string>? before = null,
+        IEnumerable<string>? after = null
+    );
+
+    static Func<object> detourContext_GetDefaultConfig = null!;
+    static ILHookConstructor newILHook = null!;
+    static DetourConfigConstructor newDetourConfig = null!;
+    static Func<object, int?> detourConfigPriority = null!;
+    static MethodInfo detourConfig_WithPriority = null!;
+
     static readonly ConcurrentDictionary<IMonoDetourConfig, object> interfaceToConfig = [];
     static readonly ConcurrentDictionary<object, object> configToConfig = [];
     static readonly ConcurrentDictionary<string, object> idToConfig = [];
 
-    // This only exists because we shouldn't use DetourConfig type in fields because
-    // Assembly.GetTypes() would throw on this type, and games keep doing that
-    // and not handling it properly with try catch (because the API sucks).
-    static bool TryGetDetourConfig<TKey>(
-        this IDictionary<TKey, object> data,
-        TKey key,
-        [NotNullWhen(true)] out DetourConfig? value
-    )
+    internal static void Init()
     {
-        if (data.TryGetValue(key, out var tmp))
+        detourContext_GetDefaultConfig = typeof(DetourContext)
+            .GetMethod("GetDefaultConfig", BindingFlags.Public | BindingFlags.Static)!
+            .CreateDelegate<Func<object>>();
+
+        var detourConfigType = Type.GetType(
+            "MonoMod.RuntimeDetour.DetourConfig, MonoMod.RuntimeDetour"
+        )!;
+
+        detourConfig_WithPriority = detourConfigType.GetMethod("WithPriority", [typeof(int?)])!;
+
         {
-            value = (DetourConfig)tmp;
-            return true;
+            var constructor = typeof(ILHook).GetConstructor([
+                typeof(MethodBase),
+                typeof(ILContext.Manipulator),
+                detourConfigType,
+                typeof(bool),
+            ])!;
+
+            using var dmd = new DynamicMethodDefinition(
+                "newILHook",
+                typeof(ILHook),
+                [typeof(MethodBase), typeof(ILContext.Manipulator), typeof(object), typeof(bool)]
+            );
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Ldarg_2);
+            il.Emit(OpCodes.Ldarg_3);
+            il.Emit(OpCodes.Newobj, constructor);
+            il.Emit(OpCodes.Ret);
+
+            newILHook = dmd.Generate().CreateDelegate<ILHookConstructor>();
         }
 
-        value = default;
-        return false;
+        {
+            var constructor = detourConfigType.GetConstructor([
+                typeof(string),
+                typeof(int?),
+                typeof(IEnumerable<string>),
+                typeof(IEnumerable<string>),
+            ])!;
+
+            using var dmd = new DynamicMethodDefinition(
+                "iLHookConstructor",
+                typeof(object),
+                [
+                    typeof(string),
+                    typeof(int?),
+                    typeof(IEnumerable<string>),
+                    typeof(IEnumerable<string>),
+                ]
+            );
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Ldarg_2);
+            il.Emit(OpCodes.Ldarg_3);
+            il.Emit(OpCodes.Newobj, constructor);
+            il.Emit(OpCodes.Ret);
+
+            newDetourConfig = dmd.Generate().CreateDelegate<DetourConfigConstructor>();
+        }
+
+        {
+            var getPriority = detourConfigType.GetProperty("Priority")!.GetGetMethod()!;
+
+            using var dmd = new DynamicMethodDefinition(
+                "get_Priority",
+                typeof(int?),
+                [typeof(object)]
+            );
+            var il = dmd.GetILProcessor();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Callvirt, getPriority);
+            il.Emit(OpCodes.Ret);
+
+            detourConfigPriority = dmd.Generate().CreateDelegate<Func<object, int?>>();
+        }
     }
 
     /// <summary>
@@ -46,34 +132,34 @@ static class ReorgILHook
     {
         if (config is null)
         {
-            var contextConfig = DetourContext.GetDefaultConfig();
+            var contextConfig = detourContext_GetDefaultConfig();
             if (contextConfig is null)
             {
-                if (!idToConfig.TryGetDetourConfig(id, out var idConfig))
+                if (!idToConfig.TryGetValue(id, out var idConfig))
                 {
-                    idConfig = new(id: id, priority: 0);
+                    idConfig = newDetourConfig(id: id, priority: 0, before: null, after: null);
                     idToConfig.TryAdd(id, idConfig);
                 }
-                return new ILHook(target, manipulator, idConfig, applyByDefault: false);
+                return newILHook(target, manipulator, idConfig, applyByDefault: false);
             }
 
-            if (contextConfig.Priority is not null)
+            if (detourConfigPriority(contextConfig) is not null)
             {
-                return new(target, manipulator, contextConfig, applyByDefault: false);
+                return newILHook(target, manipulator, contextConfig, applyByDefault: false);
             }
 
-            if (!configToConfig.TryGetDetourConfig(contextConfig, out var configWithPriority))
+            if (!configToConfig.TryGetValue(contextConfig, out var configWithPriority))
             {
-                configWithPriority = contextConfig.WithPriority(0);
+                configWithPriority = detourConfig_WithPriority.Invoke(contextConfig, [0])!;
                 configToConfig.TryAdd(contextConfig, configWithPriority);
             }
 
-            return new ILHook(target, manipulator, configWithPriority, applyByDefault: false);
+            return newILHook(target, manipulator, configWithPriority, applyByDefault: false);
         }
 
-        if (!interfaceToConfig.TryGetDetourConfig(config, out var realConfig))
+        if (!interfaceToConfig.TryGetValue(config, out var realConfig))
         {
-            realConfig = new DetourConfig(
+            realConfig = newDetourConfig(
                 config.OverrideId ?? id,
                 config.Priority,
                 config.Before,
@@ -82,6 +168,6 @@ static class ReorgILHook
             interfaceToConfig.TryAdd(config, realConfig);
         }
 
-        return new ILHook(target, manipulator, realConfig, applyByDefault: false);
+        return newILHook(target, manipulator, realConfig, applyByDefault: false);
     }
 }

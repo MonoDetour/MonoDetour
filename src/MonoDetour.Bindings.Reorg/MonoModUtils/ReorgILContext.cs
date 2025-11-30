@@ -9,17 +9,33 @@ namespace MonoDetour.Bindings.Reorg.MonoModUtils;
 
 static class ReorgILContext
 {
-    private static MethodInfo? Self_GetValueT_ii;
+    delegate int Signature<T>(ILContext context, in T? value);
+    static MethodInfo Self_GetValueT_ii = null!;
+    static MethodInfo addReferenceMethod = null!;
+    static MethodInfo cellRef_get_Index = null!;
+    static MethodInfo cellRef_get_Hash = null!;
+    static MethodInfo getReferenceCell = null!;
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static int AddReference<T>(ILContext context, in T value) =>
-        context.AddReference(value);
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static IEnumerable<Instruction> GetReference(Type type, ILContext context, int id)
+    static class Container<T>
     {
-        Self_GetValueT_ii ??=
-            typeof(DynamicReferenceManager).GetMethod(
+        internal static Signature<T> AddReference =>
+            field ??= addReferenceMethod
+                .MakeGenericMethod([typeof(T)])
+                .CreateDelegate<Signature<T>>();
+    }
+
+    internal static void Init()
+    {
+        addReferenceMethod =
+            typeof(ILContext).GetMethod(nameof(ILContext.AddReference))
+            ?? throw new NullReferenceException();
+
+        var dynamicReferenceManager = Type.GetType(
+            "MonoMod.Utils.DynamicReferenceManager, MonoMod.Utils"
+        )!;
+
+        Self_GetValueT_ii =
+            dynamicReferenceManager.GetMethod(
                 "GetValueT",
                 BindingFlags.Static | BindingFlags.NonPublic,
                 null,
@@ -27,12 +43,27 @@ static class ReorgILContext
                 null
             ) ?? throw new InvalidOperationException("GetValueT doesn't exist?!?!?!?");
 
-        // Dirty workaround to avoid TypeLoadExceptions
-        object cellRef = context.GetReferenceCell(id);
+        var dynamicReferenceCellType = Type.GetType(
+            "MonoMod.Utils.DynamicReferenceCell, MonoMod.Utils"
+        )!;
+
+        getReferenceCell = typeof(ILContext).GetMethod("GetReferenceCell")!;
+        cellRef_get_Index = dynamicReferenceCellType.GetProperty("Index")!.GetGetMethod()!;
+        cellRef_get_Hash = dynamicReferenceCellType.GetProperty("Hash")!.GetGetMethod()!;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static int AddReference<T>(ILContext context, in T value) =>
+        Container<T>.AddReference(context, value);
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static IEnumerable<Instruction> GetReference(Type type, ILContext context, int id)
+    {
+        object cellRef = getReferenceCell.Invoke(context, [id])!;
         var il = context.IL;
 
-        yield return il.Create(OpCodes.Ldc_I4, ((DynamicReferenceCell)cellRef).Index);
-        yield return il.Create(OpCodes.Ldc_I4, ((DynamicReferenceCell)cellRef).Hash);
+        yield return il.Create(OpCodes.Ldc_I4, cellRef_get_Index.Invoke(cellRef, [])!);
+        yield return il.Create(OpCodes.Ldc_I4, cellRef_get_Hash.Invoke(cellRef, [])!);
         yield return il.Create(
             OpCodes.Call,
             il.Body.Method.Module.ImportReference(Self_GetValueT_ii.MakeGenericMethod(type))

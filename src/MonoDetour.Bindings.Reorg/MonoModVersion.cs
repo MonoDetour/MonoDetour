@@ -1,5 +1,6 @@
 using System;
-using MonoMod.RuntimeDetour;
+using MonoDetour.Bindings.Reorg.MonoModUtils;
+using MonoDetour.Bindings.Reorg.RuntimeDetour;
 
 namespace MonoDetour.Bindings.Reorg;
 
@@ -15,10 +16,20 @@ internal static class MonoModVersion
         if (archType is not null)
         {
             IsReorg = true;
+            InitAll();
         }
         else
         {
             IsReorg = false;
         }
+    }
+
+    static void InitAll()
+    {
+        ReorgILHook.Init();
+        ReorgILLabel.Init();
+        ReorgILCursor.Init();
+        ReorgILContext.Init();
+        ReorgFastDelegateInvokers.Init();
     }
 }
