@@ -70,34 +70,48 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
     /// Invokes hook initializers for the specified assembly.
     /// </summary>
     /// <param name="assembly">The assembly whose hook initializers to invoke.</param>
+    /// <param name="reportUnloadableTypes">
+    /// Whether or not MonoDetour will log on unloadable types.<br/>
+    /// <br/>
+    /// If you are aware that sometimes types can't be loaded, e.g. when soft-depending
+    /// on another assembly, and you don't need MonoDetour to tell you that this is the reason
+    /// your hook initializer isn't running, you can set this value to <see langword="false"/>.
+    /// </param>
     /// <remarks>
     /// If a hook initializer throws, this method throws.
     /// </remarks>
-    public static void InvokeHookInitializers(Assembly assembly)
+    public static void InvokeHookInitializers(Assembly assembly, bool reportUnloadableTypes = true)
     {
-        foreach (Type type in MonoDetourUtils.GetTypesFromAssembly(assembly))
+        foreach (Type type in ReflectionUtils.GetTypesFromAssembly(assembly, reportUnloadableTypes))
         {
-            if (!MonoDetourUtils.TryGetCustomAttribute<IMonoDetourTargets>(type, out _))
+            if (
+                !ReflectionUtils.HasCustomAttribute<IMonoDetourTargets>(type, reportUnloadableTypes)
+            )
                 continue;
 
-            InvokeHookInitializers(type);
+            InvokeHookInitializers(type, reportUnloadableTypes);
         }
     }
+
+    /// <inheritdoc cref="InvokeHookInitializers(Assembly, bool)"/>
+    public static void InvokeHookInitializers(Assembly assembly) =>
+        InvokeHookInitializers(assembly, reportUnloadableTypes: true);
 
     /// <summary>
     /// Invokes hook initializers for the specified type.
     /// </summary>
     /// <param name="type">The type whose hook initializers to invoke.</param>
-    /// <inheritdoc cref="InvokeHookInitializers(Assembly)"/>
-    public static void InvokeHookInitializers(Type type)
+    /// <inheritdoc cref="InvokeHookInitializers(Assembly, bool)"/>
+    /// <param name="reportUnloadableTypes"></param>
+    public static void InvokeHookInitializers(Type type, bool reportUnloadableTypes = true)
     {
         MethodInfo[] methods = type.GetMethods((BindingFlags)~0);
         foreach (var method in methods)
         {
             if (
-                !MonoDetourUtils.TryGetCustomAttribute<MonoDetourHookInitializeAttribute>(
+                !ReflectionUtils.HasCustomAttribute<MonoDetourHookInitializeAttribute>(
                     method,
-                    out _
+                    reportUnloadableTypes
                 )
             )
                 continue;
@@ -105,6 +119,10 @@ public class MonoDetourManager(string id) : IDisposable, IMonoDetourLogSource
             method.Invoke(null, null);
         }
     }
+
+    /// <inheritdoc cref="InvokeHookInitializers(Type, bool)"/>
+    public static void InvokeHookInitializers(Type type) =>
+        InvokeHookInitializers(type, reportUnloadableTypes: true);
 
     /// <summary>
     /// Applies all hooks belonging to this manager.
