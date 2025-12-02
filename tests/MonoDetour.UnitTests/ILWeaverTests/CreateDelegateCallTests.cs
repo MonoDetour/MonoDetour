@@ -22,10 +22,9 @@ public static partial class CreateDelegateCallTests
             w.CreateDelegateCall(() => // No args → No FastDelegateInvokers.
             {
                 ran++;
-            })
-        );
-        w.InsertBeforeCurrent(w.Create(OpCodes.Ldc_I4_1), w.Create(OpCodes.Ldc_I4, 10));
-        w.InsertBeforeCurrent(
+            }),
+            w.Create(OpCodes.Ldc_I4_1),
+            w.Create(OpCodes.Ldc_I4, 10),
             w.CreateDelegateCall(
                 (bool _, int num) => // Args → Yes FastDelegateInvokers.
                 {

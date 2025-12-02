@@ -545,7 +545,7 @@ public class ILWeaver : IMonoDetourLogSource
     /// See <see cref="WeaverExceptionCatchHandler"/> for more information about this handler type.
     /// </remarks>
     /// <param name="catchType">The types of Exceptions that should be catched.
-    /// If left null, <c>object</c> is used.</param>
+    /// If left null, <c>Exception</c> is used.</param>
     /// <param name="handler">The created <see cref="IWeaverExceptionHandler"/> to be configured and then applied.</param>
     /// <returns>The new exception handler instance.</returns>
     public ILWeaver HandlerCreateCatch(Type? catchType, out WeaverExceptionCatchHandler handler)
@@ -705,6 +705,12 @@ public class ILWeaver : IMonoDetourLogSource
             }
         );
 
+    /// <inheritdoc cref="HandlerWrapTryCatchStackSizeNonZeroOnCurrent(Type?, IEnumerable{Instruction})"/>
+    public ILWeaver HandlerWrapTryCatchStackSizeNonZeroOnCurrent(
+        Type? catchType,
+        params IEnumerable<InstructionOrEnumerable> catchInstructions
+    ) => HandlerWrapTryCatchStackSizeNonZeroOnCurrent(catchType, catchInstructions.Unwrap());
+
     /// <summary>
     /// Wraps an area around <see cref="Current"/> where the stack size is non-zero
     /// to a try block, catching exceptions of type <paramref name="catchType"/>.
@@ -761,6 +767,20 @@ public class ILWeaver : IMonoDetourLogSource
         return this;
     }
 
+    /// <inheritdoc cref="HandlerWrapTryCatchStackSizeNonZero(Type?, Instruction, out Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver HandlerWrapTryCatchStackSizeNonZero(
+        Type? catchType,
+        Instruction origin,
+        out Instruction afterCatch,
+        params IEnumerable<InstructionOrEnumerable> catchInstructions
+    ) =>
+        HandlerWrapTryCatchStackSizeNonZero(
+            catchType,
+            origin,
+            out afterCatch,
+            catchInstructions.Unwrap()
+        );
+
     /// <summary>
     /// Wraps an area around <paramref name="origin"/> where the stack size is non-zero
     /// to a try block, catching exceptions of type <paramref name="catchType"/>.
@@ -769,7 +789,7 @@ public class ILWeaver : IMonoDetourLogSource
     /// the return value is the end of the catch block.
     /// </summary>
     /// <param name="catchType">The types of Exceptions that should be catched.
-    /// If left null, <c>object</c> is used.</param>
+    /// If left null, <c>Exception</c> is used.</param>
     /// <param name="origin">The instruction around which the area
     /// where stack size is non-zero is selected.</param>
     /// <param name="afterCatch">The instruction outside the written catch handler.</param>
@@ -1773,6 +1793,12 @@ public class ILWeaver : IMonoDetourLogSource
         return this;
     }
 
+    /// <inheritdoc cref="InsertBeforeStealLabels(int, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBeforeStealLabels(
+        int index,
+        params IEnumerable<InstructionOrEnumerable> instructions
+    ) => InsertBeforeStealLabels(index, instructions.Unwrap());
+
     /// <summary>
     /// Insert instructions before the provided instruction, stealing any labels.
     /// </summary>
@@ -1782,6 +1808,12 @@ public class ILWeaver : IMonoDetourLogSource
         params IEnumerable<Instruction> instructions
     ) => InsertBeforeStealLabels(Instructions.IndexOf(target), instructions);
 
+    /// <inheritdoc cref="InsertBeforeStealLabels(Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBeforeStealLabels(
+        Instruction target,
+        params IEnumerable<InstructionOrEnumerable> instructions
+    ) => InsertBeforeStealLabels(target, instructions.Unwrap());
+
     /// <summary>
     /// Insert instructions before this weaver's current position, stealing any labels.
     /// Current target doesn't change.
@@ -1789,6 +1821,11 @@ public class ILWeaver : IMonoDetourLogSource
     /// <inheritdoc cref="InsertBeforeStealLabels(int, IEnumerable{Instruction})"/>
     public ILWeaver InsertBeforeCurrentStealLabels(params IEnumerable<Instruction> instructions) =>
         InsertBeforeStealLabels(Index, instructions);
+
+    /// <inheritdoc cref="InsertBeforeCurrentStealLabels(IEnumerable{Instruction})"/>
+    public ILWeaver InsertBeforeCurrentStealLabels(
+        params IEnumerable<InstructionOrEnumerable> instructions
+    ) => InsertBeforeCurrentStealLabels(instructions.Unwrap());
 
     /// <summary>
     /// Insert instructions before the provided index.
@@ -1804,6 +1841,12 @@ public class ILWeaver : IMonoDetourLogSource
         return this;
     }
 
+    /// <inheritdoc cref="InsertBefore(int, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBefore(
+        int index,
+        params IEnumerable<InstructionOrEnumerable> instructions
+    ) => InsertBefore(index, instructions.Unwrap());
+
     /// <summary>
     /// Insert instructions before the provided instruction.
     /// </summary>
@@ -1812,11 +1855,21 @@ public class ILWeaver : IMonoDetourLogSource
         params IEnumerable<Instruction> instructions
     ) => InsertBefore(Instructions.IndexOf(target), instructions);
 
+    /// <inheritdoc cref="InsertBefore(Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBefore(
+        Instruction target,
+        params IEnumerable<InstructionOrEnumerable> instructions
+    ) => InsertBefore(target, instructions.Unwrap());
+
     /// <summary>
     /// Insert instructions before this weaver's current position.
     /// </summary>
     public ILWeaver InsertBeforeCurrent(params IEnumerable<Instruction> instructions) =>
         InsertBefore(Index, instructions);
+
+    /// <inheritdoc cref="InsertBeforeCurrent(IEnumerable{Instruction})"/>
+    public ILWeaver InsertBeforeCurrent(params IEnumerable<InstructionOrEnumerable> instructions) =>
+        InsertBeforeCurrent(instructions.Unwrap());
 
     /// <summary>
     /// Insert instructions after the provided index.
@@ -1832,11 +1885,23 @@ public class ILWeaver : IMonoDetourLogSource
         return this;
     }
 
+    /// <inheritdoc cref="InsertAfter(int, IEnumerable{Instruction})"/>
+    public ILWeaver InsertAfter(
+        int index,
+        params IEnumerable<InstructionOrEnumerable> instructions
+    ) => InsertAfter(index, instructions.Unwrap());
+
     /// <summary>
     /// Insert instructions after the provided instruction.
     /// </summary>
     public ILWeaver InsertAfter(Instruction target, params IEnumerable<Instruction> instructions) =>
         InsertAfter(Instructions.IndexOf(target), instructions);
+
+    /// <inheritdoc cref="InsertAfter(Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver InsertAfter(
+        Instruction target,
+        params IEnumerable<InstructionOrEnumerable> instructions
+    ) => InsertAfter(target, instructions.Unwrap());
 
     /// <summary>
     /// Insert instructions after this weaver's current position.
@@ -1855,6 +1920,10 @@ public class ILWeaver : IMonoDetourLogSource
         return this;
     }
 
+    /// <inheritdoc cref="InsertAfterCurrent(IEnumerable{Instruction})"/>
+    public ILWeaver InsertAfterCurrent(params IEnumerable<InstructionOrEnumerable> instructions) =>
+        InsertAfterCurrent(instructions.Unwrap());
+
     private ILWeaver InsertBranchOverIfX(
         Instruction start,
         Instruction end,
@@ -1867,13 +1936,6 @@ public class ILWeaver : IMonoDetourLogSource
         InsertBeforeStealLabels(startIndex, condition);
         return this;
     }
-
-    /// <param name="range">A tuple of the first and last instructions to branch over.</param>
-    /// <inheritdoc cref="InsertBranchOverIfTrue(Instruction, Instruction, IEnumerable{Instruction})"/>
-    public ILWeaver InsertBranchOverIfTrue(
-        (Instruction start, Instruction end) range,
-        params IEnumerable<Instruction> condition
-    ) => InsertBranchOverIfTrue(range.start, range.end, condition);
 
     /// <summary>
     /// Inserts a <c>brtrue</c> instruction before <paramref name="start"/> instruction
@@ -1892,12 +1954,25 @@ public class ILWeaver : IMonoDetourLogSource
         params IEnumerable<Instruction> condition
     ) => InsertBranchOverIfX(start, end, OpCodes.Brtrue, condition);
 
+    /// <inheritdoc cref="InsertBranchOverIfTrue(Instruction, Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBranchOverIfTrue(
+        Instruction start,
+        Instruction end,
+        params IEnumerable<InstructionOrEnumerable> condition
+    ) => InsertBranchOverIfTrue(start, end, condition.Unwrap());
+
     /// <param name="range">A tuple of the first and last instructions to branch over.</param>
-    /// <inheritdoc cref="InsertBranchOverIfFalse(Instruction, Instruction, IEnumerable{Instruction})"/>
-    public ILWeaver InsertBranchOverIfFalse(
+    /// <inheritdoc cref="InsertBranchOverIfTrue(Instruction, Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBranchOverIfTrue(
         (Instruction start, Instruction end) range,
         params IEnumerable<Instruction> condition
-    ) => InsertBranchOverIfFalse(range.start, range.end, condition);
+    ) => InsertBranchOverIfTrue(range.start, range.end, condition);
+
+    /// <inheritdoc cref="InsertBranchOverIfTrue(ValueTuple{Instruction, Instruction}, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBranchOverIfTrue(
+        (Instruction start, Instruction end) range,
+        params IEnumerable<InstructionOrEnumerable> condition
+    ) => InsertBranchOverIfTrue(range, condition.Unwrap());
 
     /// <summary>
     /// Inserts a <c>brfalse</c> instruction before <paramref name="start"/> instruction
@@ -1916,10 +1991,25 @@ public class ILWeaver : IMonoDetourLogSource
         params IEnumerable<Instruction> condition
     ) => InsertBranchOverIfX(start, end, OpCodes.Brfalse, condition);
 
+    /// <inheritdoc cref="InsertBranchOverIfFalse(Instruction, Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBranchOverIfFalse(
+        Instruction start,
+        Instruction end,
+        params IEnumerable<InstructionOrEnumerable> condition
+    ) => InsertBranchOverIfFalse(start, end, condition.Unwrap());
+
     /// <param name="range">A tuple of the first and last instructions to branch over.</param>
-    /// <inheritdoc cref="InsertBranchOver(Instruction, Instruction)"/>
-    public ILWeaver InsertBranchOver((Instruction start, Instruction end) range) =>
-        InsertBranchOver(range.start, range.end);
+    /// <inheritdoc cref="InsertBranchOverIfFalse(Instruction, Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBranchOverIfFalse(
+        (Instruction start, Instruction end) range,
+        params IEnumerable<Instruction> condition
+    ) => InsertBranchOverIfFalse(range.start, range.end, condition);
+
+    /// <inheritdoc cref="InsertBranchOverIfFalse(ValueTuple{Instruction, Instruction}, IEnumerable{Instruction})"/>
+    public ILWeaver InsertBranchOverIfFalse(
+        (Instruction start, Instruction end) range,
+        params IEnumerable<InstructionOrEnumerable> condition
+    ) => InsertBranchOverIfFalse(range, condition.Unwrap());
 
     /// <summary>
     /// Inserts a <c>br</c> instruction before <paramref name="start"/> instruction
@@ -1941,6 +2031,11 @@ public class ILWeaver : IMonoDetourLogSource
         InsertBeforeStealLabels(start, Create(OpCodes.Br, end.Next));
         return this;
     }
+
+    /// <param name="range">A tuple of the first and last instructions to branch over.</param>
+    /// <inheritdoc cref="InsertBranchOver(Instruction, Instruction)"/>
+    public ILWeaver InsertBranchOver((Instruction start, Instruction end) range) =>
+        InsertBranchOver(range.start, range.end);
 
     /// <summary>
     /// Store an object in the reference store, and emit the IL to retrieve it and place it on the stack.
@@ -2070,28 +2165,27 @@ public class ILWeaver : IMonoDetourLogSource
     /// Then, the Delegate is invoked with a <c>callvirt</c> instruction.<br/>
     /// <br/>
     /// With this method, the Delegate instance is automatically stored and loaded for you,
-    /// and you can simply push all arguments to the stack and then call this method emit the
-    /// required instructions to invoke the Delegate.
+    /// and you can simply push all arguments to the stack and then call this method to create
+    /// the required instructions to invoke the Delegate.
     /// </summary>
     /// <param name="delegate">The <see cref="Delegate"/> method to be invoked.</param>
     /// <returns>
-    /// An <see cref="IEnumerable{T}"/> where T is <see cref="Instruction"/>, containing all the
+    /// An array of <see cref="Instruction"/>, containing all the
     /// instructions required to invoke the Delegate.
     /// </returns>
-    public IEnumerable<Instruction> CreateDelegateCall<T>(T @delegate)
+    public Instruction[] CreateDelegateCall<T>(T @delegate)
         where T : Delegate
     {
         Helpers.ThrowIfNull(@delegate);
-        List<Instruction> instrs = [];
 
         if (@delegate.GetInvocationList().Length == 1 && @delegate.Target == null)
         {
-            instrs.Add(Create(OpCodes.Call, @delegate.Method));
-            return instrs;
+            return [Create(OpCodes.Call, @delegate.Method)];
         }
 
-        var invoker = InteropFastDelegateInvokers.GetDelegateInvoker(Context, @delegate.GetType());
+        List<Instruction> instrs = [];
 
+        var invoker = InteropFastDelegateInvokers.GetDelegateInvoker(Context, @delegate.GetType());
         int id;
 
         if (invoker is { } pair)
@@ -2122,7 +2216,7 @@ public class ILWeaver : IMonoDetourLogSource
             instrs.Add(Create(OpCodes.Callvirt, delInvoke));
         }
 
-        return instrs;
+        return [.. instrs];
     }
 
     /// <summary>
