@@ -10,7 +10,7 @@ namespace MonoDetour.Cil;
 /// <br/>
 /// You don't need to directly interact with this type; implicit type conversions are provided
 /// which allow using e.g. <see cref="ILWeaver"/>'s Insert methods seamlessly while mixing up
-/// <see cref="Instruction"/> and its <see cref="IEnumerable{T}"/>in parameters marked as
+/// <see cref="Instruction"/> and its <see cref="IEnumerable{T}"/> in parameters marked as
 /// <see langword="params"/> <see cref="IEnumerable{T}"/> of <see cref="InstructionOrEnumerable"/>.
 /// </summary>
 /// <remarks>
