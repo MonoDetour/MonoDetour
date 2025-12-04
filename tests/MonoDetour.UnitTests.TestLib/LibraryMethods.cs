@@ -6,6 +6,10 @@ namespace MonoDetour.UnitTests.TestLib;
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
 #pragma warning disable CA1822 // Mark members as static
+#pragma warning disable CA1720 // Identifier contains type
+#pragma warning disable IDE0062 // Make local function 'static'
+#pragma warning disable CS8321 // Local function is declared but never used
+
 public class LibraryMethods
 {
     public class SubType
@@ -79,9 +83,12 @@ public class LibraryMethods
 
     public void TakesRefDictionary(ref Dictionary<bool, bool> dictionary) { }
 
-    public void CSharpKeywordParameterName(object obj) { }
+    public void CSharpKeywordParameterName(object @object) { }
 
     public bool CausesConflictingParameterNames(bool self, bool returnValue) => true;
+
+    public void HasLocalMethod()
+    {
+        void LocalMethod() { }
+    }
 }
-#pragma warning restore CA1822 // Mark members as static
-#pragma warning restore IDE0079 // Remove unnecessary suppression

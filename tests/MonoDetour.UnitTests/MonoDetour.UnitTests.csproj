@@ -42,6 +42,7 @@
     <ProjectReference
       Include="../MonoDetour.UnitTests.TestLib/MonoDetour.UnitTests.TestLib.csproj"
       Publicize="true"
+      PublicizeCompilerGenerated="true"
     />
   </ItemGroup>
   <Import Project="$(SolutionRoot)src/MonoDetour.HookGen/MonoDetour.HookGen.props" />

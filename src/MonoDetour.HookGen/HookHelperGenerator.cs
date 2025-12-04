@@ -547,11 +547,11 @@ namespace MonoDetour.HookGen
                                 {
                                     CodeBuilder cb = new(new(member.Name));
                                     AppendSignatureIdentifier(cb, member.Signature);
-                                    memberName = cb.ToString();
+                                    memberName = ValidationHelpers.SanitizeName(cb.ToString());
                                 }
                                 else
                                 {
-                                    memberName = member.Name;
+                                    memberName = ValidationHelpers.SanitizeName(member.Name);
                                 }
 
                                 if (memberNameToModel.TryGetValue(memberName, out var members))
@@ -1347,13 +1347,7 @@ namespace MonoDetour.HookGen
             return v;
         }
 
-        private static string SanitizeMdName(string v) =>
-            v.Replace(".", "_")
-                .Replace("`", "_")
-                .Replace('|', '_')
-                .Replace("+", "_")
-                .Replace("<", "_")
-                .Replace(">", "_");
+        private static string SanitizeMdName(string v) => ValidationHelpers.SanitizeName(v);
 
         private static string SanitizeUnspeakableFqName(string v)
         {
@@ -1981,14 +1975,7 @@ namespace MonoDetour.HookGen
             if (string.IsNullOrEmpty(name))
                 return string.Empty;
 
-            var result = name.Replace('.', '_')
-                .Replace('/', '_')
-                .Replace('|', '_')
-                .Replace('`', '_')
-                .Replace('+', '_')
-                .Replace('<', '_')
-                .Replace('>', '_')
-                .Replace('$', '_');
+            var result = ValidationHelpers.SanitizeName(name);
 
             /*
             if (result != name) {
