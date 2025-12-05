@@ -34,10 +34,10 @@
     <RuntimeDetourVersion>[21.12.13.1,)</RuntimeDetourVersion>
     <SolutionRoot>$(MSBuildThisFileDirectory)</SolutionRoot>
     <!-- Release version for main MonoDetour package -->
-    <MonoDetourVersionPrefix>0.7.5</MonoDetourVersionPrefix>
+    <MonoDetourVersionPrefix>0.7.6</MonoDetourVersionPrefix>
     <MonoDetourVersionSuffix></MonoDetourVersionSuffix>
     <!-- Release version for HookGen and Analyzers packages -->
-    <HookGenAndAnalyzersVersionPrefix>0.7.3</HookGenAndAnalyzersVersionPrefix>
+    <HookGenAndAnalyzersVersionPrefix>0.7.6</HookGenAndAnalyzersVersionPrefix>
     <HookGenAndAnalyzersVersionSuffix></HookGenAndAnalyzersVersionSuffix>
     <!-- I only target net9.0 to get documentation and better nullability annotations in the BCL. -->
     <MonoDetourTargetFrameworks>net9.0;netstandard2.0</MonoDetourTargetFrameworks>
