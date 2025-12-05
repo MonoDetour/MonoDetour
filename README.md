@@ -79,7 +79,7 @@ Change the version number to optimally the newest:
 ```xml
 <ItemGroup>
   <PackageReference Include="MonoDetour.HookGen" Version="0.7.*" PrivateAssets="all" />
-  <PackageReference Include="MonoDetour" Version="*" />
+  <PackageReference Include="MonoDetour" Version="[*,2.0)" /> <!-- Highest version below 2.0 -->
 </ItemGroup>
 ```
 
@@ -93,11 +93,18 @@ You can configure this setting yourself however you wish, such as replicating th
 
 ```xml
 <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-  <MonoDetourHookGenStripUnusedHooks>true</MonoDetourHookGenStripUnusedHooks>
+  <MonoDetourHookGenStripUnusedHooks>partial</MonoDetourHookGenStripUnusedHooks>
 </PropertyGroup>
 ```
 
-Having this setting enabled will be more expensive generation wise and intellisense may not keep up when writing hooks, e.g. Prefix, Postfix and ILHook methods may not immediately appear when typing `Md.Namespace.Type.Method.` even if they have just been generated.
+> [!NOTE]  
+> Possible values for `MonoDetourHookGenStripUnusedHooks` are:
+>
+> - `false`: no stripping
+> - `partial`: unused hook helper types exist, but are empty
+> - `true`: unused hook helper types aren't generated at all
+
+Having this setting enabled will be more expensive generation wise, and when set to `partial`, intellisense may not keep up when writing hooks, e.g. Prefix, Postfix and ILHook methods may not immediately appear when typing `Md.Namespace.Type.Method.` even if they have just been generated. If the value is `true`, the hook generator may appear as if it was broken.
 
 If the default HookGen namespace `Md` causes collisions or you just don't like it, you can set it with the following property:
 

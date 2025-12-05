@@ -28,6 +28,13 @@ namespace MonoDetour.HookGen
             Both = 2,
         }
 
+        private enum StripType
+        {
+            None,
+            KeepStubs,
+            Full,
+        }
+
         public const string GenHelperForTypeAttributeFqn =
             "MonoDetour.HookGen.MonoDetourTargetsAttribute";
         private const string ILHookParameterType = "global::MonoMod.Cil.ILContext.Manipulator";
@@ -462,35 +469,38 @@ namespace MonoDetour.HookGen
 
             var generatableTypes = generatableTypesWithoutSupport.Combine(support);
 
-            IncrementalValueProvider<(bool stripUnusedHooks, string hookGenNamespace)> userConfig =
-                context.AnalyzerConfigOptionsProvider.Select(
-                    static (options, _) =>
+            IncrementalValueProvider<(
+                StripType stripUnusedHooks,
+                string hookGenNamespace
+            )> userConfig = context.AnalyzerConfigOptionsProvider.Select(
+                static (options, _) =>
+                {
+                    var globalOptions = options.GlobalOptions;
+                    globalOptions.TryGetValue(
+                        "build_property.MonoDetourHookGenStripUnusedHooks",
+                        out var propertyStripUnusedHooks
+                    );
+
+                    globalOptions.TryGetValue(
+                        "build_property.MonoDetourHookGenNamespace",
+                        out var hookGenNamespace
+                    );
+
+                    StripType stripUnusedHooks = propertyStripUnusedHooks?.ToLowerInvariant() switch
                     {
-                        var globalOptions = options.GlobalOptions;
-                        globalOptions.TryGetValue(
-                            "build_property.MonoDetourHookGenStripUnusedHooks",
-                            out var propertyStripUnusedHooks
-                        );
+                        "true" => StripType.Full,
+                        "partial" => StripType.KeepStubs,
+                        _ => StripType.None,
+                    };
 
-                        globalOptions.TryGetValue(
-                            "build_property.MonoDetourHookGenNamespace",
-                            out var hookGenNamespace
-                        );
-
-                        bool stripUnusedHooks =
-                            propertyStripUnusedHooks?.Equals(
-                                "true",
-                                StringComparison.InvariantCultureIgnoreCase
-                            ) ?? false;
-
-                        if (string.IsNullOrEmpty(hookGenNamespace))
-                        {
-                            hookGenNamespace = "Md";
-                        }
-
-                        return (stripUnusedHooks, hookGenNamespace!);
+                    if (string.IsNullOrEmpty(hookGenNamespace))
+                    {
+                        hookGenNamespace = "Md";
                     }
-                );
+
+                    return (stripUnusedHooks, hookGenNamespace!);
+                }
+            );
 
             // We only try to generate hook contents for hooks which are used.
             var memberNameToModel = generatableTypesWithoutSupport
@@ -501,7 +511,7 @@ namespace MonoDetour.HookGen
                     {
                         var (types, (stripUnusedHooks, _)) = items;
 
-                        if (!stripUnusedHooks)
+                        if (stripUnusedHooks is StripType.None)
                         {
                             return ImmutableDictionary.Create<
                                 string,
@@ -596,7 +606,7 @@ namespace MonoDetour.HookGen
                     (x, _) =>
                     {
                         var ((semanticModel, methodSyntax), (stripUnusedHooks, _)) = x;
-                        if (!stripUnusedHooks)
+                        if (stripUnusedHooks is StripType.None)
                         {
                             return null;
                         }
@@ -730,7 +740,7 @@ namespace MonoDetour.HookGen
                     ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>,
                     ContextSupportOptions
                 ),
-                (bool, string)
+                (StripType, string)
             ) input
         )
         {
@@ -788,12 +798,17 @@ namespace MonoDetour.HookGen
 
         private void EmitHelperTypeStub(
             SourceProductionContext context,
-            ((GeneratableTypeModel, ContextSupportOptions), (bool, string)) input
+            ((GeneratableTypeModel, ContextSupportOptions), (StripType, string)) input
         )
         {
             try
             {
                 var ((type, ctx), (stripUnusedHooks, hookGenNamespace)) = input;
+
+                if (stripUnusedHooks is StripType.Full)
+                {
+                    return;
+                }
 
                 var sb = new StringBuilder();
                 var cb = new CodeBuilder(sb);
@@ -806,7 +821,7 @@ namespace MonoDetour.HookGen
 
                     type.Type.AppendEnterContext(cb);
 
-                    EmitTypeMembers(type, cb, il: false, ctx, generateContent: !stripUnusedHooks);
+                    EmitTypeMembers(type, cb, il: false, ctx, stripUnusedHooks is StripType.None);
 
                     type.Type.AppendExitContext(cb);
 

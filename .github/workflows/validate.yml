@@ -21,5 +21,8 @@ jobs:
         with:
           additional-build-args: -WarnAsError
 
+      - name: Build with Full Stripping
+        run: dotnet build ./tests/MonoDetour.UnitTests/ -c Release --no-restore -property:MonoDetourHookGenStripUnusedHooks=true
+
       - name: Check Formatting
         run: dotnet csharpier check .

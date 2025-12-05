@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup Condition="$(MonoDetourHookGenStripUnusedHooks) == '' and '$(Configuration)' == 'Release'">
-    <MonoDetourHookGenStripUnusedHooks>true</MonoDetourHookGenStripUnusedHooks>
+    <MonoDetourHookGenStripUnusedHooks>partial</MonoDetourHookGenStripUnusedHooks>
   </PropertyGroup>
   <ItemGroup>
     <CompilerVisibleProperty Include="MonoDetourHookGenStripUnusedHooks" />
