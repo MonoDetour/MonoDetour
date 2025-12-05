@@ -14,7 +14,6 @@
   <ItemGroup>
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
-    <PackageReference Include="Mono.Cecil" Version="0.11.5" />
     <ProjectReference Include="$(SolutionRoot)src/MonoDetour/MonoDetour.csproj" />
     <ProjectReference Include="$(SolutionRoot)src/MonoDetour.Interop.HarmonyX/MonoDetour.Interop.HarmonyX.csproj" />
   </ItemGroup>
