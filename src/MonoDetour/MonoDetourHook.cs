@@ -1,7 +1,10 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using MonoDetour.DetourTypes;
 using MonoDetour.Interop.RuntimeDetour;
+using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 
 namespace MonoDetour;
@@ -11,6 +14,17 @@ namespace MonoDetour;
 /// </summary>
 public class MonoDetourHook : IMonoDetourHook
 {
+    static readonly ConditionalWeakTable<
+        ILContext.Manipulator,
+        MonoDetourHook
+    > s_ManipulatorToHook = new();
+
+#if NETSTANDARD2_0
+    static readonly object tableLock = new();
+#else
+    static readonly System.Threading.Lock tableLock = new();
+#endif
+
     /// <inheritdoc/>
     public MethodBase Target { get; }
 
@@ -84,12 +98,19 @@ public class MonoDetourHook : IMonoDetourHook
 
         owner.Hooks.Add(this);
 
+        ILContext.Manipulator applierManipulator = applierInstance.ApplierManipulator;
+
         Applier = ProxyILHookConstructor.ConstructILHook(
             target,
-            applierInstance.ApplierManipulator,
+            applierManipulator,
             config,
             owner.Id
         );
+
+        lock (tableLock)
+        {
+            s_ManipulatorToHook.Add(applierManipulator, this);
+        }
 
         if (applyByDefault)
         {
@@ -135,6 +156,22 @@ public class MonoDetourHook : IMonoDetourHook
     )
         where TApplier : class, IMonoDetourHookApplier =>
         new(target, manipulator, null, typeof(TApplier), owner, config, applyByDefault);
+
+    /// <summary>
+    /// Tries to get the corresponding <see cref="MonoDetourHook"/> for the
+    /// specified <see cref="ILContext.Manipulator"/> if it exists.
+    /// </summary>
+    /// <param name="key">The <see cref="ILContext.Manipulator"/>
+    /// whose <see cref="MonoDetourHook"/> to get.</param>
+    /// <param name="monoDetourHook">The found <see cref="MonoDetourHook"/> or null.</param>
+    /// <returns>
+    /// <see langword="true"/> if the corresponding <see cref="MonoDetourHook"/> was found;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
+    public static bool TryGetFrom(
+        ILContext.Manipulator key,
+        [NotNullWhen(true)] out MonoDetourHook? monoDetourHook
+    ) => s_ManipulatorToHook.TryGetValue(key, out monoDetourHook);
 
     /// <inheritdoc/>
     public void Apply() => Applier.Apply();
