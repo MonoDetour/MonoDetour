@@ -92,11 +92,13 @@ public class PrefixDetour : IMonoDetourHookApplier
 
             w.DefineAndMarkLabelToFutureNextInsert(out var hardReturn);
             // Hack: MonoDetour will not redirect ret instructions if there are two.
+            // New stuff: For HarmonyX interop, persistent instructions are a thing.
+            // MonoDetour should probably just switch to that system?
             for (int i = 0; i < 2; i++)
             {
                 if (info.ReturnValue is not null)
                     w.InsertBeforeCurrent(w.Create(OpCodes.Ldloc, info.ReturnValue));
-                w.InsertBeforeCurrent(w.Create(OpCodes.Ret));
+                w.InsertBeforeCurrent(info.MarkPersistentInstruction(w.Create(OpCodes.Ret)));
             }
 
             w.DefineAndMarkLabelToFutureNextInsert(out var softReturn);

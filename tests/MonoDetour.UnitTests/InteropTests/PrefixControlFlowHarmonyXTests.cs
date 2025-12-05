@@ -79,6 +79,41 @@ public static class PrefixControlFlowHarmonyXTests
         Interop.HarmonyX.HarmonyXInterop.Dispose();
     }
 
+    [Fact]
+    public static void CanHardReturnWithHarmonyX()
+    {
+        // In this test, we insert a control flow prefix with HardReturn.
+        // Normally, HarmonyX would redirect its return values,
+        // and the HarmonyPostfixThrowMethod would run.
+        // Additionally, we include a transpiler method to make HarmonyX
+        // rewrite all instructions in the target method.
+        // So, we:
+        // 1. insert and mark ret labels as persistent
+        // 1. map old instructions to new ones
+        // 2. prevent HarmonyX from redirecting our persistent ret instructions.
+
+        using var m = DefaultMonoDetourManager.New();
+        m.Hook<PrefixDetour>(Stub3, Prefix_HardReturnStub3, new(1));
+
+        var scope = new DetourConfigContext(new(id: "detourContext", priority: 0));
+
+        Interop.HarmonyX.HarmonyXInterop.Initialize();
+
+        using (scope.Use())
+        {
+            using var harmony = new Harmony("test3");
+            harmony.Patch(
+                ((Delegate)Stub3).Method,
+                postfix: new(HarmonyPostfixThrow),
+                transpiler: new(Transpiler)
+            );
+
+            Stub3();
+        }
+
+        Interop.HarmonyX.HarmonyXInterop.Dispose();
+    }
+
     static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
         instructions;
 
@@ -123,6 +158,10 @@ public static class PrefixControlFlowHarmonyXTests
         runCount2++;
     }
 
+    static ReturnFlow Prefix_HardReturnStub3() => ReturnFlow.HardReturn;
+
+    static void HarmonyPostfixThrow() => throw new Exception("This should never run.");
+
     static int Stub()
     {
         runCount -= 10;
@@ -134,4 +173,6 @@ public static class PrefixControlFlowHarmonyXTests
         runCount2 -= 10;
         return 0;
     }
+
+    static void Stub3() { }
 }

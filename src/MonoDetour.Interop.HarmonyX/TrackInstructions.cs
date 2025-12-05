@@ -169,6 +169,12 @@ static class TrackInstructions
         if (!harmonyToCecil.TryGetValue(cur, out (Instruction oldIns, bool original) value))
             return;
 
+        // TODO: There is a bug here. HarmonyX can emit two leave instructions at once.
+        // It does this for every leave instruction, however that itself is not considered a bug.
+        // This fact creates a very specific issue where if some poor soul tries to get a
+        // leave instruction in an ILWeaver.MatchRelaxed method after HarmonyX has run,
+        // they will get the second leave instruction which is always skipped by the first one.
+        // So we should get the first of the newly inserted instructions.
         var newIns = body.Instructions[^1];
 
         // TODO: Figure out a better way to track instructions
@@ -206,6 +212,17 @@ static class TrackInstructions
                 continue;
 
             postfixes[i] = newInstruction;
+        }
+
+        var oldPersistentInstructions = hookTargetInfo.PersistentInstructions.ToArray();
+        hookTargetInfo.PersistentInstructions.Clear();
+
+        foreach (var oldInstruction in oldPersistentInstructions)
+        {
+            if (!oldToNew.TryGetValue(oldInstruction, out var newInstruction))
+                continue;
+
+            hookTargetInfo.MarkPersistentInstruction(newInstruction);
         }
     }
 }

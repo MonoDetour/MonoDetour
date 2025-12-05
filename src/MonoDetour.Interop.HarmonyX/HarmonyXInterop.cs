@@ -1,3 +1,4 @@
+using System;
 using MonoDetour.Logging;
 
 namespace MonoDetour.Interop.HarmonyX;
@@ -16,6 +17,24 @@ public static class HarmonyXInterop
     /// </summary>
     public static void Initialize()
     {
+        try
+        {
+            InternalInitialize();
+        }
+        catch (Exception ex)
+        {
+            MonoDetourLogger.Log(
+                MonoDetourLogger.LogChannel.Error,
+                $"HarmonyX interop exploded while trying to initialize: {ex}"
+            );
+
+            // If we ever end up here, it's probably safer to dispose since this was unhandled.
+            Dispose();
+        }
+    }
+
+    static void InternalInitialize()
+    {
         if (initialized)
             return;
 
@@ -28,6 +47,17 @@ public static class HarmonyXInterop
             MonoDetourLogger.Log(
                 MonoDetourLogger.LogChannel.Error,
                 "HarmonyX interop module has completely failed to initialize."
+            );
+            return;
+        }
+
+        EnforcePersistentInstructions.Init();
+
+        if (anyFailed)
+        {
+            MonoDetourLogger.Log(
+                MonoDetourLogger.LogChannel.Error,
+                "HarmonyX interop module has partly failed to initialize."
             );
             return;
         }
@@ -47,6 +77,7 @@ public static class HarmonyXInterop
     internal static void Dispose()
     {
         TrackInstructions.instructionManager.DisposeHooks();
+        EnforcePersistentInstructions.persistentManager.DisposeHooks();
         TrackPatches.patchManager.DisposeHooks();
         initialized = false;
     }

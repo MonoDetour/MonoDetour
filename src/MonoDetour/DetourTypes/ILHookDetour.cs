@@ -2,7 +2,9 @@ using System;
 using System.Reflection;
 using System.Threading;
 using MonoDetour.Cil;
+using MonoDetour.Cil.Analysis;
 using MonoDetour.DetourTypes.Manipulation;
+using MonoDetour.Logging;
 using MonoMod.Cil;
 
 namespace MonoDetour.DetourTypes;
@@ -42,6 +44,15 @@ public class ILHookDetour : IMonoDetourHookApplier
         ILManipulationInfo info = new(il, Hook.Target, originalInstructions);
 
         invoker(info);
+
+        Hook.Owner.Log(
+            MonoDetourLogger.LogChannel.IL,
+            () =>
+            {
+                var body = il.Body.CreateInformationalSnapshotJIT().AnnotateErrors();
+                return $"Manipulated by ILHook: {Hook.Manipulator.Name} ({Hook.Owner.Id}):\n{body}";
+            }
+        );
 
         Utils.DebugValidateCILValidatorNoErrors(Hook, il.Body);
     }

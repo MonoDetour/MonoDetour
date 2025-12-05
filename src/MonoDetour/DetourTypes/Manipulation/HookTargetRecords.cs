@@ -102,6 +102,27 @@ public static class HookTargetRecords
         /// The local variable containing the return value of the method.
         /// </summary>
         public VariableDefinition? ReturnValue { get; }
+
+        internal HashSet<Instruction> PersistentInstructions { get; } = [];
+
+        /// <summary>
+        /// Makes the specified instruction non-redirectable by HarmonyX.
+        /// </summary>
+        /// <param name="instruction">Instruction to mark.</param>
+        /// <returns>The provided instruction.</returns>
+        internal Instruction MarkPersistentInstruction(Instruction instruction)
+        {
+            PersistentInstructions.Add(instruction);
+            return instruction;
+        }
+
+        /// <summary>
+        /// Checks if the specified instruction is marked as persistent.
+        /// </summary>
+        /// <param name="instruction">The instruction to check.</param>
+        /// <returns><see langword="true"/> if persistent; <see langword="false"/> otherwise.</returns>
+        internal bool IsPersistentInstruction(Instruction instruction) =>
+            PersistentInstructions.Contains(instruction);
     }
 
     /// <summary>
