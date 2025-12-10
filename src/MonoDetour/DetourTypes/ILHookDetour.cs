@@ -1,6 +1,5 @@
 using System;
 using System.Reflection;
-using System.Threading;
 using MonoDetour.Cil;
 using MonoDetour.Cil.Analysis;
 using MonoDetour.DetourTypes.Manipulation;
@@ -10,8 +9,9 @@ using MonoMod.Cil;
 namespace MonoDetour.DetourTypes;
 
 /// <summary>
-/// Implements MonoDetour support for a regular <see cref="MonoMod.RuntimeDetour.ILHook"/>
-/// which supports modifying the target method on the CIL level.
+/// Implements MonoDetour support for a <see cref="MonoMod.RuntimeDetour.ILHook"/>
+/// which supports modifying the target method on the CIL level with a manipulator method
+/// of type <see cref="ILManipulationInfo.Manipulator"/>.
 /// </summary>
 public class ILHookDetour : IMonoDetourHookApplier
 {
