@@ -26,8 +26,9 @@ public static class MethodDefinitionExtensions
 
         context.Invoke(il =>
         {
-            ILManipulationInfo info = new(il, null);
+            ILManipulationInfo info = new(il, null, out var onFinish);
             manipulator(info);
+            onFinish();
         });
     }
 }

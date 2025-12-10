@@ -128,6 +128,7 @@ public class ILWeaver : IMonoDetourLogSource
     Instruction current;
 
     readonly List<ILLabel> pendingFutureNextInsertLabels = [];
+    readonly List<IWeaverExceptionHandler> pendingHandlers = [];
 
     const string gotoMatchingDocsLink = "<documentation link will be here once it exists>";
 
@@ -136,6 +137,14 @@ public class ILWeaver : IMonoDetourLogSource
         ManipulationInfo = Helpers.ThrowIfNull(il);
         Context = il.Context;
         current = Context.Instrs[0];
+
+        il.OnManipulatorFinished += () =>
+        {
+            foreach (var handler in pendingHandlers.ToArray())
+            {
+                HandlerApply(handler);
+            }
+        };
     }
 
     /// <summary>
@@ -538,19 +547,20 @@ public class ILWeaver : IMonoDetourLogSource
     /// Note that certain values can be figured out implicitly such as HandlerStart when
     /// TryEnd is defined.<br/>
     /// <br/>
-    /// The <see cref="IWeaverExceptionHandler"/> needs to be applied to the method body with
-    /// <see cref="HandlerApply(IWeaverExceptionHandler)"/> after which it becomes immutable.<br/>
+    /// The <see cref="IWeaverExceptionHandler"/> will automatically be applied to the method body
+    /// after your manipulator method is finished.
     /// </summary>
     /// <remarks>
     /// See <see cref="WeaverExceptionCatchHandler"/> for more information about this handler type.
     /// </remarks>
     /// <param name="catchType">The types of Exceptions that should be catched.
     /// If left null, <c>Exception</c> is used.</param>
-    /// <param name="handler">The created <see cref="IWeaverExceptionHandler"/> to be configured and then applied.</param>
+    /// <param name="handler">The created <see cref="IWeaverExceptionHandler"/> to be configured.</param>
     /// <returns>The new exception handler instance.</returns>
     public ILWeaver HandlerCreateCatch(Type? catchType, out WeaverExceptionCatchHandler handler)
     {
         handler = new(IL.Import(catchType ?? typeof(Exception)));
+        pendingHandlers.Add(handler);
         return this;
     }
 
@@ -561,6 +571,7 @@ public class ILWeaver : IMonoDetourLogSource
     public ILWeaver HandlerCreateFilter(Type? catchType, out WeaverExceptionFilterHandler handler)
     {
         handler = new(IL.Import(catchType ?? typeof(Exception)));
+        pendingHandlers.Add(handler);
         return this;
     }
 
@@ -571,6 +582,7 @@ public class ILWeaver : IMonoDetourLogSource
     public ILWeaver HandlerCreateFinally(out WeaverExceptionFinallyHandler handler)
     {
         handler = new();
+        pendingHandlers.Add(handler);
         return this;
     }
 
@@ -581,6 +593,7 @@ public class ILWeaver : IMonoDetourLogSource
     public ILWeaver HandlerCreateFault(out WeaverExceptionFaultHandler handler)
     {
         handler = new();
+        pendingHandlers.Add(handler);
         return this;
     }
 
@@ -824,6 +837,10 @@ public class ILWeaver : IMonoDetourLogSource
     }
 
     /// <summary>
+    /// Note: This method is automatically called for all unapplied handlers
+    /// after your manipulator method is finished. This wasn't always the case,
+    /// but it's unlikely you'll ever need to call this anymore.<br/>
+    /// <br/>
     /// Writes the leave instructions for try, catch or finally blocks and applies the
     /// provided <see cref="IWeaverExceptionHandler"/> to the method body.
     /// </summary>
@@ -839,6 +856,15 @@ public class ILWeaver : IMonoDetourLogSource
     /// <exception cref="NullReferenceException"></exception>
     public ILWeaver HandlerApply(IWeaverExceptionHandler handler)
     {
+        // We remove this from the list at the start of this method because
+        // if we did so at the end, someone could try catch this method throwing
+        // without any intention to apply the handler again.
+        // If that were to happen, the handler would be tried to be applied again
+        // after their manipulator has finished, and it would throw.
+        // So if someone explicitly applies a handler and it fails,
+        // they must apply it explicitly again after fixing it.
+        pendingHandlers.Remove(handler);
+
         if (handler.TryStart is null)
             throw new NullReferenceException("TryStart was not set!");
         if (handler.HandlerEnd is null)

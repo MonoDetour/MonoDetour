@@ -40,9 +40,10 @@ public class ILHookDetour : IMonoDetourHookApplier
     /// <inheritdoc/>
     public void ApplierManipulator(ILContext il)
     {
-        ILManipulationInfo info = new(il, Hook.Target);
+        ILManipulationInfo info = new(il, Hook.Target, out var onFinish);
 
         invoker(info);
+        onFinish();
 
         Hook.Owner.Log(
             MonoDetourLogger.LogChannel.IL,

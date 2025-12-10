@@ -15,17 +15,30 @@ namespace MonoDetour.Cil;
 /// </summary>
 public class ILManipulationInfo
 {
-    /// <inheritdoc cref="ILManipulationInfo(ILContext, MethodBase?, ReadOnlyCollection{Instruction}?)"/>
-    public ILManipulationInfo(ILContext il, MethodBase? original)
-#pragma warning disable CS0618 // Type or member is obsolete
-        : this(il, original, null) { }
-#pragma warning restore CS0618 // Type or member is obsolete
+    /// <param name="invokeOnManipulatorFinished">
+    /// A delegate which invokes an event which should run right after the
+    /// manipulator method this <see cref="ILManipulationInfo"/> was passed to returns.
+    /// </param>
+    /// <inheritdoc cref="ILManipulationInfo(ILContext, MethodBase?, ReadOnlyCollection{Instruction}?)" />
+    /// <param name="il"></param>
+    /// <param name="original"></param>
+    public ILManipulationInfo(
+        ILContext il,
+        MethodBase? original,
+        out Action invokeOnManipulatorFinished
+    )
+    {
+        Original = original;
+        Context = il;
+        OriginalInstructions = HookTargetRecords.GetOriginalInstructions(il.Method);
+        invokeOnManipulatorFinished = () => OnManipulatorFinished?.Invoke();
+    }
 
     /// <param name="il">The main <see cref="ILContext"/> for manipulation.</param>
     /// <param name="original">The original method if it exists.</param>
     /// <param name="originalInstructions">The original instructions of the method.</param>
     /// <inheritdoc cref="ILManipulationInfo"/>
-    [Obsolete("Use ILManipulationInfo(ILContext il, MethodBase? original) instead.")]
+    [Obsolete("Use ILManipulationInfo(ILContext il, MethodBase? original) instead.", true)]
     public ILManipulationInfo(
         ILContext il,
         MethodBase? original,
@@ -79,8 +92,14 @@ public class ILManipulationInfo
     /// matching where another mod might have inserted harmless instructions somewhere between.
     /// </summary>
     public ILContext UnmanipulatedContext =>
-        _original ??= new ILContext(new DynamicMethodDefinition(Original).Definition);
-    ILContext? _original;
+        _unmanipulated ??= new ILContext(new DynamicMethodDefinition(Original).Definition);
+    ILContext? _unmanipulated;
+
+    /// <summary>
+    /// Event which runs right after the manipulator method this
+    /// <see cref="ILManipulationInfo"/> was passed to returns.
+    /// </summary>
+    public event Action? OnManipulatorFinished;
 
     /// <inheritdoc cref="ILContextExtensions.ToAnalyzedString(ILContext)"/>
     public override string ToString() => Context.ToAnalyzedString();
