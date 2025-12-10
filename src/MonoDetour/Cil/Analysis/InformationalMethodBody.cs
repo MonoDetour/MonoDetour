@@ -91,7 +91,17 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
             }
         }
 
-        body.Method.RecalculateILOffsets();
+        try
+        {
+            body.Method.RecalculateILOffsets();
+        }
+        catch (Exception)
+        {
+            // Someone set the operand of a switch instruction to
+            // something other than ILLabel[] or Instruction[], or it was null.
+            // Everything will explode in a moment if we are in an ILHook,
+            // but let's continue as far as we can.
+        }
 
         InformationalInstruction first = null!;
         InformationalInstruction? previous = null;

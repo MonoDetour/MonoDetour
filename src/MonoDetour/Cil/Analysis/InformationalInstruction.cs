@@ -464,7 +464,7 @@ internal sealed class InformationalInstruction(
         }
 
         if (!IsEvaluated)
-            sb.Append(LeftWall).Append(" - | ").Append(Instruction);
+            sb.Append(LeftWall).Append(" - | ").Append(Instruction.ToStringSafe());
         else
         {
             var stackSize = StackSize.ToString(CultureInfo.InvariantCulture).PadLeft(2);
@@ -472,11 +472,14 @@ internal sealed class InformationalInstruction(
             if (withAnnotations)
             {
                 TryAppendIncomingBranchesInfo(sb, IncomingBranches);
-                sb.Append(LeftWall).Append(stackSize).Append(" | ").Append(Instruction);
+                sb.Append(LeftWall)
+                    .Append(stackSize)
+                    .Append(" | ")
+                    .Append(Instruction.ToStringSafe());
             }
             else
             {
-                sb.Append(stackSize).Append(" | ").Append(Instruction);
+                sb.Append(stackSize).Append(" | ").Append(Instruction.ToStringSafe());
             }
         }
 

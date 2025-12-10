@@ -7,5 +7,11 @@
       PrivateAssets="all"
       Condition="$(ReferencePolySharp) == 'true'"
     />
+    <PackageReference
+      Include="Microsoft.CodeAnalysis.BannedApiAnalyzers"
+      Version="3.3.4"
+      PrivateAssets="all"
+    />
+    <AdditionalFiles Include="$(SolutionRoot)BannedSymbols.txt" />
   </ItemGroup>
 </Project>

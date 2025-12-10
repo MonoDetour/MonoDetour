@@ -23,6 +23,7 @@ obj/
 
 # Add root level files
 !/.editorconfig
+!/BannedSymbols.txt
 !/.gitignore
 !/CONTRIBUTING.md
 !/Directory.Build.props

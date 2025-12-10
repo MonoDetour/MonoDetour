@@ -276,16 +276,18 @@ static class ILHookDMDManipulation
 
     static void AnalyzeMethodBody(InvalidProgramException ex, MethodBody body)
     {
-        IInformationalMethodBody analysis;
+        string analysis;
         try
         {
-            analysis = body.CreateInformationalSnapshotJIT().AnnotateErrors();
+            analysis = body.CreateInformationalSnapshotJIT()
+                .AnnotateErrors()
+                .ToErrorMessageString();
         }
-        catch
+        catch (Exception ex2)
         {
-            throw new Exception("MonoDetour failed to analyze invalid program.", ex);
+            throw new Exception("MonoDetour failed to analyze invalid program: " + ex2, ex);
         }
 
-        throw new InvalidProgramException(analysis.ToErrorMessageString(), ex);
+        throw new InvalidProgramException(analysis, ex);
     }
 }

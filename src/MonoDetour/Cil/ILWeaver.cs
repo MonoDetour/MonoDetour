@@ -1547,9 +1547,9 @@ public class ILWeaver : IMonoDetourLogSource
                     .Write(" to ")
                     .Write(match)
                     .Write(" (")
-                    .Write(instructions[match - predicates.Length + 1].ToString())
+                    .Write(instructions[match - predicates.Length + 1].ToStringSafe())
                     .Write(" to ")
-                    .Write(instructions[match].ToString())
+                    .Write(instructions[match].ToStringSafe())
                     .WriteLine(")");
             }
 
@@ -1653,15 +1653,15 @@ public class ILWeaver : IMonoDetourLogSource
                         .Write(" to ")
                         .Write(indexBeforeFailed)
                         .Write(" | ")
-                        .Write(instructions[indexBeforeFailed - count + 1].ToString())
+                        .Write(instructions[indexBeforeFailed - count + 1].ToStringSafe())
                         .Write(" to ")
-                        .Write(instructions[indexBeforeFailed].ToString())
+                        .Write(instructions[indexBeforeFailed].ToStringSafe())
                         .WriteLine(") but failed to match the next instruction:")
                         .IncreaseIndent()
                         .Write(' ')
                         .Write(indexBeforeFailed + 1)
                         .Write(' ')
-                        .WriteLine(nextInstruction.ToString());
+                        .WriteLine(nextInstruction.ToStringSafe());
                 }
             }
 
