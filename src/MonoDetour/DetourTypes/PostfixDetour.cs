@@ -56,8 +56,7 @@ public class PostfixDetour : IMonoDetourHookApplier
         }
 
         HookTargetRecords.HookTargetInfo info = HookTargetRecords.GetHookTargetInfo(il);
-        var originalInstructions = HookTargetRecords.GetOriginalInstructions(il.Method);
-        ILWeaver w = new(new(il, Hook.Target, originalInstructions));
+        ILWeaver w = new(new(il, Hook.Target));
         w.CurrentTo(w.Last);
 
         var firstPostfixInstructions = info.PostfixInfo.FirstPostfixInstructions;

@@ -29,9 +29,8 @@ public static class TryCatchStackTests
             il.Emit(Op.Ret);
         }
 
-        new ILContext(dmd.Definition).Invoke(il =>
+        dmd.Definition.ILWeave(info =>
         {
-            ILManipulationInfo info = new(il, null, il.Instrs.AsReadOnly());
             ILWeaver w = new(info);
 
             w.MatchStrict(x => x.MatchLdcI4(2) && w.SetCurrentTo(x)).ThrowIfFailure();
@@ -56,6 +55,11 @@ public static class TryCatchStackTests
     [Fact]
     public static void CanFixStackNotEmptyBeforePrefixTry()
     {
+        // TODO: This seems like a test I forgot to finish.
+        // It'd probably be about ILWeaver's inserted try catch handlers
+        // being able to store values on stack before try and pushing them
+        // right back at the start of the try block.
+        // That feature is not implemented as of now.
         var m = DefaultMonoDetourManager.New();
 
         // m.Hook<PrefixDetour>(Stub, Prefix_DoNothing, new(priority: 1));

@@ -25,11 +25,12 @@ public static class HookTargetRecords
     /// </summary>
     /// <remarks>
     /// This method is strictly intended to be used in <see cref="MonoMod.RuntimeDetour.ILHook"/>
-    /// manipulators, including <see cref="MonoDetourHook"/>. Usage elsewhere is not supported.
+    /// manipulators, including <see cref="MonoDetourHook"/>. Usage elsewhere returns an empty collection.
     /// </remarks>
     /// <param name="method">The <see cref="MethodDefinition"/> whose original instructions to get.</param>
-    /// <returns>The original instructions.</returns>
-    /// <exception cref="Exception"></exception>
+    /// <returns>The original instructions, or an empty collection if MonoDetour doesn't know about the
+    /// <see cref="MethodDefinition"/> because it wasn't an ILHook manipulation target
+    /// managed by MonoMod.</returns>
     internal static ReadOnlyCollection<Instruction> GetOriginalInstructions(MethodDefinition method)
     {
         var methodInstructions = ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions;
@@ -39,18 +40,23 @@ public static class HookTargetRecords
             return instructions;
         }
 
-        throw new Exception(
-            "Tried to get original instructions for a method which MonoDetour does not know about."
-        );
+#if NETSTANDARD2_0
+        return new([]);
+#else
+        return ReadOnlyCollection<Instruction>.Empty;
+#endif
     }
 
     internal static void SwapOriginalInstructionsCollection(
         MethodDefinition method,
+        HookTargetInfo info,
         ReadOnlyCollection<Instruction> replacement
     )
     {
         ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions.Remove(method);
         ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions.Add(method, replacement);
+
+        info.OriginalInstructions = replacement;
     }
 
     /// <param name="il">The <see cref="ILContext"/> for the target method.</param>
@@ -76,7 +82,7 @@ public static class HookTargetRecords
             method.Body.Variables.Add(returnValue);
         }
 
-        info = new(method, returnValue);
+        info = new(method, returnValue, GetOriginalInstructions(method));
         s_MethodToInfo.Add(method, info);
         return info;
     }
@@ -86,10 +92,15 @@ public static class HookTargetRecords
     /// </summary>
     public class HookTargetInfo
     {
-        internal HookTargetInfo(MethodDefinition method, VariableDefinition? returnValue)
+        internal HookTargetInfo(
+            MethodDefinition method,
+            VariableDefinition? returnValue,
+            ReadOnlyCollection<Instruction> originalInstructions
+        )
         {
             PrefixInfo = new(method);
             ReturnValue = returnValue;
+            OriginalInstructions = originalInstructions;
         }
 
         /// <inheritdoc cref="TargetPrefixInfo"/>
@@ -102,6 +113,15 @@ public static class HookTargetRecords
         /// The local variable containing the return value of the method.
         /// </summary>
         public VariableDefinition? ReturnValue { get; }
+
+        /// <summary>
+        /// A list of the original instructions before the method was manipulated.
+        /// </summary>
+        /// <remarks>
+        /// This list has the same instruction instances as the current <see cref="ILContext"/>,
+        /// meaning some may have been modified.
+        /// </remarks>
+        public ReadOnlyCollection<Instruction> OriginalInstructions { get; internal set; }
 
         internal HashSet<Instruction> PersistentInstructions { get; } = [];
 

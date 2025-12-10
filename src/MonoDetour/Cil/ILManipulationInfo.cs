@@ -1,6 +1,8 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Reflection;
 using Mono.Cecil.Cil;
+using MonoDetour.DetourTypes.Manipulation;
 using MonoMod.Cil;
 using MonoMod.Utils;
 
@@ -11,15 +13,31 @@ namespace MonoDetour.Cil;
 /// and an untouched <see cref="ILContext"/> useful for observing the untouched
 /// state, including the original method as a <see cref="MethodBase"/> if it exists.
 /// </summary>
-/// <param name="il">The main <see cref="ILContext"/> for manipulation.</param>
-/// <param name="original">The original method if it exists.</param>
-/// <param name="originalInstructions">The original instructions of the method.</param>
-public class ILManipulationInfo(
-    ILContext il,
-    MethodBase? original = null,
-    ReadOnlyCollection<Instruction>? originalInstructions = null
-)
+public class ILManipulationInfo
 {
+    /// <inheritdoc cref="ILManipulationInfo(ILContext, MethodBase?, ReadOnlyCollection{Instruction}?)"/>
+    public ILManipulationInfo(ILContext il, MethodBase? original)
+#pragma warning disable CS0618 // Type or member is obsolete
+        : this(il, original, null) { }
+#pragma warning restore CS0618 // Type or member is obsolete
+
+    /// <param name="il">The main <see cref="ILContext"/> for manipulation.</param>
+    /// <param name="original">The original method if it exists.</param>
+    /// <param name="originalInstructions">The original instructions of the method.</param>
+    /// <inheritdoc cref="ILManipulationInfo"/>
+    [Obsolete("Use ILManipulationInfo(ILContext il, MethodBase? original) instead.")]
+    public ILManipulationInfo(
+        ILContext il,
+        MethodBase? original,
+        ReadOnlyCollection<Instruction>? originalInstructions
+    )
+    {
+        Original = original;
+        Context = il;
+        OriginalInstructions =
+            originalInstructions ?? HookTargetRecords.GetOriginalInstructions(il.Method);
+    }
+
     /// <summary>
     /// An IL manipulator method accepting a <see cref="ILManipulationInfo"/>.
     /// </summary>
@@ -34,12 +52,12 @@ public class ILManipulationInfo(
     /// <summary>
     /// The original method if it exists.
     /// </summary>
-    public MethodBase? Original { get; } = original;
+    public MethodBase? Original { get; }
 
     /// <summary>
     /// The <see cref="ILContext"/> used for manipulating the target method.
     /// </summary>
-    public ILContext Context { get; } = il;
+    public ILContext Context { get; }
 
     /// <summary>
     /// A list of the original instructions before the method was manipulated.
@@ -49,15 +67,7 @@ public class ILManipulationInfo(
     /// meaning some may have been modified. For unmanipulated instructions, see
     /// <see cref="UnmanipulatedContext"/>.
     /// </remarks>
-    public ReadOnlyCollection<Instruction> OriginalInstructions { get; } =
-        originalInstructions
-#if NETSTANDARD2_0
-        ?? emptyCollection;
-
-    static readonly ReadOnlyCollection<Instruction> emptyCollection = new([]);
-#else
-        ?? ReadOnlyCollection<Instruction>.Empty;
-#endif
+    public ReadOnlyCollection<Instruction> OriginalInstructions { get; }
 
     /// <summary>
     /// Similar to <see cref="Context"/> except this is untouched and won't

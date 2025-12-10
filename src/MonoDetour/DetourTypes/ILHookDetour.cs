@@ -40,8 +40,7 @@ public class ILHookDetour : IMonoDetourHookApplier
     /// <inheritdoc/>
     public void ApplierManipulator(ILContext il)
     {
-        var originalInstructions = HookTargetRecords.GetOriginalInstructions(il.Method);
-        ILManipulationInfo info = new(il, Hook.Target, originalInstructions);
+        ILManipulationInfo info = new(il, Hook.Target);
 
         invoker(info);
 

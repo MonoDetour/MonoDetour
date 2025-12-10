@@ -199,9 +199,14 @@ static class TrackInstructions
     )
     {
         var method = body.Method;
-        HookTargetRecords.SwapOriginalInstructionsCollection(method, new(newOriginalInstructions));
-
         var hookTargetInfo = HookTargetRecords.GetHookTargetInfo(body.Method);
+
+        HookTargetRecords.SwapOriginalInstructionsCollection(
+            method,
+            hookTargetInfo,
+            new(newOriginalInstructions)
+        );
+
         var postfixes = hookTargetInfo.PostfixInfo.FirstPostfixInstructions;
 
         for (int i = 0; i < postfixes.Count; i++)
