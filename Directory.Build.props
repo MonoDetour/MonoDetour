@@ -34,7 +34,7 @@
     <RuntimeDetourVersion>[21.12.13.1,)</RuntimeDetourVersion>
     <SolutionRoot>$(MSBuildThisFileDirectory)</SolutionRoot>
     <!-- Release version for main MonoDetour package -->
-    <MonoDetourVersionPrefix>0.7.7</MonoDetourVersionPrefix>
+    <MonoDetourVersionPrefix>0.7.8</MonoDetourVersionPrefix>
     <MonoDetourVersionSuffix></MonoDetourVersionSuffix>
     <!-- Release version for HookGen and Analyzers packages -->
     <HookGenAndAnalyzersVersionPrefix>0.7.6</HookGenAndAnalyzersVersionPrefix>
