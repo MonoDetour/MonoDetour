@@ -23,6 +23,10 @@ namespace MonoDetour.Cil;
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 #pragma warning disable CS1573 // Parameter has no matching param tag in the XML comment (but other parameters do)
 
+/// <summary>
+/// An API for manipulating CIL instructions of method bodies.
+/// See https://monodetour.github.io/ilhooking/introduction/
+/// </summary>
 public class ILWeaver : IMonoDetourLogSource
 {
     private enum InsertType
@@ -469,24 +473,86 @@ public class ILWeaver : IMonoDetourLogSource
         return this;
     }
 
+    /// <summary>
+    /// Replaces the <paramref name="target"/> instruction.
+    /// </summary>
+    /// <remarks>
+    /// The <paramref name="target"/> instruction instance is left untouched and instead
+    /// the actual instance of the instruction that replaces it takes its place,
+    /// and as such it steals all the labels of <paramref name="target"/> to itself.
+    /// </remarks>
+    /// <param name="target">The instruction to replace.</param>
+    /// <param name="replacement">The replacement instruction.</param>
+    /// <returns>this <see cref="ILWeaver"/>.</returns>
     public ILWeaver Replace(Instruction target, Instruction replacement)
     {
         InsertAfter(target, replacement);
+        StealHandlerRole(target, replacement);
         Remove(target, out var label);
         RetargetLabels(label, replacement);
         return this;
     }
 
     /// <summary>
+    /// Replaces the <paramref name="target"/> instruction with the first instruction of the
+    /// <paramref name="replacement"/> IEnumerable and inserts the rest of the instructions after.
+    /// </summary>
+    /// <param name="replacement">The replacement instructions.
+    /// The first instruction replaces the <paramref name="target"/>.</param>
+    /// <returns>this <see cref="ILWeaver"/>.</returns>
+    /// <inheritdoc cref="Replace(Instruction, Instruction)"/>
+    /// <param name="target"></param>
+    public ILWeaver Replace(Instruction target, params IEnumerable<Instruction> replacement)
+    {
+        var first = replacement.FirstOrDefault();
+        if (first is null)
+            return this;
+
+        Replace(target, first);
+
+        var rest = replacement.Skip(1);
+        return InsertAfter(first, rest);
+    }
+
+    /// <inheritdoc cref="Replace(Instruction, IEnumerable{Instruction})"/>
+    public ILWeaver Replace(
+        Instruction target,
+        params IEnumerable<InstructionOrEnumerable> replacement
+    ) => Replace(target, replacement.Unwrap());
+
+    // ReplaceCurrent(Instruction, params IEnumerable<Instruction>)
+    // ReplaceCurrent(Instruction, params IEnumerable<InstructionOrEnumerable>)
+
+    /// <summary>
     /// Replaces the instruction at <see cref="Current"/>.
     /// </summary>
-    /// <param name="replacement"></param>
-    /// <returns>this <see cref="ILWeaver"/></returns>
+    /// <remarks>
+    /// The <see cref="Current"/> instruction instance is left untouched and instead
+    /// the actual instance of the instruction that replaces it takes its place,
+    /// and as such it steals all the labels of <see cref="Current"/> to itself.
+    /// </remarks>
+    /// <param name="replacement">The replacement instruction.</param>
+    /// <returns>this <see cref="ILWeaver"/>.</returns>
     public ILWeaver ReplaceCurrent(Instruction replacement)
     {
         Replace(Current, replacement);
         return this;
     }
+
+    /// <summary>
+    /// Replaces the <see cref="Current"/> instruction with the first instruction of the
+    /// <paramref name="replacement"/> IEnumerable and inserts the rest of the instructions after.
+    /// </summary>
+    /// <param name="replacement">The replacement instructions.
+    /// The first instruction replaces the <see cref="Current"/>.</param>
+    /// <returns>this <see cref="ILWeaver"/>.</returns>
+    /// <inheritdoc cref="ReplaceCurrent(Instruction)"/>
+    public ILWeaver ReplaceCurrent(params IEnumerable<Instruction> replacement) =>
+        Replace(Current, replacement);
+
+    /// <inheritdoc cref="ReplaceCurrent(IEnumerable{Instruction})"/>
+    public ILWeaver ReplaceCurrent(params IEnumerable<InstructionOrEnumerable> replacement) =>
+        ReplaceCurrent(replacement.Unwrap());
 
     [Obsolete(obsoleteMessageRemoveAt)]
     public ILWeaver RemoveAt(int index, int instructions, out IEnumerable<ILLabel> orphanedLabels)
@@ -1720,22 +1786,7 @@ public class ILWeaver : IMonoDetourLogSource
         // include the inserted instruction inside the start range.
         if (insertType is InsertType.BeforeAndStealLabels)
         {
-            foreach (var eh in Body.ExceptionHandlers)
-            {
-                if (eh.TryStart == instructionAtIndex)
-                    eh.TryStart = instruction;
-                if (eh.HandlerStart == instructionAtIndex)
-                    eh.HandlerStart = instruction;
-                if (eh.FilterStart == instructionAtIndex)
-                    eh.FilterStart = instruction;
-                // Handler end ranges is exclusive, so we most likely
-                // want our instruction to become the new end
-                if (eh.TryEnd == instructionAtIndex)
-                    eh.TryEnd = instruction;
-                if (eh.HandlerEnd == instructionAtIndex)
-                    eh.HandlerEnd = instruction;
-            }
-
+            StealHandlerRole(instructionAtIndex, instruction);
             RetargetLabels(GetIncomingLabelsFor(instructionAtIndex), instruction);
         }
         else if (insertType is InsertType.After)
@@ -1749,6 +1800,25 @@ public class ILWeaver : IMonoDetourLogSource
         InstructionOperandToILLabel(instruction);
         Instructions.Insert(index, instruction);
         return this;
+    }
+
+    private void StealHandlerRole(Instruction target, Instruction replacement)
+    {
+        foreach (var eh in Body.ExceptionHandlers)
+        {
+            if (eh.TryStart == target)
+                eh.TryStart = replacement;
+            if (eh.HandlerStart == target)
+                eh.HandlerStart = replacement;
+            if (eh.FilterStart == target)
+                eh.FilterStart = replacement;
+            // Handler end ranges is exclusive, so we most likely
+            // want our instruction to become the new end
+            if (eh.TryEnd == target)
+                eh.TryEnd = replacement;
+            if (eh.HandlerEnd == target)
+                eh.HandlerEnd = replacement;
+        }
     }
 
     // MonoMod's instruction matching extensions expect ILLabel[] or ILLabel.
