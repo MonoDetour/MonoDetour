@@ -19,7 +19,10 @@ public partial class ILWeaver
     /// <remarks>
     /// The <paramref name="target"/> instruction instance is left untouched and instead
     /// the actual instance of the instruction that replaces it takes its place,
-    /// and as such it steals all the labels of <paramref name="target"/> to itself.
+    /// and as such it steals all the labels of <paramref name="target"/> to itself.<br/>
+    /// <br/>
+    /// If <see cref="Current"/> points to the instruction being replaced,
+    /// it is moved to the <paramref name="replacement"/> instruction.
     /// </remarks>
     /// <param name="target">The instruction to replace.</param>
     /// <param name="replacement">The replacement instruction.</param>
@@ -89,6 +92,38 @@ public partial class ILWeaver
         ReplaceCurrent(replacement.Unwrap());
 
     /// <summary>
+    /// Replaces the <paramref name="target"/> instruction's Operand.
+    /// </summary>
+    /// <remarks>
+    /// The <paramref name="target"/> instruction instance is left untouched and instead
+    /// a copy of the instruction with the replacement operand takes its place,
+    /// and as such it steals all the labels of <paramref name="target"/> to itself.<br/>
+    /// <br/>
+    /// If <see cref="Current"/> points to the instruction being replaced,
+    /// it is moved to the replacement instruction.
+    /// </remarks>
+    /// <param name="target">The instruction whose Operand to replace.</param>
+    /// <param name="replacementOperand">The new operand value to replace the old one.</param>
+    /// <returns>this <see cref="ILWeaver"/>.</returns>
+    public ILWeaver ReplaceOperand(Instruction target, object replacementOperand)
+    {
+        var replacement = Create(target.OpCode, replacementOperand);
+        return Replace(target, replacement);
+    }
+
+    /// <summary>
+    /// Replaces the <see cref="Current"/> instruction's Operand.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="Current"/> instruction instance is left untouched and instead
+    /// a copy of the instruction with the replacement operand takes its place,
+    /// and as such it steals all the labels of <see cref="Current"/> to itself.
+    /// </remarks>
+    /// <inheritdoc cref="ReplaceOperand(Instruction, object)"/>
+    public ILWeaver ReplaceCurrentOperand(object replacementOperand) =>
+        ReplaceOperand(Current, replacementOperand);
+
+    /// <summary>
     /// Removes the provided <paramref name="instruction"/> from the method body and
     /// moves all its labels and exception handler range roles to the next instruction.<br/>
     /// <br/>
@@ -132,6 +167,7 @@ public partial class ILWeaver
                 "Attempted to remove more instructions than there are available."
             );
 
+        // TODO: Write test for method with 1 instruction that will be removed.
         var shiftTarget = Instructions[endIndex + 1];
 
         if (currentIndex >= index && currentIndex <= endIndex)
