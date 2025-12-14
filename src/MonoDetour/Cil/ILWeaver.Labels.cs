@@ -33,16 +33,22 @@ public partial class ILWeaver
         return this;
     }
 
-    /// <param name="label">The label to retarget.</param>
-    /// <param name="target">The new target instruction for the label.</param>
+    /// <summary>
+    /// Retargets ILLabels targeting <paramref name="source"/> instruction
+    /// to <paramref name="target"/> instruction.
+    /// </summary>
+    /// <param name="source">The instruction whose labels to retarget.</param>
     /// <inheritdoc cref="RetargetLabels(IEnumerable{ILLabel}, Instruction)"/>
+    /// <param name="target"></param>
+    public ILWeaver RetargetLabels(Instruction source, Instruction target) =>
+        RetargetLabels(GetIncomingLabelsFor(source), target);
+
+    /// <param name="label">The label to retarget.</param>
+    /// <inheritdoc cref="RetargetLabels(IEnumerable{ILLabel}, Instruction)"/>
+    /// <param name="target"></param>
     public ILWeaver RetargetLabels(ILLabel? label, Instruction target)
     {
-        if (label is not null)
-        {
-            label.InteropSetTarget(target);
-        }
-
+        label?.InteropSetTarget(target);
         return this;
     }
 

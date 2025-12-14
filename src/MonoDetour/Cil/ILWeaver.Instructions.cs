@@ -27,10 +27,7 @@ public partial class ILWeaver
     public ILWeaver Replace(Instruction target, Instruction replacement)
     {
         InsertAfter(target, replacement);
-        StealHandlerRole(target, replacement);
-        Remove(target, out var label);
-        RetargetLabels(label, replacement);
-        return this;
+        return RemoveAndShiftLabels(target);
     }
 
     /// <summary>
@@ -91,8 +88,70 @@ public partial class ILWeaver
     public ILWeaver ReplaceCurrent(params IEnumerable<InstructionOrEnumerable> replacement) =>
         ReplaceCurrent(replacement.Unwrap());
 
+    /// <summary>
+    /// Removes the provided <paramref name="instruction"/> from the method body and
+    /// moves all its labels and exception handler range roles to the next instruction.<br/>
+    /// <br/>
+    /// <b>Important:</b> If you are removing an instruction to replace it, use
+    /// <see cref="Replace(Instruction, Instruction)"/> or any of the variants instead.
+    /// </summary>
+    /// <remarks>
+    /// If <see cref="Current"/> points to an instruction to be removed, it is moved to
+    /// the next instruction alongside the labels.<br/>
+    /// <br/>
+    /// Note: Removing instructions have consequences as described by this method.
+    /// This method does what is necessary to not break the target method in cases where
+    /// labels would not be shifted. As such, this is <i>the method</i> for removing instructions,
+    /// and there is no variant which does not shift labels (that is not deprecate anyways).
+    /// </remarks>
+    /// <param name="instruction">The instruction to remove.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver RemoveAndShiftLabels(Instruction instruction) =>
+        RemoveAndShiftLabelsInternal(Instructions.IndexOf(instruction), 1);
+
+    /// <summary>
+    /// Removes <see cref="Current"/> from the method body and
+    /// moves all its labels and exception handler range roles to the next instruction.<br/>
+    /// <br/>
+    /// <b>Important:</b> If you are removing an instruction to replace it, use
+    /// <see cref="ReplaceCurrent(Instruction)"/> or any of the variants instead.
+    /// </summary>
+    /// <inheritdoc cref="RemoveAndShiftLabels(Instruction)"/>
+    public ILWeaver RemoveCurrentAndShiftLabels() => RemoveAndShiftLabels(Current);
+
+    ILWeaver RemoveAndShiftLabelsInternal(int index, int instructions)
+    {
+        int endIndex = index + instructions - 1;
+        int currentIndex = Index;
+
+        if (instructions < 0)
+            throw new IndexOutOfRangeException("Can not remove a negative amount of instructions.");
+
+        if (endIndex > Instructions.Count)
+            throw new IndexOutOfRangeException(
+                "Attempted to remove more instructions than there are available."
+            );
+
+        var shiftTarget = Instructions[endIndex + 1];
+
+        if (currentIndex >= index && currentIndex <= endIndex)
+        {
+            Current = shiftTarget;
+        }
+
+        while (instructions-- > 0)
+        {
+            var toRemove = Instructions[index];
+            RetargetLabels(toRemove, shiftTarget);
+            StealHandlerRole(toRemove, shiftTarget);
+            Instructions.RemoveAt(index);
+        }
+
+        return this;
+    }
+
     /// <summary></summary>
-    [Obsolete(obsoleteMessageRemoveAt)]
+    [Obsolete(obsoleteMessageRemoveAt, true)]
     public ILWeaver RemoveAt(int index, int instructions, out IEnumerable<ILLabel> orphanedLabels)
     {
         int endIndex = index + instructions - 1;
@@ -126,7 +185,7 @@ public partial class ILWeaver
     }
 
     /// <summary></summary>
-    [Obsolete(obsoleteMessageRemoveAt)]
+    [Obsolete(obsoleteMessageRemoveAt, true)]
     public ILWeaver RemoveAtCurrent(int instructions, out IEnumerable<ILLabel> orphanedLabels) =>
         RemoveAt(Index, instructions, out orphanedLabels);
 
@@ -134,9 +193,7 @@ public partial class ILWeaver
     [Obsolete("Use RemoveAndShiftLabels instead.")]
     public ILWeaver Remove(Instruction instruction, out ILLabel? orphanedLabel)
     {
-#pragma warning disable CS0618 // Type or member is obsolete
         RemoveAt(Instructions.IndexOf(instruction), 1, out var orphanedLabels);
-#pragma warning restore CS0618 // Type or member is obsolete
         orphanedLabel = orphanedLabels.FirstOrDefault();
         return this;
     }
