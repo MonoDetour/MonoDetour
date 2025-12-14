@@ -177,13 +177,9 @@ public partial class ILWeaver
             if (enumerable is { IsEvaluated: true, StackSize: <= 0 })
                 break;
 
-            enumerable = enumerable.Next;
-
-            if (enumerable is null)
-            {
-                Console.WriteLine("threw");
-                throw new NullReferenceException("There was no next empty stack.");
-            }
+            enumerable =
+                enumerable.Next
+                ?? throw new NullReferenceException("There was no next empty stack.");
         }
 
         return enumerable.Instruction;

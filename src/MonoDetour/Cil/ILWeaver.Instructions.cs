@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
@@ -44,13 +45,14 @@ public partial class ILWeaver
     /// <param name="target"></param>
     public ILWeaver Replace(Instruction target, params IEnumerable<Instruction> replacement)
     {
-        var first = replacement.FirstOrDefault();
+        var noNull = replacement.Where(x => x is { });
+        var first = noNull.FirstOrDefault();
         if (first is null)
             return this;
 
         Replace(target, first);
 
-        var rest = replacement.Skip(1);
+        var rest = noNull.Skip(1);
         return InsertAfter(first, rest);
     }
 
@@ -162,13 +164,40 @@ public partial class ILWeaver
         if (instructions < 0)
             throw new IndexOutOfRangeException("Can not remove a negative amount of instructions.");
 
-        if (endIndex > Instructions.Count)
+        if (index == -1)
+            throw new IndexOutOfRangeException(
+                $"The index -1 or target instruction to be removed does not exist in the method body."
+            );
+        else if (endIndex >= Instructions.Count)
             throw new IndexOutOfRangeException(
                 "Attempted to remove more instructions than there are available."
             );
 
-        // TODO: Write test for method with 1 instruction that will be removed.
-        var shiftTarget = Instructions[endIndex + 1];
+        // We want to shift labels forward if possible.
+        // If not, we will move them backwards for consistency.
+        Instruction shiftTarget;
+        if (endIndex + 1 < Instructions.Count)
+        {
+            shiftTarget = Instructions[endIndex + 1];
+        }
+        else
+        {
+            if (index != 0)
+                shiftTarget = Instructions[index - 1];
+            else
+            {
+                // If there is nowhere for labels to go,
+                // they must go into future next inserted instruction.
+                // Though, is there a point in doing this?
+                // There's no instructions in the method body after this.
+                // But let's just do it because maybe there is a use case.
+                foreach (var label in Context.Labels)
+                    pendingFutureNextInsertLabels.Add(label);
+
+                Instructions.Clear();
+                return this;
+            }
+        }
 
         if (currentIndex >= index && currentIndex <= endIndex)
         {
@@ -187,6 +216,8 @@ public partial class ILWeaver
     }
 
     /// <summary></summary>
+    [Browsable(false)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     [Obsolete(obsoleteMessageRemoveAt, true)]
     public ILWeaver RemoveAt(int index, int instructions, out IEnumerable<ILLabel> orphanedLabels)
     {
@@ -221,11 +252,15 @@ public partial class ILWeaver
     }
 
     /// <summary></summary>
+    [Browsable(false)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     [Obsolete(obsoleteMessageRemoveAt, true)]
     public ILWeaver RemoveAtCurrent(int instructions, out IEnumerable<ILLabel> orphanedLabels) =>
         RemoveAt(Index, instructions, out orphanedLabels);
 
     /// <summary></summary>
+    [Browsable(false)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     [Obsolete("Use RemoveAndShiftLabels instead.")]
     public ILWeaver Remove(Instruction instruction, out ILLabel? orphanedLabel)
     {
@@ -235,6 +270,8 @@ public partial class ILWeaver
     }
 
     /// <summary></summary>
+    [Browsable(false)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     [Obsolete("Use RemoveCurrentAndShiftLabels instead.")]
     public ILWeaver RemoveCurrent(out ILLabel? orphanedLabel)
     {
@@ -244,35 +281,52 @@ public partial class ILWeaver
         return this;
     }
 
-    ILWeaver InsertAtInternal(int index, Instruction instruction, InsertType insertType)
+    ILWeaver InsertAtInternal(ref int refIndex, Instruction instruction, InsertType insertType)
     {
         Helpers.ThrowIfNull(instruction);
+        var index = refIndex;
 
         if (index == -1)
         {
-            throw new IndexOutOfRangeException(
-                $"The index -1 or target instruction to be inserted at does not exist in the method body."
-            );
+            // If there are no instructions in the method body, ILWeaver would
+            // be incapable of inserting new instructions without this hack.
+            if (Instructions.Count == 0)
+            {
+                refIndex = insertType is InsertType.After ? -1 : 0;
+                index = refIndex;
+
+                if (insertType is InsertType.BeforeAndStealLabels)
+                    insertType = InsertType.Before;
+
+                CurrentTo(instruction);
+            }
+            else
+            {
+                throw new IndexOutOfRangeException(
+                    $"The index -1 or target instruction to be inserted at does not exist in the method body."
+                );
+            }
         }
-        else if (index > Instructions.Count - 1)
+
+        if (insertType is InsertType.After)
+        {
+            index += 1;
+        }
+
+        if (index > Instructions.Count)
         {
             throw new IndexOutOfRangeException(
                 $"The index to be inserted is out of range; index: {index} / instructions: {Instructions.Count}"
             );
         }
 
-        Instruction instructionAtIndex = Instructions[index];
-
         // When inserting before a target instruction that is inside handler ranges,
         // include the inserted instruction inside the start range.
         if (insertType is InsertType.BeforeAndStealLabels)
         {
+            Instruction instructionAtIndex = Instructions[index];
             StealHandlerRole(instructionAtIndex, instruction);
             RetargetLabels(GetIncomingLabelsFor(instructionAtIndex), instruction);
-        }
-        else if (insertType is InsertType.After)
-        {
-            index += 1;
         }
 
         RetargetLabels(pendingFutureNextInsertLabels, instruction);
@@ -354,16 +408,17 @@ public partial class ILWeaver
     /// </remarks>
     public ILWeaver InsertBeforeStealLabels(int index, params IEnumerable<Instruction> instructions)
     {
-        var first = instructions.FirstOrDefault();
+        var noNull = instructions.Where(x => x is { });
+        var first = noNull.FirstOrDefault();
         if (first is null)
             return this;
 
-        InsertAtInternal(index, first, InsertType.BeforeAndStealLabels);
+        InsertAtInternal(ref index, first, InsertType.BeforeAndStealLabels);
         index++;
 
-        foreach (var instruction in instructions.Skip(1))
+        foreach (var instruction in noNull.Skip(1))
         {
-            InsertAtInternal(index, instruction, InsertType.Before);
+            InsertAtInternal(ref index, instruction, InsertType.Before);
             index++;
         }
 
@@ -409,9 +464,9 @@ public partial class ILWeaver
     /// </summary>
     public ILWeaver InsertBefore(int index, params IEnumerable<Instruction> instructions)
     {
-        foreach (var instruction in instructions)
+        foreach (var instruction in instructions.Where(x => x is { }))
         {
-            InsertAtInternal(index, instruction, InsertType.Before);
+            InsertAtInternal(ref index, instruction, InsertType.Before);
             index++;
         }
 
@@ -453,9 +508,9 @@ public partial class ILWeaver
     /// </summary>
     public ILWeaver InsertAfter(int index, params IEnumerable<Instruction> instructions)
     {
-        foreach (var instruction in instructions)
+        foreach (var instruction in instructions.Where(x => x is { }))
         {
-            InsertAtInternal(index, instruction, InsertType.After);
+            InsertAtInternal(ref index, instruction, InsertType.After);
             index++;
         }
 
@@ -487,9 +542,9 @@ public partial class ILWeaver
     public ILWeaver InsertAfterCurrent(params IEnumerable<Instruction> instructions)
     {
         int index = Index;
-        foreach (var instruction in instructions)
+        foreach (var instruction in instructions.Where(x => x is { }))
         {
-            InsertAtInternal(index, instruction, InsertType.After);
+            InsertAtInternal(ref index, instruction, InsertType.After);
             CurrentTo(instruction);
             index++;
         }

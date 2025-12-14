@@ -19,5 +19,5 @@ public static class ILContextExtensions
     /// </summary>
     /// <returns>A rich string presentation of the method body's instructions.</returns>
     public static string ToAnalyzedString(this ILContext context) =>
-        context.Body.CreateInformationalSnapshotJIT().AnnotateErrors().ToStringWithAnnotations();
+        context.Body.CreateInformationalSnapshotJIT().AnnotateErrors().ToString();
 }

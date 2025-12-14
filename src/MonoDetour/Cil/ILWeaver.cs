@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoDetour.Logging;
@@ -132,7 +133,13 @@ public partial class ILWeaver : IMonoDetourLogSource
     {
         ManipulationInfo = Helpers.ThrowIfNull(il);
         Context = il.Context;
-        current = Context.Instrs[0];
+
+        // ILWeaver promises that Current is never null (maybe), so if the target method
+        // does not have any instructions, we assign it to one that is not on the method.
+        // If we insert an instruction in the above scenario, the instruction goes in the
+        // method body and Current will be set to that instruction.
+        var first = Instructions.FirstOrDefault();
+        current = first is { } ? first : Create(OpCodes.Ldstr, "The method body is empty.");
 
         il.OnManipulatorFinished += () =>
         {

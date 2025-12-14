@@ -120,8 +120,9 @@ static class ILHookDMDManipulation
         bool found = c.TryGotoNext(MoveType.After, x => x.MatchNewobj(dmdConstructor));
         if (!found)
         {
-            Console.WriteLine(il);
-            throw new NullReferenceException("DMD construction not found.");
+            throw new NullReferenceException(
+                "DMD construction not found. " + il.ToAnalyzedString()
+            );
         }
 
         c.EmitDelegate(BorrowDMD);
