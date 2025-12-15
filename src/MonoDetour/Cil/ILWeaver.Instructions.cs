@@ -292,8 +292,14 @@ public partial class ILWeaver
             // be incapable of inserting new instructions without this hack.
             if (Instructions.Count == 0)
             {
+                // We'll have to rewrite refIndex so the potential next
+                // instruction to be inserted from an IEnumerable will
+                // be inserted right after the instruction we are inserting.
+                // Because InsertType.After offsets index by 1, setting it
+                // to -1 here means it's 0 for the next instruction where
+                // it'll be offset to 1, which is after this instruction.
                 refIndex = insertType is InsertType.After ? -1 : 0;
-                index = refIndex;
+                index = 0;
 
                 if (insertType is InsertType.BeforeAndStealLabels)
                     insertType = InsertType.Before;
@@ -307,8 +313,7 @@ public partial class ILWeaver
                 );
             }
         }
-
-        if (insertType is InsertType.After)
+        else if (insertType is InsertType.After)
         {
             index += 1;
         }
