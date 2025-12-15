@@ -325,8 +325,6 @@ public partial class ILWeaver
             );
         }
 
-        // When inserting before a target instruction that is inside handler ranges,
-        // include the inserted instruction inside the start range.
         if (insertType is InsertType.BeforeAndStealLabels)
         {
             Instruction instructionAtIndex = Instructions[index];
