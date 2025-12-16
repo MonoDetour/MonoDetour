@@ -51,6 +51,7 @@ public partial class ILWeaver
     /// </summary>
     /// <returns>this <see cref="ILWeaver"/></returns>
     /// <exception cref="ArgumentNullException"></exception>
+    [MemberNotNull(nameof(current))]
     public ILWeaver CurrentTo(Instruction instruction)
     {
         if (instruction is null)

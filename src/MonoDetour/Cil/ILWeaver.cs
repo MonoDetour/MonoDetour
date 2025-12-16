@@ -60,6 +60,10 @@ public partial class ILWeaver : IMonoDetourLogSource
     /// The instruction this weaver currently points to.
     /// </summary>
     /// <remarks>
+    /// Even if the method body would have no instructions, ILWeaver
+    /// creates a temporary instruction on the method body to ensure
+    /// this can always be used as a reference for inserting new instructions.<br/>
+    /// <br/>
     /// Setter is <see cref="CurrentTo(Instruction)"/>.<br/>
     /// For replacing the current instruction,
     /// see <see cref="ReplaceCurrent(Instruction)"/>
@@ -118,6 +122,7 @@ public partial class ILWeaver : IMonoDetourLogSource
         MonoDetourLogger.LogChannel.Warning | MonoDetourLogger.LogChannel.Error;
 
     Instruction current;
+    Instruction? temporaryInstruction;
 
     readonly List<ILLabel> pendingFutureNextInsertLabels = [];
     readonly List<IWeaverExceptionHandler> pendingHandlers = [];
@@ -135,15 +140,23 @@ public partial class ILWeaver : IMonoDetourLogSource
         ManipulationInfo = Helpers.ThrowIfNull(il);
         Context = il.Context;
 
-        // ILWeaver promises that Current is never null (maybe), so if the target method
-        // does not have any instructions, we assign it to one that is not on the method.
-        // If we insert an instruction in the above scenario, the instruction goes in the
-        // method body and Current will be set to that instruction.
         var first = Instructions.FirstOrDefault();
-        current = first is { } ? first : Create(OpCodes.Ldstr, "The method body is empty.");
+        if (first is { })
+            current = first;
+        else
+            InsertTemporaryCurrentTarget();
 
         il.OnManipulatorFinished += () =>
         {
+            if (temporaryInstruction is { })
+            {
+                var index = Instructions.IndexOf(temporaryInstruction);
+                if (index != -1)
+                {
+                    RemoveAndShiftLabelsInternal(index, 1);
+                }
+            }
+
             foreach (var maybeRemove in existingHandlersToMaybeRemove)
             {
                 // HanderStart is inclusive and HandlerEnd is exclusive,
@@ -174,6 +187,16 @@ public partial class ILWeaver : IMonoDetourLogSource
             return;
 
         Current = weaver.Current;
+    }
+
+    [MemberNotNull(nameof(current))]
+    void InsertTemporaryCurrentTarget()
+    {
+        // Inserting instructions will be much more predictable if we have
+        // a temporary instruction on the method body.
+        temporaryInstruction ??= Create(OpCodes.Nop, (object)"ILWeaver temporary instruction.");
+        Instructions.Add(temporaryInstruction);
+        CurrentTo(temporaryInstruction);
     }
 
     /// <summary>

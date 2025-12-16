@@ -21,15 +21,20 @@ public static class EmptyBodyTests
             // Test 2: Inserting instructions in an empty body.
             w.InsertBeforeCurrent(w.Create(Op.Nop), w.Create(Op.Ret));
             w.RemoveCurrentAndShiftLabels();
+            w.RemoveCurrentAndShiftLabels();
 
             // Test 3: Removing the only instruction.
+            // ILWeaver should have added a temporary instruction so this would be last.
             w.RemoveCurrentAndShiftLabels();
 
+            // This is the way to actually remove all instructions while in a ILHook manipulator.
+            w.Instructions.Clear();
+
             // ...and testing the same with other insert methods.
-            w.InsertAfter(null!, w.Create(Op.Nop), w.Create(Op.Ret));
+            w.InsertAfterCurrent(w.Create(Op.Nop), w.Create(Op.Ret));
             w.RemoveCurrentAndShiftLabels();
             w.RemoveCurrentAndShiftLabels();
-            w.InsertBeforeStealLabels(null!, w.Create(Op.Nop), w.Create(Op.Ret));
+            w.InsertBeforeCurrentStealLabels(w.Create(Op.Nop), w.Create(Op.Ret));
         });
 
         var method = dmd.Generate().CreateDelegate<Action>();
@@ -37,23 +42,23 @@ public static class EmptyBodyTests
         method();
     }
 
-    // [Fact]
-    // public static void CanInsertCorrectly()
-    // {
-    //     using var dmd = new DynamicMethodDefinition("CanInsertCorrectlyTest", null, []);
+    [Fact]
+    public static void CanInsertCorrectly()
+    {
+        using var dmd = new DynamicMethodDefinition("CanInsertCorrectlyTest", null, []);
 
-    //     dmd.Definition.ILWeave(info =>
-    //     {
-    //         ILWeaver w = new(info);
+        dmd.Definition.ILWeave(info =>
+        {
+            ILWeaver w = new(info);
 
-    //         w.InsertBeforeCurrent(w.Create(Op.Ldc_I4_0), w.Create(Op.Add));
-    //         w.InsertBeforeCurrent(w.Create(Op.Ret));
-    //         MonoDetourLogger.Log(MonoDetourLogger.LogChannel.Warning, info.ToString());
-    //         // w.RemoveRangeAndShiftLabels(w.First, w.Last.Previous);
-    //     });
+            w.InsertBeforeCurrent(w.Create(Op.Ldc_I4_0), w.Create(Op.Pop));
 
-    //     var method = dmd.Generate().CreateDelegate<Action>();
+            // This should be the last instruction.
+            w.InsertBeforeCurrent(w.Create(Op.Ret));
+        });
 
-    //     method();
-    // }
+        var method = dmd.Generate().CreateDelegate<Action>();
+
+        method();
+    }
 }

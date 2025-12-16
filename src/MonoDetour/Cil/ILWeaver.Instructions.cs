@@ -242,6 +242,8 @@ public partial class ILWeaver
                     pendingFutureNextInsertLabels.Add(label);
 
                 Instructions.Clear();
+
+                InsertTemporaryCurrentTarget();
                 return this;
             }
         }
@@ -339,21 +341,18 @@ public partial class ILWeaver
         {
             // If there are no instructions in the method body, ILWeaver would
             // be incapable of inserting new instructions without this hack.
+            // Normally this wouldn't happen because ILWeaver inserts a temporary
+            // instruction if instruction count is 0, but users can still remove
+            // all instructions by using e.g. Instructions.Clear()
             if (Instructions.Count == 0)
             {
                 // We'll have to rewrite refIndex so the potential next
                 // instruction to be inserted from an IEnumerable will
-                // be inserted right after the instruction we are inserting.
-                // Because InsertType.After offsets index by 1, setting it
-                // to -1 here means it's 0 for the next instruction where
-                // it'll be offset to 1, which is after this instruction.
-                refIndex = insertType is InsertType.After ? -1 : 0;
+                // target our temporary instruction.
+                refIndex = 0;
                 index = 0;
 
-                if (insertType is InsertType.BeforeAndStealLabels)
-                    insertType = InsertType.Before;
-
-                CurrentTo(instruction);
+                InsertTemporaryCurrentTarget();
             }
             else
             {
@@ -362,7 +361,8 @@ public partial class ILWeaver
                 );
             }
         }
-        else if (insertType is InsertType.After)
+
+        if (insertType is InsertType.After)
         {
             index += 1;
         }

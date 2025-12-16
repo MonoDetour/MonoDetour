@@ -16,14 +16,9 @@ public static class RemoveTests
             var start = w.Create(Op.Ldc_I4_0);
             var end = w.Create(Op.Throw);
             var handlerStart = w.Create(Op.Pop);
+            var ret = w.Create(Op.Ret);
 
-            w.InsertBeforeCurrent(
-                w.Create(Op.Ldc_I4_1),
-                start,
-                end,
-                handlerStart,
-                w.Create(Op.Ret)
-            );
+            w.InsertBeforeCurrent(w.Create(Op.Ldc_I4_1), start, end, handlerStart, ret);
 
             w.HandlerCreateCatch(null, out var handler)
                 .HandlerSetTryStart(start, handler)
@@ -31,7 +26,7 @@ public static class RemoveTests
                 .HandlerSetHandlerEnd(handlerStart, handler)
                 .HandlerApply(handler);
 
-            w.RemoveRangeAndShiftLabels(start, w.Last.Previous);
+            w.RemoveRangeAndShiftLabels(start, ret.Previous);
         });
 
         var method = dmd.Generate().CreateDelegate<Func<bool>>();
