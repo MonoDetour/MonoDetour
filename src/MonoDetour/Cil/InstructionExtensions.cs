@@ -14,6 +14,51 @@ namespace MonoDetour.Cil;
 public static class InstructionExtensions
 {
     /// <summary>
+    /// Stores an instruction instance into an 'out' parameter variable while
+    /// returning the same instruction instance for convenient use in
+    /// methods that take instruction instances, e.g.
+    /// <code>
+    /// <![CDATA[
+    /// weaver.InsertBeforeCurrent(
+    ///     w.Create(OpCodes.Ldc_I4_0).Get(out var ldcI40),
+    ///     w.Create(OpCodes.Ret).Get(out var ret)
+    /// );
+    /// ]]>
+    /// </code>
+    /// </summary>
+    /// <param name="source">The instruction instance to get.</param>
+    /// <param name="instruction">The got instruction instance.</param>
+    /// <returns>The same instruction instance.</returns>
+    public static Instruction Get(this Instruction source, out Instruction instruction)
+    {
+        instruction = source;
+        return source;
+    }
+
+    /// <summary>
+    /// Marks an instruction as a target of an <see cref="ILLabel"/> while returning
+    /// the same instruction instance for convenient use in
+    /// methods that take instruction instances, e.g.
+    /// <code>
+    /// <![CDATA[
+    /// ILLabel label = weaver.DeclareLabel();
+    /// // ...
+    /// weaver.InsertBeforeCurrent(
+    ///     w.Create(OpCodes.Ret).MarkLabel(label)
+    /// );
+    /// ]]>
+    /// </code>
+    /// </summary>
+    /// <param name="instruction">The instruction to mark a label with.</param>
+    /// <param name="label">The label to be marked.</param>
+    /// <returns>The same instruction instance.</returns>
+    public static Instruction MarkLabel(this Instruction instruction, ILLabel label)
+    {
+        label.InteropSetTarget(instruction);
+        return instruction;
+    }
+
+    /// <summary>
     /// Returns a string representation of an <see cref="Instruction"/> without fear of
     /// <see cref="InvalidCastException"/>.
     /// </summary>

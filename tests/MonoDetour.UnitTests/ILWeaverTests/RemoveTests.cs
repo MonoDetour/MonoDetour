@@ -13,12 +13,13 @@ public static class RemoveTests
         {
             ILWeaver w = new(info);
 
-            var start = w.Create(Op.Ldc_I4_0);
-            var end = w.Create(Op.Throw);
-            var handlerStart = w.Create(Op.Pop);
-            var ret = w.Create(Op.Ret);
-
-            w.InsertBeforeCurrent(w.Create(Op.Ldc_I4_1), start, end, handlerStart, ret);
+            w.InsertBeforeCurrent(
+                w.Create(Op.Ldc_I4_1),
+                w.Create(Op.Ldc_I4_0).Get(out var start),
+                w.Create(Op.Throw),
+                w.Create(Op.Pop).Get(out var handlerStart),
+                w.Create(Op.Ret).Get(out var ret)
+            );
 
             w.HandlerCreateCatch(null, out var handler)
                 .HandlerSetTryStart(start, handler)
