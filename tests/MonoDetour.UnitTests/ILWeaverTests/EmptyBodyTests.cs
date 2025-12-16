@@ -36,4 +36,24 @@ public static class EmptyBodyTests
 
         method();
     }
+
+    // [Fact]
+    // public static void CanInsertCorrectly()
+    // {
+    //     using var dmd = new DynamicMethodDefinition("CanInsertCorrectlyTest", null, []);
+
+    //     dmd.Definition.ILWeave(info =>
+    //     {
+    //         ILWeaver w = new(info);
+
+    //         w.InsertBeforeCurrent(w.Create(Op.Ldc_I4_0), w.Create(Op.Add));
+    //         w.InsertBeforeCurrent(w.Create(Op.Ret));
+    //         MonoDetourLogger.Log(MonoDetourLogger.LogChannel.Warning, info.ToString());
+    //         // w.RemoveRangeAndShiftLabels(w.First, w.Last.Previous);
+    //     });
+
+    //     var method = dmd.Generate().CreateDelegate<Action>();
+
+    //     method();
+    // }
 }

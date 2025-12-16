@@ -121,6 +121,7 @@ public partial class ILWeaver : IMonoDetourLogSource
 
     readonly List<ILLabel> pendingFutureNextInsertLabels = [];
     readonly List<IWeaverExceptionHandler> pendingHandlers = [];
+    readonly List<ExceptionHandler> existingHandlersToMaybeRemove = [];
 
     const string gotoMatchingDocsLink = "<documentation link will be here once it exists>";
 
@@ -143,6 +144,17 @@ public partial class ILWeaver : IMonoDetourLogSource
 
         il.OnManipulatorFinished += () =>
         {
+            foreach (var maybeRemove in existingHandlersToMaybeRemove)
+            {
+                // HanderStart is inclusive and HandlerEnd is exclusive,
+                // therefore they can't be the same.
+                // This would be the case if almost the whole handler block was removed.
+                if (maybeRemove.HandlerStart == maybeRemove.HandlerEnd)
+                {
+                    Body.ExceptionHandlers.Remove(maybeRemove);
+                }
+            }
+
             foreach (var handler in pendingHandlers.ToArray())
             {
                 HandlerApply(handler);

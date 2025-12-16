@@ -1,1 +1,2 @@
 M:Mono.Cecil.Cil.Instruction.ToString(); Does unsafe casting which may result in InvalidCastException
+M:MonoMod.Cil.ILContext.IndexOf(T:Mono.Cecil.Cil.Instruction); Failure doesn't return -1

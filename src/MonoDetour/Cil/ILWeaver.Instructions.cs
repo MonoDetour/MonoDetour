@@ -133,13 +133,17 @@ public partial class ILWeaver
     /// <see cref="Replace(Instruction, Instruction)"/> or any of the variants instead.
     /// </summary>
     /// <remarks>
+    /// If there is no next instruction, the previous instruction will be the shift target.
+    /// If there is no previous instruction either, the next inserted instruction will be
+    /// the new shift target.<br/>
+    /// <br/>
     /// If <see cref="Current"/> points to an instruction to be removed, it is moved to
     /// the next instruction alongside the labels.<br/>
     /// <br/>
     /// Note: Removing instructions have consequences as described by this method.
     /// This method does what is necessary to not break the target method in cases where
-    /// labels would not be shifted. As such, this is <i>the method</i> for removing instructions,
-    /// and there is no variant which does not shift labels (that is not deprecate anyways).
+    /// labels would not be shifted. As such, there is no variant which does not shift labels
+    /// (that is not deprecate anyways).
     /// </remarks>
     /// <param name="instruction">The instruction to remove.</param>
     /// <returns>This <see cref="ILWeaver"/>.</returns>
@@ -156,12 +160,55 @@ public partial class ILWeaver
     /// <inheritdoc cref="RemoveAndShiftLabels(Instruction)"/>
     public ILWeaver RemoveCurrentAndShiftLabels() => RemoveAndShiftLabels(Current);
 
-    ILWeaver RemoveAndShiftLabelsInternal(int index, int instructions)
+    /// <summary>
+    /// Removes the instructions in the inclusive <paramref name="start"/> to
+    /// <paramref name="end"/> range from the method body and
+    /// moves all their labels and exception handler range roles to the next available instruction.
+    /// </summary>
+    /// <remarks>
+    /// The order of <paramref name="start"/> and <paramref name="end"/> does not matter.<br/>
+    /// <br/>
+    /// If there is no next instruction, the previous instruction will be the shift target.
+    /// If there is no previous instruction either, the next inserted instruction will be
+    /// the new shift target.<br/>
+    /// <br/>
+    /// If <see cref="Current"/> points to an instruction to be removed, it is moved to
+    /// the next available instruction alongside the labels.<br/>
+    /// <br/>
+    /// Exception handlers: If the range contains the <see cref="ExceptionHandler.HandlerStart"/>
+    /// and previous instruction of <see cref="ExceptionHandler.HandlerEnd"/> of an
+    /// exception handler, and the handler block is not fixed to be valid again during the
+    /// execution of the ILHook manipulator method, it will be removed from the method body.<br/>
+    /// <br/>
+    /// Note: Removing instructions have consequences as described by this method.
+    /// This method does what is necessary to not break the target method in cases where
+    /// labels would not be shifted. As such, there is no variant which does not shift labels
+    /// (that is not deprecate anyways).
+    /// </remarks>
+    /// <param name="start">The first instruction in the range to remove.</param>
+    /// <param name="end">The last instruction in the range to remove.</param>
+    /// <returns>This <see cref="ILWeaver"/>.</returns>
+    public ILWeaver RemoveRangeAndShiftLabels(Instruction start, Instruction end)
     {
-        int endIndex = index + instructions - 1;
+        var startIndex = Instructions.IndexOf(start);
+        if (startIndex == -1)
+            throw new ArgumentException($"'{nameof(start)}' is not part of the method body.");
+
+        var endIndex = Instructions.IndexOf(end);
+        if (endIndex == -1)
+            throw new ArgumentException($"'{nameof(end)}' is not part of the method body.");
+
+        var index = Math.Min(startIndex, endIndex);
+        var count = Math.Abs(startIndex - endIndex) + 1;
+        return RemoveAndShiftLabelsInternal(index, count);
+    }
+
+    ILWeaver RemoveAndShiftLabelsInternal(int index, int count)
+    {
+        int endIndex = index + count - 1;
         int currentIndex = Index;
 
-        if (instructions < 0)
+        if (count < 0)
             throw new IndexOutOfRangeException("Can not remove a negative amount of instructions.");
 
         if (index == -1)
@@ -191,7 +238,7 @@ public partial class ILWeaver
                 // Though, is there a point in doing this?
                 // There's no instructions in the method body after this.
                 // But let's just do it because maybe there is a use case.
-                foreach (var label in Context.Labels)
+                foreach (var label in Context.Labels.Where(x => x.InteropGetTarget() is { }))
                     pendingFutureNextInsertLabels.Add(label);
 
                 Instructions.Clear();
@@ -204,11 +251,13 @@ public partial class ILWeaver
             Current = shiftTarget;
         }
 
-        while (instructions-- > 0)
+        List<ExceptionHandler>? handlersWithHandlerStart = null;
+
+        while (count-- > 0)
         {
             var toRemove = Instructions[index];
             RetargetLabels(toRemove, shiftTarget);
-            StealHandlerRole(toRemove, shiftTarget);
+            StealHandlerRole(toRemove, shiftTarget, ref handlersWithHandlerStart);
             Instructions.RemoveAt(index);
         }
 
@@ -350,10 +399,57 @@ public partial class ILWeaver
                 eh.HandlerStart = replacement;
             if (eh.FilterStart == target)
                 eh.FilterStart = replacement;
-            // Handler end ranges is exclusive, so we most likely
-            // want our instruction to become the new end
             if (eh.TryEnd == target)
                 eh.TryEnd = replacement;
+            if (eh.HandlerEnd == target)
+                eh.HandlerEnd = replacement;
+        }
+    }
+
+    private void StealHandlerRole(
+        Instruction target,
+        Instruction replacement,
+        ref List<ExceptionHandler>? handlersWithHandlerStart
+    )
+    {
+        foreach (var eh in Body.ExceptionHandlers)
+        {
+            if (eh.TryStart == target)
+                eh.TryStart = replacement;
+            if (eh.HandlerStart == target)
+            {
+                eh.HandlerStart = replacement;
+                if (handlersWithHandlerStart is null)
+                    handlersWithHandlerStart = [eh];
+                else
+                    handlersWithHandlerStart.Add(eh);
+            }
+            if (eh.FilterStart == target)
+                eh.FilterStart = replacement;
+            if (eh.TryEnd == target)
+                eh.TryEnd = replacement;
+
+            // HandlerEnd.Previous should be leave instruction,
+            // and that's close enough for exception handler removal purposes.
+            if (eh.HandlerEnd?.Previous == target)
+            {
+                if (handlersWithHandlerStart?.Contains(eh) ?? false)
+                {
+                    // If we are here, we have removed basically the whole handler block
+                    // in a single RemoveRangeAndShiftLabels call. This is almost definitely
+                    // not something whoever removed these instructions wants to recover from.
+
+                    // If we don't do anything about it, the exception handler will
+                    // remain in the method body and explode everything.
+
+                    // However, there's a nonzero chance that they might rewrite the whole catch block.
+                    // But if they are going to do that and they end up causing this code to execute,
+                    // they are making their lives more difficult than necessary.
+
+                    // But just in case, let's decide what to do after their manipulator finishes.
+                    existingHandlersToMaybeRemove.Add(eh);
+                }
+            }
             if (eh.HandlerEnd == target)
                 eh.HandlerEnd = replacement;
         }
