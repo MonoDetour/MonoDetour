@@ -59,20 +59,6 @@ public static class HookTargetRecords
         info.OriginalInstructions = replacement;
     }
 
-    [Obsolete(
-        "Unremoved for now because I fear someone might get an old version of MonoDetour BepInEx package,"
-            + " so this will be removed after next release only.",
-        true
-    )]
-    internal static void SwapOriginalInstructionsCollection(
-        MethodDefinition method,
-        ReadOnlyCollection<Instruction> replacement
-    )
-    {
-        ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions.Remove(method);
-        ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions.Add(method, replacement);
-    }
-
     /// <param name="il">The <see cref="ILContext"/> for the target method.</param>
     /// <inheritdoc cref="GetHookTargetInfo(MethodDefinition)"/>
     public static HookTargetInfo GetHookTargetInfo(ILContext il) => GetHookTargetInfo(il.Method);
