@@ -39,6 +39,10 @@ source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoD
 target = "Renderer/BepInEx/core/"
 
 [[build.copy]]
+source = "../CHANGELOG.md"
+target = "/"
+
+[[build.copy]]
 source = "../../LICENSE"
 target = "/"
 

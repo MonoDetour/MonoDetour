@@ -29,10 +29,9 @@ target = "core/"
 source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Bindings.Reorg.dll"
 target = "core/"
 
-# TODO: Maybe add changelog?
-# [[build.copy]]
-# source = "../../CHANGELOG.md"
-# target = "/"
+[[build.copy]]
+source = "../CHANGELOG.md"
+target = "/"
 
 [[build.copy]]
 source = "../../LICENSE"

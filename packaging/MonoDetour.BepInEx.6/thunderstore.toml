@@ -27,6 +27,10 @@ source = "../../artifacts/bin/MonoDetour.Interop.HarmonyX/release/netstandard2.0
 target = "patchers/"
 
 [[build.copy]]
+source = "../CHANGELOG.md"
+target = "/"
+
+[[build.copy]]
 source = "../../LICENSE"
 target = "/"
 
