@@ -177,8 +177,10 @@ public partial class ILWeaver
     /// <br/>
     /// Exception handlers: If the range contains the <see cref="ExceptionHandler.HandlerStart"/>
     /// and previous instruction of <see cref="ExceptionHandler.HandlerEnd"/> of an
-    /// exception handler, and the handler block is not fixed to be valid again during the
-    /// execution of the ILHook manipulator method, it will be removed from the method body.<br/>
+    /// exception handler in a single <see cref="RemoveRangeAndShiftLabels(Instruction, Instruction)"/>
+    /// call, the exception handler is removed from the method body as leaving
+    /// it be would cause invalid IL. If you wish to rewrite the handler block instead, don't remove
+    /// the previous instruction of the leave target which is <see cref="ExceptionHandler.HandlerEnd"/>.<br/>
     /// <br/>
     /// Note: Removing instructions have consequences as described by this method.
     /// This method does what is necessary to not break the target method in cases where
@@ -412,6 +414,8 @@ public partial class ILWeaver
         ref List<ExceptionHandler>? handlersWithHandlerStart
     )
     {
+        List<ExceptionHandler>? handlersToRemove = null;
+
         foreach (var eh in Body.ExceptionHandlers)
         {
             if (eh.TryStart == target)
@@ -444,14 +448,23 @@ public partial class ILWeaver
 
                     // However, there's a nonzero chance that they might rewrite the whole catch block.
                     // But if they are going to do that and they end up causing this code to execute,
-                    // they are making their lives more difficult than necessary.
-
-                    // But just in case, let's decide what to do after their manipulator finishes.
-                    existingHandlersToMaybeRemove.Add(eh);
+                    // they are making their lives more difficult than necessary. So we don't support it.
+                    if (handlersToRemove is null)
+                        handlersToRemove = [eh];
+                    else
+                        handlersToRemove.Add(eh);
                 }
             }
             if (eh.HandlerEnd == target)
                 eh.HandlerEnd = replacement;
+        }
+
+        if (handlersToRemove is null)
+            return;
+
+        foreach (var handlerToRemove in handlersToRemove)
+        {
+            Body.ExceptionHandlers.Remove(handlerToRemove);
         }
     }
 
