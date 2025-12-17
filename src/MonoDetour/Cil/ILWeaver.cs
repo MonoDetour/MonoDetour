@@ -152,7 +152,7 @@ public partial class ILWeaver : IMonoDetourLogSource
                 var index = Instructions.IndexOf(temporaryInstruction);
                 if (index != -1)
                 {
-                    RemoveAndShiftLabelsInternal(index, 1);
+                    RemoveAndShiftLabelsInternal(index, 1, insertTemporaryIfNeeded: false);
                 }
             }
 

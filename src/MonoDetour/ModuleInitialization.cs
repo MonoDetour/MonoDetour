@@ -16,5 +16,6 @@ file static class ModuleInitialization
     {
         ILHookInstructionILLabelCastFixes.InitHook();
         ILHookDMDManipulation.InitHook();
+        LegacyILHookAntiExploder.InitHook();
     }
 }

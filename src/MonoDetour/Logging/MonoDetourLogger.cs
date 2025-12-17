@@ -1,4 +1,5 @@
 using System;
+using MonoDetour.Bindings.Reorg;
 
 namespace MonoDetour.Logging;
 
@@ -151,6 +152,11 @@ public static class MonoDetourLogger
 
     static void DefaultLog(LogChannel channel, string message)
     {
+        LogWithChannel($"[{LogChannelToString(channel)}: MonoDetour] {message}", channel);
+    }
+
+    static void LogWithChannel(string message, LogChannel channel)
+    {
         ConsoleColor color = channel switch
         {
             LogChannel.Warning => ConsoleColor.Yellow,
@@ -158,14 +164,16 @@ public static class MonoDetourLogger
             _ => Console.ForegroundColor,
         };
 
-        LogWithColor($"[{LogChannelToString(channel)}: MonoDetour] {message}", color);
-    }
-
-    static void LogWithColor(string message, ConsoleColor color)
-    {
         var originalColor = Console.ForegroundColor;
         Console.ForegroundColor = color;
-        Console.Error.WriteLine(message);
+
+        // Console.Error is not read by BepInEx 5,
+        // and we likely have that if we have legacy MonoMod.
+        if (channel is LogChannel.Error && MonoModVersion.IsReorg)
+            Console.Error.WriteLine(message);
+        else
+            Console.Out.WriteLine(message);
+
         Console.ForegroundColor = originalColor;
     }
 }

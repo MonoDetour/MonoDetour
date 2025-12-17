@@ -37,6 +37,8 @@ static class ILHookDMDManipulation
         typeof(ILHookDMDManipulation).Assembly.GetName().Name!
     );
 
+    internal static MethodInfo? legacyContextRefreshMethod;
+
     static bool initialized;
 
     internal static void InitHook()
@@ -105,13 +107,13 @@ static class ILHookDMDManipulation
                 "Type 'MonoMod.RuntimeDetour.ILHook+Context, MonoMod.RuntimeDetour' not found."
             );
 
-        var target =
+        legacyContextRefreshMethod =
             type.GetMethod("Refresh")
             ?? throw new NullReferenceException("Method 'Refresh' not found.");
 
-        getDmdBeforeManipulationHook = new(target, GetDMDBeforeManipulation);
+        getDmdBeforeManipulationHook = new(legacyContextRefreshMethod, GetDMDBeforeManipulation);
 
-        m.ILHook(target, TryCatchAnalyzeCompilationLegacy);
+        m.ILHook(legacyContextRefreshMethod, TryCatchAnalyzeCompilationLegacy);
     }
 
     private static void GetDMDBeforeManipulation(ILContext il)
@@ -182,8 +184,6 @@ static class ILHookDMDManipulation
         w.HandlerSetHandlerEnd(w.Current, handler);
 
         w.HandlerApply(handler);
-
-        // StackSizeAnalyzer.Analyze(info.Context.Body);
     }
 
     static void TryCatchAnalyzeCompilationLegacy(ILManipulationInfo info)

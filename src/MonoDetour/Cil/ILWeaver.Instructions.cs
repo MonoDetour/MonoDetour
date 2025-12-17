@@ -205,7 +205,7 @@ public partial class ILWeaver
         return RemoveAndShiftLabelsInternal(index, count);
     }
 
-    ILWeaver RemoveAndShiftLabelsInternal(int index, int count)
+    ILWeaver RemoveAndShiftLabelsInternal(int index, int count, bool insertTemporaryIfNeeded = true)
     {
         int endIndex = index + count - 1;
         int currentIndex = Index;
@@ -245,7 +245,10 @@ public partial class ILWeaver
 
                 Instructions.Clear();
 
-                InsertTemporaryCurrentTarget();
+                if (insertTemporaryIfNeeded)
+                {
+                    InsertTemporaryCurrentTarget();
+                }
                 return this;
             }
         }
