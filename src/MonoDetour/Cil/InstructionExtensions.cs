@@ -59,6 +59,22 @@ public static class InstructionExtensions
     }
 
     /// <summary>
+    /// Creates and returns a clone of the provided instruction instance.
+    /// Useful for reusing the same instruction in a method
+    /// as inserting duplicate instruction instances into a method is problematic,
+    /// such as breaking the target method compilation in certain cases.
+    /// </summary>
+    /// <param name="instruction">The instruction to clone.</param>
+    /// <returns>The clone.</returns>
+    public static Instruction Clone(this Instruction instruction)
+    {
+        var copy = Instruction.Create(OpCodes.Nop);
+        copy.OpCode = instruction.OpCode;
+        copy.Operand = instruction.Operand;
+        return copy;
+    }
+
+    /// <summary>
     /// Returns a string representation of an <see cref="Instruction"/> without fear of
     /// <see cref="InvalidCastException"/>.
     /// </summary>
