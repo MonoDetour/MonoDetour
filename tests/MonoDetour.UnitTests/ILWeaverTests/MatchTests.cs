@@ -54,4 +54,38 @@ public static class MatchTests
         // Throws if the match matched the last nop
         method();
     }
+
+    [Fact]
+    public static void CanMatchProperly2()
+    {
+        using var dmd = new DynamicMethodDefinition("MatchTest2", typeof(void), []);
+        {
+            var il = dmd.GetILProcessor();
+            var instrs = dmd.Definition.Body.Instructions;
+
+            il.Emit(Op.Ldc_I4_0);
+            il.Emit(Op.Nop);
+            il.Emit(Op.Ldc_I4_0);
+            il.Emit(Op.Nop);
+            il.Emit(Op.Pop);
+            il.Emit(Op.Pop);
+            il.Emit(Op.Ret);
+        }
+
+        dmd.Definition.ILWeave(info =>
+        {
+            ILWeaver w = new(info);
+            w.LogFilter = MonoDetourLogger.LogChannel.IL;
+
+            // The first ldc_i4_0 and Nop should not cause this to fail.
+            w.MatchStrict(x => x.MatchLdcI4(0), x => x.MatchNop(), x => x.MatchPop())
+                .ThrowIfFailure();
+
+            // Unsatisfiable match, should not result in infinite loop
+            _ = w.MatchStrict(x => x.MatchAnd());
+        });
+
+        var method = dmd.Generate().CreateDelegate<Action>();
+        method();
+    }
 }

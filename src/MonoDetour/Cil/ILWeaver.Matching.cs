@@ -418,6 +418,7 @@ public partial class ILWeaver
                         bestAttempts.Add((predicatesMatched, i - 1));
                 }
 
+                i -= predicatesMatched;
                 predicatesMatched = 0;
                 continue;
             }
