@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using MonoDetour.DetourTypes;
+using MonoDetour.DetourTypes.Manipulation;
 using MonoDetour.Interop.RuntimeDetour;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
@@ -14,6 +17,8 @@ namespace MonoDetour;
 /// </summary>
 public class MonoDetourHook : IMonoDetourHook
 {
+    static readonly Dictionary<MethodBase, List<IReadOnlyMonoDetourHook>> s_TargetToHooks = [];
+
     static readonly ConditionalWeakTable<
         ILContext.Manipulator,
         MonoDetourHook
@@ -110,6 +115,11 @@ public class MonoDetourHook : IMonoDetourHook
         lock (tableLock)
         {
             s_ManipulatorToHook.Add(applierManipulator, this);
+
+            if (s_TargetToHooks.TryGetValue(Target, out var hooks))
+                hooks.Add(this);
+            else
+                s_TargetToHooks.Add(Target, [this]);
         }
 
         if (applyByDefault)
@@ -172,6 +182,21 @@ public class MonoDetourHook : IMonoDetourHook
         ILContext.Manipulator key,
         [NotNullWhen(true)] out MonoDetourHook? monoDetourHook
     ) => s_ManipulatorToHook.TryGetValue(key, out monoDetourHook);
+
+    internal static bool HasActiveControlFlowMonoDetourHooks(MethodBase target, out int count)
+    {
+        count = 0;
+
+        if (!s_TargetToHooks.TryGetValue(target, out var hooks))
+            return false;
+
+        foreach (var hook in hooks)
+        {
+            if (hook.IsApplied && hook.ModifiesControlFlow())
+                count++;
+        }
+        return count > 0;
+    }
 
     /// <inheritdoc/>
     public void Apply() => Applier.Apply();

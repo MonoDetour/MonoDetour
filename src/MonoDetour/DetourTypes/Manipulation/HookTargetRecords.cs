@@ -173,10 +173,14 @@ public static class HookTargetRecords
         /// </summary>
         public bool ControlFlowImplemented { get; private set; }
 
+        internal int AppliedControlFlowPrefixes { get; private set; }
+
         /// <summary>
         /// Sets <see cref="ControlFlowImplemented"/> to true.
         /// </summary>
         public void SetControlFlowImplemented() => ControlFlowImplemented = true;
+
+        internal void MarkControlFlowPrefixAsApplied() => AppliedControlFlowPrefixes++;
     }
 
     /// <summary>

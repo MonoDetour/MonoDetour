@@ -65,13 +65,13 @@ static class TrackPatches
         ILWeaver w = new(info);
 
         Instruction ldarg0_ResultVar = null!;
-        Instruction ldarg0_RunOriginalParam = null!;
         Instruction declareVar_ResultVar = null!;
-        Instruction declareVar_RunOriginalParam = null!;
+        Instruction init_runOriginal = null!;
         Instruction start_RunOriginalParamLogic = null!;
         Instruction end_RunOriginalParamLogic = null!;
         Instruction end_RetLogic = null!;
         Instruction ilEmitterField = null!;
+        int loc_runOriginal = -1;
 
         var result = w.MatchRelaxed(
             x => x.MatchLdarg(0),
@@ -119,14 +119,13 @@ static class TrackPatches
         result = w.MatchRelaxed(
             x => x.MatchLdarg(0),
             x => x.MatchLdfld(out _),
-            x => x.MatchLdsfld<HarmonyManipulator>(nameof(HarmonyManipulator.RunOriginalParam)),
-            x => x.MatchLdarg(0) && w.SetInstructionTo(ref ldarg0_RunOriginalParam, x),
+            x => x.MatchLdsfld(typeof(OpCodes), nameof(OpCodes.Ldc_I4_1)),
+            x => x.MatchCallvirt(out _),
+            x => x.MatchLdarg(0),
             x => x.MatchLdfld(out _),
-            x => x.MatchLdtoken(out _),
-            x => x.MatchCall(out _),
-            x =>
-                x.MatchCallvirt<ILEmitter>(nameof(ILEmitter.DeclareVariable))
-                && w.SetInstructionTo(ref declareVar_RunOriginalParam, x)
+            x => x.MatchLdsfld(typeof(OpCodes), nameof(OpCodes.Stloc)),
+            x => x.MatchLdloc(out loc_runOriginal),
+            x => x.MatchCallvirt(out _) && w.SetInstructionTo(ref init_runOriginal, x)
         );
 
         if (!result.IsValid)
@@ -182,24 +181,28 @@ static class TrackPatches
         // stack imbalance as the last instruction that is jumped over
         w.InsertAfter(declareVar_ResultVar, w.Create(OpCodes.Pop));
 
-        w.InsertBranchOver(ldarg0_RunOriginalParam, declareVar_RunOriginalParam);
-
-        w.InsertBeforeStealLabels(
-            declareVar_RunOriginalParam.Next,
+        w.InsertAfter(
+            init_runOriginal,
+            w.Create(OpCodes.Ldarg_0),
             w.Create(OpCodes.Ldarg_0),
             w.Create(OpCodes.Ldfld, ilEmitterField.Operand),
-            w.CreateCall(GetRunOriginalParamVar)
+            w.Create(OpCodes.Ldloc, loc_runOriginal),
+            w.CreateCall(RunOriginalParamInit)
         );
-        w.InsertAfter(declareVar_RunOriginalParam, w.Create(OpCodes.Pop));
 
         w.InsertBranchOverIfTrue(
             start_RunOriginalParamLogic,
             end_RunOriginalParamLogic,
             w.Create(OpCodes.Ldarg_0),
+            w.Create(OpCodes.Ldarg_0),
             w.Create(OpCodes.Ldfld, ilEmitterField.Operand),
-            w.CreateCall(RunOriginalParamLogic)
+            w.Create(OpCodes.Ldloc, loc_runOriginal),
+            w.CreateCall(RunOriginalParamBranchLogic)
         );
 
+        // Note: at this point we are at the end of the method body, we want
+        // to jump back to MonoDetour's prefixes (if there are any), after which
+        // we jump over this part to the actual end of the method.
         w.InsertAfter(
             end_RetLogic,
             w.Create(OpCodes.Ldarg_0),
@@ -345,16 +348,6 @@ static class TrackPatches
         );
         w.InsertAfter(declareVar_ResultVar, w.Create(OpCodes.Pop));
 
-        w.InsertBranchOver(ldarg0_RunOriginalParam, declareVar_RunOriginalParam);
-
-        w.InsertBeforeStealLabels(
-            declareVar_RunOriginalParam.Next,
-            w.Create(OpCodes.Ldarg_0),
-            w.Create(OpCodes.Ldfld, ilEmitterField.Operand),
-            w.CreateCall(GetRunOriginalParamVar)
-        );
-        w.InsertAfter(declareVar_RunOriginalParam, w.Create(OpCodes.Pop));
-
         var labels = w.DeclareVariable(typeof(List<ILEmitter.Label>));
 
         w.InsertAfter(
@@ -422,24 +415,109 @@ static class TrackPatches
         return hookTargetInfo.ReturnValue;
     }
 
-    static VariableDefinition? GetRunOriginalParamVar(ILEmitter ilEmitter)
+    static void RunOriginalParamInit(
+        HarmonyManipulator manipulator,
+        ILEmitter il,
+        VariableDefinition runOriginal
+    )
     {
-        var method = ilEmitter.IL.Body.Method;
+        // If there are no MonoDetourHooks which can modify control flow,
+        // we don't need to add any additional logic.
+        if (
+            !MonoDetourHook.HasActiveControlFlowMonoDetourHooks(
+                manipulator.original,
+                out int totalControlFlowHookCount
+            )
+        )
+        {
+            return;
+        }
+
+        var method = il.IL.Body.Method;
         var hookTargetInfo = HookTargetRecords.GetHookTargetInfo(method);
-        return hookTargetInfo.PrefixInfo.ControlFlow;
+        var prefixInfo = hookTargetInfo.PrefixInfo;
+        var controlFlow = prefixInfo.ControlFlow;
+
+        if (totalControlFlowHookCount == prefixInfo.AppliedControlFlowPrefixes)
+        {
+            // All MonoDetourHooks are already applied, we don't need to do anything.
+            return;
+        }
+
+        // We have to merge ControlFlow value into runOriginal before executing HarmonyX prefixes.
+        // This is because __runOriginal can be inspected in HarmonyX prefixes.
+
+        // MonoDetour and HarmonyX store the equivalent value of runOriginal differently:
+        // - runOriginal true (1) => ReturnFlow.None (0)
+        // - runOriginal false (0) => ReturnFlow.SkipOriginal (1)
+
+        // With runOriginal as true, and flipping MonoDetour's ReturnFlow value
+        // so that ReturnFlow.None is true, and performing an AND operation, we get:
+        // true && true == true // do not skip original
+        // every other combination is false aka skip original.
+        il.Emit(OpCodes.Ldc_I4_1);
+        il.Emit(OpCodes.Ldloc, controlFlow);
+        il.Emit(OpCodes.Sub);
+        il.Emit(OpCodes.Ldloc, runOriginal);
+        il.Emit(OpCodes.And);
+        il.Emit(OpCodes.Stloc, runOriginal);
     }
 
-    static bool RunOriginalParamLogic(ILEmitter il)
+    static bool RunOriginalParamBranchLogic(
+        HarmonyManipulator manipulator,
+        ILEmitter il,
+        VariableDefinition runOriginal
+    )
     {
         var method = il.IL.Body.Method;
         var hookTargetInfo = HookTargetRecords.GetHookTargetInfo(method);
+        var prefixInfo = hookTargetInfo.PrefixInfo;
+        var controlFlow = prefixInfo.ControlFlow;
 
-        if (hookTargetInfo.PrefixInfo.ControlFlowImplemented)
+        // If there are no MonoDetourHooks which can modify control flow,
+        // and no MonoDetourHooks after us to be executed,
+        // we don't need to add any additional logic.
+        if (
+            !MonoDetourHook.HasActiveControlFlowMonoDetourHooks(
+                manipulator.original,
+                out int totalControlFlowHookCount
+            ) && !prefixInfo.ControlFlowImplemented
+        )
         {
+            return false;
+        }
+
+        if (prefixInfo.ControlFlowImplemented)
+        {
+            // MonoDetour has implemented control flow already;
+            // we must set MonoDetour's local variable for tracking the control flow.
+
+            il.Emit(OpCodes.Ldc_I4_1);
+            il.Emit(OpCodes.Ldloc, runOriginal);
+            il.Emit(OpCodes.Sub);
+            // It's possible that a MonoDetour ControlFlow prefix will be applied after us,
+            // in which case we must not override the existing ReturnFlow value.
+            // but we only need to account for it if there are unapplied ControlFlow hooks.
+            if (totalControlFlowHookCount > prefixInfo.AppliedControlFlowPrefixes)
+            {
+                // Let's define skipping original as true, meaning we flip runOriginal's value.
+                // First is runOriginal flipped, second is MonoDetour's ReturnFlow value.
+                // With an OR operation, we get the results:
+                // false || false == false // do not skip original
+                // every other combination is true, aka 1, aka ReturnFlow.SkipOriginal,
+                // which is what we want.
+                il.Emit(OpCodes.Ldloc, controlFlow);
+                il.Emit(OpCodes.Or);
+            }
+            il.Emit(OpCodes.Stloc, controlFlow);
             return true;
         }
 
-        hookTargetInfo.PrefixInfo.SetControlFlowImplemented();
+        // We are last to execute in the target method,
+        // all MonoDetour hooks are earlier than us (but written after us).
+        // In this path, we already merged MonoDetour's ControlFlow variable into
+        // runOriginal in the method which is declared above this method with this comment.
+        prefixInfo.SetControlFlowImplemented();
         return false;
     }
 

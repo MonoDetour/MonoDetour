@@ -157,6 +157,11 @@ public class PrefixDetour : IMonoDetourHookApplier
 
         onFinish();
 
+        if (Hook.ModifiesControlFlow())
+        {
+            info.PrefixInfo.MarkControlFlowPrefixAsApplied();
+        }
+
         Hook.Owner.Log(
             MonoDetourLogger.LogChannel.IL,
             () =>
