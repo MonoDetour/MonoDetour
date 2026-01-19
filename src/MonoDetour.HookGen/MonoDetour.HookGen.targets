@@ -1,0 +1,10 @@
+<Project InitialTargets="MonoDetourHookGen_TrimProperties">
+  <Target Name="MonoDetourHookGen_TrimProperties">
+    <PropertyGroup Condition="'$(MonoDetourHookGenStripUnusedHooks)' != ''">
+      <MonoDetourHookGenStripUnusedHooks>$([System.String]::Copy('$(MonoDetourHookGenStripUnusedHooks)').Trim())</MonoDetourHookGenStripUnusedHooks>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(MonoDetourHookGenNamespace)' != ''">
+      <MonoDetourHookGenNamespace>$([System.String]::Copy('$(MonoDetourHookGenNamespace)').Trim())</MonoDetourHookGenNamespace>
+    </PropertyGroup>
+  </Target>
+</Project>
