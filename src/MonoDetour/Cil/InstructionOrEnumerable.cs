@@ -69,15 +69,14 @@ public sealed class InstructionOrEnumerable : IEnumerable<Instruction>
 /// </summary>
 public static class InstructionOrEnumerableExtensions
 {
-    extension(IEnumerable<InstructionOrEnumerable> instructions)
-    {
-        /// <summary>
-        /// Unwraps an <see cref="IEnumerable"/> of the wrapper type
-        /// <see cref="InstructionOrEnumerable"/> which may contain an arbitrary
-        /// amount of <see cref="Instruction"/>s per wrapper type
-        /// into a flat <see cref="IEnumerable"/> of <see cref="Instruction"/>.
-        /// </summary>
-        /// <returns>A flat <see cref="IEnumerable"/> of <see cref="Instruction"/>.</returns>
-        public IEnumerable<Instruction> Unwrap() => instructions.SelectMany(x => x);
-    }
+    /// <summary>
+    /// Unwraps an <see cref="IEnumerable"/> of the wrapper type
+    /// <see cref="InstructionOrEnumerable"/> which may contain an arbitrary
+    /// amount of <see cref="Instruction"/>s per wrapper type
+    /// into a flat <see cref="IEnumerable"/> of <see cref="Instruction"/>.
+    /// </summary>
+    /// <returns>A flat <see cref="IEnumerable"/> of <see cref="Instruction"/>.</returns>
+    public static IEnumerable<Instruction> Unwrap(
+        this IEnumerable<InstructionOrEnumerable> instructions
+    ) => instructions.SelectMany(x => x);
 }

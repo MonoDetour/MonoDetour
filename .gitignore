@@ -19,6 +19,10 @@ obj/
 /.config/*
 !/.config/dotnet-tools.json
 
+!/docfx/
+/docfx/*
+!/docfx/docfx.json
+
 !/.github/
 
 # Add root level files

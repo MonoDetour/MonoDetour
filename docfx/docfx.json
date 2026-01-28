@@ -1,0 +1,21 @@
+{
+    "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+    "metadata": [
+        {
+            "src": [
+                {
+                    "src": "..",
+                    "files": [
+                        "src/MonoDetour/MonoDetour.csproj",
+                        "src/MonoDetour.Reflection/MonoDetour.Reflection.csproj"
+                    ],
+                    "exclude": [
+                        "**/bin/**",
+                        "**/obj/**"
+                    ]
+                }
+            ],
+            "output": "api"
+        }
+    ]
+}
