@@ -14,6 +14,18 @@ jobs:
           fetch-depth: 0
           filter: tree:0
 
+      - name: Dispatch Event deploy-docs for MonoDetour.github.io
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.PAT_MONODETOUR_DOCS }}
+          script: |
+            const result = await github.rest.repos.createDispatchEvent({
+              owner: 'MonoDetour',
+              repo: 'MonoDetour.github.io',
+              event_type: 'deploy-docs'
+            })
+            console.log(result);
+
       - name: Restore and Build
         uses: ./.github/actions/build
 
