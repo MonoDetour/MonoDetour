@@ -37,7 +37,7 @@
     <MonoDetourVersionPrefix>0.7.10</MonoDetourVersionPrefix>
     <MonoDetourVersionSuffix></MonoDetourVersionSuffix>
     <!-- Release version for HookGen and Analyzers packages -->
-    <HookGenAndAnalyzersVersionPrefix>0.7.11</HookGenAndAnalyzersVersionPrefix>
+    <HookGenAndAnalyzersVersionPrefix>0.7.12</HookGenAndAnalyzersVersionPrefix>
     <HookGenAndAnalyzersVersionSuffix></HookGenAndAnalyzersVersionSuffix>
     <!-- I only target net9.0 to get documentation and better nullability annotations in the BCL. -->
     <MonoDetourTargetFrameworks>net9.0;netstandard2.0</MonoDetourTargetFrameworks>

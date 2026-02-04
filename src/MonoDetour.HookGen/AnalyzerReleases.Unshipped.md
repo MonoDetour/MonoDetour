@@ -13,3 +13,5 @@ HookGen0005 | MonoDetour.HookGen | Error | HookHelperAnalyzer
 HookGen0006 | MonoDetour.HookGen | Error | HookHelperAnalyzer
 HookGen0007 | MonoDetour.HookGen | Error | HookHelperAnalyzer
 HookGen0008 | MonoDetour.HookGen | Error | HookHelperAnalyzer
+HookGen0009 | MonoDetour.HookGen | Warning | HookHelperAnalyzer
+MonoDetour0001 | MonoDetour | Warning | MonoDetourAnalyzer

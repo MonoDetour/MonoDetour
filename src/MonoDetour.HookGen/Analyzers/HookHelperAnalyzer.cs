@@ -2,10 +2,9 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
+using MonoMod.SourceGen.Internal.Extensions;
 
 namespace MonoDetour.HookGen.Analyzers;
 
@@ -13,6 +12,8 @@ namespace MonoDetour.HookGen.Analyzers;
 public sealed class HookHelperAnalyzer : DiagnosticAnalyzer
 {
     private const string Category = "MonoDetour.HookGen";
+    private const string HookInitializeAttributeFqn =
+        "MonoDetour.MonoDetourHookInitializeAttribute";
 
     public static readonly DiagnosticDescriptor ProjectDoesNotReferenceRuntimeDetour = new(
         "HookGen0001",
@@ -89,6 +90,20 @@ public sealed class HookHelperAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true
     );
 
+    public static readonly DiagnosticDescriptor MissingHookInitializeAttribute = new(
+        "HookGen0009",
+        $"Type marked with '{HookHelperGenerator.GenHelperForTypeAttributeFqn}'"
+            + $" does not have a static method marked with '{HookInitializeAttributeFqn}'",
+        $"The type '{{0}}' marked with '{HookHelperGenerator.GenHelperForTypeAttributeFqn}'"
+            + $" does not have a static method marked with '{HookInitializeAttributeFqn}'"
+            + " and as a result MonoDetourManager.InvokeHookInitializers will not invoke"
+            + " any hook initializers for the type at runtime."
+            + " If this is intended, make this an assembly attribute instead: [assembly: {1}].",
+        Category,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
         ImmutableArray.Create<DiagnosticDescriptor>(
             ProjectDoesNotReferenceRuntimeDetour,
@@ -98,7 +113,8 @@ public sealed class HookHelperAnalyzer : DiagnosticAnalyzer
             CannotPatchNonClassOrStruct,
             CannotPatchGenericTypes,
             HookMustBeStatic,
-            HookMustNotBeLambda
+            HookMustNotBeLambda,
+            MissingHookInitializeAttribute
         );
 
     public override void Initialize(AnalysisContext context)
@@ -110,10 +126,10 @@ public sealed class HookHelperAnalyzer : DiagnosticAnalyzer
         {
             var compilation = context.Compilation;
 
-            var attributeType = compilation.GetTypeByMetadataName(
+            var hookTargetsAttributeType = compilation.GetTypeByMetadataName(
                 HookHelperGenerator.GenHelperForTypeAttributeFqn
             );
-            if (attributeType is null)
+            if (hookTargetsAttributeType is null)
             {
                 // somehow the generator isn't running, so we don't have anything to analyze
                 return;
@@ -173,11 +189,13 @@ public sealed class HookHelperAnalyzer : DiagnosticAnalyzer
                     }
 
                     var attrType = ctor.ContainingType;
-                    if (!SymbolEqualityComparer.Default.Equals(attributeType, attrType))
+                    if (!SymbolEqualityComparer.Default.Equals(hookTargetsAttributeType, attrType))
                     {
                         // the attribute is not the one we care about
                         return;
                     }
+
+                    EnsureHookTargetsTypeHasHookInitializerAttribute(context, attribute);
 
                     // now lets try to process the arguments
 
@@ -210,7 +228,7 @@ public sealed class HookHelperAnalyzer : DiagnosticAnalyzer
                         return;
                     }
 
-                    // queue the assemblies to be checked for publicisation
+                    // queue the assemblies to be checked for publicization
                     if (targetAssembly is not null && assembliesToReport.TryAdd(targetAssembly, 0))
                     {
                         // we are the first to get to this assembly, analyzer it
@@ -259,5 +277,43 @@ public sealed class HookHelperAnalyzer : DiagnosticAnalyzer
                 OperationKind.Attribute
             );
         });
+    }
+
+    private static void EnsureHookTargetsTypeHasHookInitializerAttribute(
+        OperationAnalysisContext context,
+        IAttributeOperation attribute
+    )
+    {
+        var symbolWhichHasAttribute = context.ContainingSymbol;
+
+        if (symbolWhichHasAttribute is not INamedTypeSymbol typeSymbol)
+        {
+            return;
+        }
+
+        foreach (var member in typeSymbol.GetMembers())
+        {
+            if (member is not IMethodSymbol method)
+                continue;
+
+            // We deliberately don't check for stuff like if the target method is
+            // static or has no parameters because I believe it's better that
+            // the analyzer for the MonoDetourHookInitializeAttribute catches those.
+            // Then the user has only a warning for that instead of for this too.
+
+            if (method.HasAttributeWithFullyQualifiedMetadataName(HookInitializeAttributeFqn))
+            {
+                return;
+            }
+        }
+
+        context.ReportDiagnostic(
+            Diagnostic.Create(
+                MissingHookInitializeAttribute,
+                attribute.Syntax.GetLocation(),
+                symbolWhichHasAttribute,
+                attribute.Syntax
+            )
+        );
     }
 }

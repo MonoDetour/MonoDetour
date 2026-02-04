@@ -1,8 +1,9 @@
 using Md.MonoDetour.UnitTests.TestLib.ControlFlowLib;
 
+[assembly: MonoDetourTargets(typeof(ControlFlowLib), GenerateControlFlowVariants = true)]
+
 namespace MonoDetour.UnitTests.HookTests;
 
-[MonoDetourTargets(typeof(ControlFlowLib), GenerateControlFlowVariants = true)]
 public static class ControlFlowTests
 {
     [Fact]
