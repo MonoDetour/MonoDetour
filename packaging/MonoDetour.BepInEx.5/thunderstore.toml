@@ -42,7 +42,8 @@ communities = [
     "repo",
     "riskofrain2",
     "peak",
-    "hollow-knight-silksong"
+    "hollow-knight-silksong",
+    "gloomwood"
 ]
 
 [publish.categories]
@@ -52,3 +53,4 @@ repo = [ "libraries", ]
 riskofrain2 = [ "libraries", ]
 peak = [ "libraries", ]
 hollow-knight-silksong = [ "libraries", ]
+gloomwood = [ "libraries", ]

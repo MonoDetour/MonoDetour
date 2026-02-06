@@ -46,6 +46,7 @@ communities = [
     "riskofrain2",
     "peak",
     "hollow-knight-silksong",
+    "gloomwood",
     # Special BepInEx 5 layout and "normal" BepInEx 6
     "resonite",
     # BepInEx 6
@@ -58,5 +59,6 @@ repo = [ "libraries", ]
 riskofrain2 = [ "libraries", ]
 peak = [ "libraries", ]
 hollow-knight-silksong = [ "libraries", ]
+gloomwood = [ "libraries", ]
 
 resonite = [ "libraries", ]
