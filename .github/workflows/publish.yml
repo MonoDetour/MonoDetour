@@ -4,6 +4,17 @@ on:
   release:
     types: [prereleased, released]
 
+  workflow_dispatch:
+    inputs:
+      publish-on:
+        description: 'Publish on Platforms'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'thunderstore'
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -36,6 +47,7 @@ jobs:
         run: dotnet pack -c Release --no-build
 
       - name: Publish NuGet
+        if: ${{ inputs.publish-on != 'thunderstore' }}
         run: dotnet nuget push ./artifacts/package/release/*.nupkg --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
       - name: Publish Thunderstore
