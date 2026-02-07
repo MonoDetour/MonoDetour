@@ -14,7 +14,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>MonoDetour.HookGen</PackageId>
-    <Description>Hook generation for MonoDetour via C# source generators: On.Namespace.Type.Method.Prefix(MyPrefix);</Description>
+    <Description>Hook generation for MonoDetour via C# source generators: Md.Namespace.Type.Method.Prefix(MyPrefix);</Description>
     <PackageTags>MonoDetour;RuntimeDetour;detour;detours;patch;patching;hook;$(PackageTags)</PackageTags>
   </PropertyGroup>
   <ItemGroup>
