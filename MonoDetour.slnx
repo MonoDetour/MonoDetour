@@ -1,8 +1,6 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/MonoDetour.Analyzers/MonoDetour.Analyzers.csproj" />
-    <Project Path="src/MonoDetour.Aot.Interfaces/MonoDetour.Aot.Interfaces.csproj" />
-    <Project Path="src/MonoDetour.Aot/MonoDetour.Aot.csproj" />
     <Project Path="src/MonoDetour.Bindings.Reorg/MonoDetour.Bindings.Reorg.csproj" />
     <Project Path="src/MonoDetour.HookGen/MonoDetour.HookGen.csproj" />
     <Project Path="src/MonoDetour.Interop.HarmonyX/MonoDetour.Interop.HarmonyX.csproj" />

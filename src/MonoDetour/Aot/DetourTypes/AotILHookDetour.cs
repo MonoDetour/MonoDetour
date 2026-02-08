@@ -1,13 +1,12 @@
 using System;
 using System.Reflection;
 using Mono.Cecil;
-using MonoDetour.Aot;
 using MonoDetour.Cil;
 using MonoDetour.Cil.Analysis;
 using MonoDetour.Logging;
 using MonoMod.Cil;
 
-namespace MonoDetour.DetourTypes;
+namespace MonoDetour.Aot.DetourTypes;
 
 /// <summary>
 /// Implements MonoDetour support for a <see cref="MonoMod.RuntimeDetour.ILHook"/>
@@ -17,12 +16,12 @@ namespace MonoDetour.DetourTypes;
 public class AotILHookDetour : IAotMonoDetourHookApplier
 {
     /// <inheritdoc/>
-    public required IReadOnlyAotMonoDetourHook AotHook
+    public IReadOnlyAotMonoDetourHook AotHook
     {
-        get => field;
+        get => _aotHook;
         set
         {
-            field = value;
+            _aotHook = value;
 
             if (value.ManipulatorBase is MethodInfo { } methodInfo)
             {
@@ -36,7 +35,7 @@ public class AotILHookDetour : IAotMonoDetourHookApplier
             }
         }
     }
-
+    IReadOnlyAotMonoDetourHook _aotHook = null!;
     ILManipulationInfo.Manipulator invoker = null!;
 
     /// <inheritdoc/>

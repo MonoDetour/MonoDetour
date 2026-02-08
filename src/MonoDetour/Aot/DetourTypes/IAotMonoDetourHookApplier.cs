@@ -1,7 +1,6 @@
 using Mono.Cecil;
-using MonoDetour.Aot.Interfaces;
 
-namespace MonoDetour.Aot;
+namespace MonoDetour.Aot.DetourTypes;
 
 /// <summary>
 /// A type which implements this interface can be used as an AOT
@@ -11,7 +10,7 @@ namespace MonoDetour.Aot;
 /// For MonoDetour to be able to use a type which implements this
 /// interface, the type must have a parameterless constructor.
 /// </remarks>
-public interface IAotMonoDetourHookApplier : IAotMonoDetourHookApplierBase
+public interface IAotMonoDetourHookApplier
 {
     /// <summary>
     /// All the available metadata for the <see cref="AotMonoDetourHook"/>.

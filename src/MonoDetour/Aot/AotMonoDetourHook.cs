@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Mono.Cecil;
-using MonoDetour.Aot.Interfaces;
+using MonoDetour.Aot.DetourTypes;
 using MonoDetour.DetourTypes;
 
 namespace MonoDetour.Aot;
@@ -12,7 +12,8 @@ namespace MonoDetour.Aot;
 /// </summary>
 public class AotMonoDetourHook : IReadOnlyAotMonoDetourHook
 {
-    static readonly Dictionary<MethodDefinition, List<AotMonoDetourHook>> s_TargetToHooks = [];
+    internal static Dictionary<MethodDefinition, List<AotMonoDetourHook>> TargetToHooks { get; } =
+    [];
 
 #if NETSTANDARD2_0
     static readonly object tableLock = new();
@@ -46,7 +47,7 @@ public class AotMonoDetourHook : IReadOnlyAotMonoDetourHook
     public Type ApplierType { get; }
 
     /// <inheritdoc/>
-    public bool IsApplied { get; }
+    public bool IsApplied { get; private set; }
 
     readonly IAotMonoDetourHookApplier aotHookApplier;
 
@@ -87,10 +88,10 @@ public class AotMonoDetourHook : IReadOnlyAotMonoDetourHook
 
         lock (tableLock)
         {
-            if (s_TargetToHooks.TryGetValue(Target, out var hooks))
+            if (TargetToHooks.TryGetValue(Target, out var hooks))
                 hooks.Add(this);
             else
-                s_TargetToHooks.Add(Target, [this]);
+                TargetToHooks.Add(Target, [this]);
         }
 
         if (applyByDefault)
@@ -98,7 +99,7 @@ public class AotMonoDetourHook : IReadOnlyAotMonoDetourHook
             IsApplied = true;
         }
 
-        // TODO: Apply logic.
+        // Unlike runtime detour, AOT hooks are all applied at once later.
     }
 
     /// <summary>
@@ -118,7 +119,7 @@ public class AotMonoDetourHook : IReadOnlyAotMonoDetourHook
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where TApplier : class, IAotMonoDetourHookApplierBase =>
+        where TApplier : class, IAotMonoDetourHookApplier =>
         new(
             target,
             Helpers.ThrowIfNull(manipulatorBase).Method,
@@ -137,7 +138,7 @@ public class AotMonoDetourHook : IReadOnlyAotMonoDetourHook
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where TApplier : class, IAotMonoDetourHookApplierBase =>
+        where TApplier : class, IAotMonoDetourHookApplier =>
         new(
             target,
             Helpers.ThrowIfNull(manipulatorBase),
@@ -168,8 +169,13 @@ public class AotMonoDetourHook : IReadOnlyAotMonoDetourHook
         );
 
     /// <inheritdoc/>
-    public void Apply() => throw new NotImplementedException();
+    public void Apply() => IsApplied = true;
 
     /// <inheritdoc/>
-    public void Undo() => throw new NotImplementedException();
+    public void Undo() => IsApplied = false;
+
+    internal void Manipulate(MethodDefinition method)
+    {
+        aotHookApplier.ApplierManipulator(method);
+    }
 }
