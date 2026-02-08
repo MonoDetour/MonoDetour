@@ -1,6 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoDetour.Cil;
 using MonoDetour.Cil.Analysis;
@@ -8,89 +7,42 @@ using MonoDetour.DetourTypes.Manipulation;
 using MonoDetour.Logging;
 using MonoMod.Cil;
 
-namespace MonoDetour.DetourTypes;
+namespace MonoDetour.Aot.DetourTypes;
 
 /// <summary>
-/// Implements MonoDetour support for a Hook that will run at the start of the target method.
+/// Implements MonoDetour support for an AOT Hook that will run at the start of the target method.
 /// </summary>
-public class PrefixDetour : IMonoDetourHookApplier
+public class AotPrefixDetour : IAotMonoDetourHookApplier
 {
     /// <inheritdoc/>
-    public IReadOnlyMonoDetourHook Hook
+    public IReadOnlyAotMonoDetourHook AotHook
     {
-        get => hook;
-        set
-        {
-            hook = value;
-
-            hookId = prefixHooks.Count;
-            prefixHooks.Add(hook);
-
-            if (value.ManipulatorDelegate is { } manipulator)
-            {
-                delegateId = prefixDelegates.Count;
-                prefixDelegates.Add(manipulator);
-            }
-        }
+        get => aotHook;
+        set => aotHook = value;
     }
 
-    IReadOnlyMonoDetourHook hook = null!;
-
-    static readonly List<Delegate> prefixDelegates = [];
-    static readonly List<IReadOnlyMonoDetourHook> prefixHooks = [];
-
-    int delegateId = -1;
-    int hookId = -1;
-
-    static Delegate GetDelegate(int id) => prefixDelegates[id];
-
-    static IReadOnlyMonoDetourHook GetHook(int id) => prefixHooks[id];
+    IReadOnlyAotMonoDetourHook aotHook = null!;
 
     /// <inheritdoc/>
-    public void ApplierManipulator(ILContext il)
+    public void ApplierManipulator(MethodDefinition method)
     {
-        var info = HookTargetRecords.GetHookTargetInfo(il);
-        ILWeaver w = new(new(il, Hook.Target, out var onFinish));
+        var info = HookTargetRecords.GetHookTargetInfo(method);
+        ILWeaver w = new(new(new(method), null, out var onFinish));
 
-        // A hook may only modify return value if it also modifies control flow.
-        // If the hook modifies return value and doesn't early return,
-        // the return value the hook modified is ignored.
-        bool modifiesReturnValue = Hook.ModifiesControlFlow() && info.ReturnValue is not null;
-
-        w.HandlerCreateCatch(null, out var handler);
-        w.DefineAndMarkLabelToFutureNextInsert(out var tryStart);
-        w.HandlerSetTryStart(tryStart, handler);
-
-        var callManipulator = Utils.GetCallMaybeInsertGetDelegate(w, Hook, delegateId, GetDelegate);
-
-        if (modifiesReturnValue)
-            w.EmitParamsAndReturnValueBeforeCurrent(info.ReturnValue!, Hook);
-        else
-            w.EmitParamsBeforeCurrent(Hook);
-
-        w.InsertBeforeCurrent(callManipulator);
-
-        if (Hook.ModifiesControlFlow())
-            w.InsertBeforeCurrent(w.Create(OpCodes.Stloc, info.PrefixInfo.TemporaryControlFlow));
-
-        w.HandlerSetTryEnd(w.Previous, handler);
+        bool modifiesControlFlow = AotHook.ModifiesControlFlow();
+        bool modifiesReturnValue = modifiesControlFlow && info.ReturnValue is not null;
 
         w.InsertBeforeCurrent(
-            w.Create(OpCodes.Ldc_I4, hookId),
-            w.CreateCall(GetHook),
-            w.CreateCall(Utils.DisposeBadHooks)
+            w.CreateParamsBeforeCurrent(AotHook),
+            w.If(modifiesReturnValue)?.Create(OpCodes.Ldloca, info.ReturnValue!),
+            w.Create(OpCodes.Call, AotHook.Manipulator)
         );
 
-        w.HandlerSetHandlerEnd(w.Previous, handler);
-
-        if (Hook.ModifiesControlFlow())
+        if (modifiesControlFlow)
         {
             // Evaluate temporary control flow value.
             var setControlFlowSwitch = w.Create(OpCodes.Switch, new object());
-            w.InsertBeforeCurrent(
-                w.Create(OpCodes.Ldloc, info.PrefixInfo.TemporaryControlFlow),
-                setControlFlowSwitch
-            );
+            w.InsertBeforeCurrent(setControlFlowSwitch);
 
             w.DefineAndMarkLabelToFutureNextInsert(out var hardReturn);
             // Hack: MonoDetour will not redirect ret instructions if there are two.
@@ -147,11 +99,11 @@ public class PrefixDetour : IMonoDetourHookApplier
 
                 if (!foundPostfix)
                 {
-                    Hook.Owner.Log(
+                    AotHook.Owner.Log(
                         MonoDetourLogger.LogChannel.Warning,
-                        $"While applying Prefix: {Hook.Manipulator.Name} ({Hook.Owner.Id}): "
+                        $"While applying Prefix: {AotHook.Manipulator.Name} ({AotHook.Owner.Id}): "
                             + "No postfix labels found despite postfixes being applied on the method. "
-                            + $"Postfixes might not run on method '{Hook.Target}'. "
+                            + $"Postfixes might not run on method '{AotHook.Target}'. "
                     );
                     w.InsertBeforeCurrent(w.Create(OpCodes.Ret));
                 }
@@ -160,20 +112,20 @@ public class PrefixDetour : IMonoDetourHookApplier
 
         onFinish();
 
-        if (Hook.ModifiesControlFlow())
+        if (AotHook.ModifiesControlFlow())
         {
             info.PrefixInfo.MarkControlFlowPrefixAsApplied();
         }
 
-        Hook.Owner.Log(
+        AotHook.Owner.Log(
             MonoDetourLogger.LogChannel.IL,
             () =>
             {
                 var body = w.Body.CreateInformationalSnapshotJIT().AnnotateErrors();
-                return $"Manipulated by Prefix: {Hook.Manipulator.Name} ({Hook.Owner.Id}):\n{body}";
+                return $"Manipulated by Prefix: {AotHook.Manipulator.Name} ({AotHook.Owner.Id}):\n{body}";
             }
         );
 
-        Utils.DebugValidateCILValidatorNoErrors(Hook, w.Body);
+        // Utils.DebugValidateCILValidatorNoErrors(AotHook, w.Body);
     }
 }

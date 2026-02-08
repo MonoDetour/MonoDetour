@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoDetour.Aot;
 using MonoDetour.Cil;
 using MonoDetour.Cil.Analysis;
 using MonoDetour.Logging;
@@ -26,8 +29,30 @@ static class Utils
         w.InsertBeforeCurrent(w.Create(OpCodes.Call, method));
     }
 
+    static Instruction CreateSpeakableEnumerator(ILWeaver w, Type speakableEnumeratorType)
+    {
+        MethodInfo method = speakableEnumeratorType.GetMethod("GetOrCreate")!;
+        return w.Create(OpCodes.Call, method);
+    }
+
     public static bool ModifiesControlFlow(this IReadOnlyMonoDetourHook hook) =>
         hook.Manipulator is MethodInfo mi && mi.ReturnType == typeof(ReturnFlow);
+
+    public static bool ModifiesControlFlow(this IReadOnlyAotMonoDetourHook hook)
+    {
+        if (hook.Manipulator is MethodInfo mi)
+        {
+            if (mi.ReturnType == typeof(ReturnFlow))
+                return true;
+        }
+        else if (hook.ManipulatorDefinition is { } def)
+        {
+            if (def.ReturnType.MetadataType != Mono.Cecil.MetadataType.Void)
+                return true;
+        }
+
+        return false;
+    }
 
     public static void EmitParamsAndReturnValueBeforeCurrent(
         this ILWeaver w,
@@ -80,6 +105,54 @@ static class Utils
             else
             {
                 w.InsertBeforeCurrent(w.Create(OpCodes.Ldarga, origParam.Index));
+            }
+        }
+    }
+
+    public static Instruction[] CreateParamsBeforeCurrent(
+        this ILWeaver w,
+        IReadOnlyAotMonoDetourHook hook
+    ) => [.. CreateParamsBeforeCurrentEnumerable(w, hook)];
+
+    static IEnumerable<Instruction> CreateParamsBeforeCurrentEnumerable(
+        this ILWeaver w,
+        IReadOnlyAotMonoDetourHook hook
+    )
+    {
+        bool isStatic = hook.Target.IsStatic;
+
+        foreach (var origParam in w.Method.Parameters)
+        {
+            bool isThis = !isStatic && origParam.Index == 0;
+
+            if (isThis)
+            {
+                // Having this logic here is kinda dirty.
+                var firstArg = hook.Manipulator.GetParameters().First().ParameterType;
+                if (typeof(ISpeakableEnumerator).IsAssignableFrom(firstArg))
+                {
+                    var targetDeclaringType =
+                        hook.Target.DeclaringType
+                        ?? throw new NullReferenceException(
+                            "Declaring type of target method is null!"
+                        );
+
+                    yield return w.Create(OpCodes.Ldarg, origParam.Index);
+                    yield return CreateSpeakableEnumerator(w, firstArg);
+                }
+                else
+                {
+                    yield return w.Create(OpCodes.Ldarg, origParam.Index);
+                }
+            }
+            // 'this', and reference types must not be passed by reference.
+            else if (origParam.ParameterType.IsByReference)
+            {
+                yield return w.Create(OpCodes.Ldarg, origParam.Index);
+            }
+            else
+            {
+                yield return w.Create(OpCodes.Ldarga, origParam.Index);
             }
         }
     }

@@ -5,6 +5,7 @@ using MonoDetour.Cil;
 using MonoDetour.Cil.Analysis;
 using MonoDetour.Logging;
 using MonoMod.Cil;
+using MonoMod.Utils;
 
 namespace MonoDetour.Aot.DetourTypes;
 
@@ -23,7 +24,7 @@ public class AotILHookDetour : IAotMonoDetourHookApplier
         {
             _aotHook = value;
 
-            if (value.ManipulatorBase is MethodInfo { } methodInfo)
+            if (value.Manipulator is MethodInfo { } methodInfo)
             {
                 invoker = methodInfo.CreateDelegate<ILManipulationInfo.Manipulator>();
             }
@@ -52,7 +53,7 @@ public class AotILHookDetour : IAotMonoDetourHookApplier
             () =>
             {
                 var body = il.Body.CreateInformationalSnapshotJIT().AnnotateErrors();
-                return $"Manipulated by AotILHook: {AotHook.ManipulatorBase!.Name} ({AotHook.Owner.Id}):\n{body}";
+                return $"Manipulated by AotILHook: {AotHook.Manipulator!.Name} ({AotHook.Owner.Id}):\n{body}";
             }
         );
     }

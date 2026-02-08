@@ -232,6 +232,8 @@ public partial class ILWeaver : IMonoDetourLogSource
         Body.Variables.Add(variableDefinition);
         return this;
     }
+
+    internal ILWeaver? If(bool condition) => condition ? this : null;
 }
 
 /// <summary>

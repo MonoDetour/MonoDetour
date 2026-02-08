@@ -16,7 +16,9 @@ public interface IReadOnlyAotMonoDetourHook
     /// <summary>
     /// The hook or manipulator method.
     /// </summary>
-    MethodBase? ManipulatorBase { get; }
+    MethodInfo Manipulator { get; }
+
+    // For now, only support MethodInfo for Manipulator and no MethodDefinition.
 
     /// <summary>
     /// Manipulator method as a <see cref="MethodDefinition"/>.

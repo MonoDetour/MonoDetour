@@ -27,7 +27,7 @@ public class AotMonoDetourHook : IReadOnlyAotMonoDetourHook
     /// <summary>
     /// The hook or manipulator method.
     /// </summary>
-    public MethodBase? ManipulatorBase { get; }
+    public MethodInfo Manipulator { get; }
 
     /// <summary>
     /// Manipulator method as a <see cref="MethodDefinition"/>.
@@ -74,7 +74,7 @@ public class AotMonoDetourHook : IReadOnlyAotMonoDetourHook
     )
     {
         Target = Helpers.ThrowIfNull(target);
-        ManipulatorBase = manipulatorBase;
+        Manipulator = Helpers.ThrowIfNull(manipulatorBase as MethodInfo);
         ManipulatorDefinition = manipulatorDefinition;
         Owner = Helpers.ThrowIfNull(owner);
         ApplierType = applierType;
