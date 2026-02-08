@@ -60,6 +60,7 @@ public partial class ILWeaver : IMonoDetourLogSource
     /// The instruction this weaver currently points to.
     /// </summary>
     /// <remarks>
+    /// By default, this will be the first instruction in the method body.
     /// Even if the method body would have no instructions, ILWeaver
     /// creates a temporary instruction on the method body to ensure
     /// this can always be used as a reference for inserting new instructions.<br/>
