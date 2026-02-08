@@ -12,7 +12,6 @@ namespace MonoDetour.Interop.RuntimeDetour;
 
 static class ProxyILHookConstructor
 {
-    static Dictionary<IMonoDetourConfig, ILHookConfig>? interfaceToConfig;
     static readonly ILHook detourContextHook = null!;
 
     static ProxyILHookConstructor()
@@ -82,8 +81,6 @@ static class ProxyILHookConstructor
         string id
     )
     {
-        interfaceToConfig ??= [];
-
         if (config is null)
         {
             // In this implementation existing DetourContext will not override applyByDefault.
@@ -107,12 +104,7 @@ static class ProxyILHookConstructor
             return new ILHook(target, manipulator, configWithManualApply);
         }
 
-        if (interfaceToConfig.TryGetValue(config, out var realConfig))
-        {
-            return new ILHook(target, manipulator, realConfig);
-        }
-
-        realConfig = new ILHookConfig()
+        var realConfig = new ILHookConfig()
         {
             ID = config.OverrideId ?? id,
             Priority = config.Priority,
@@ -120,7 +112,6 @@ static class ProxyILHookConstructor
             After = config.After,
             ManualApply = true,
         };
-        interfaceToConfig.Add(config, realConfig);
 
         return new ILHook(target, manipulator, realConfig);
     }
