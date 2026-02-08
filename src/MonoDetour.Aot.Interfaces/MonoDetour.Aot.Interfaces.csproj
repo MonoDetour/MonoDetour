@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>$(MonoDetourTargetFrameworks)</TargetFrameworks>
-    <AssemblyName>com.github.MonoDetour.Aot.Interfaces</AssemblyName>
-    <VersionPrefix>$(MonoDetourVersionPrefix)</VersionPrefix>
-    <VersionSuffix>$(MonoDetourVersionSuffix)</VersionSuffix>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-</Project>

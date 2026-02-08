@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Mono.Cecil;
+using MonoDetour.Aot.DetourTypes;
 using MonoDetour.Cil;
-using MonoDetour.DetourTypes;
 using MonoDetour.Logging;
 
 namespace MonoDetour.Aot;
@@ -32,7 +32,7 @@ public class AotMonoDetourManager(string id) : IMonoDetourLogSource
         MonoDetourLogger.LogChannel.Warning | MonoDetourLogger.LogChannel.Error;
 
     /// <summary>
-    /// The hooks applied by this MonoDetourAotManager.
+    /// The hooks applied by this <see cref="AotMonoDetourManager"/>.
     /// </summary>
     public List<AotMonoDetourHook> Hooks { get; } = [];
 
@@ -71,18 +71,10 @@ public class AotMonoDetourManager(string id) : IMonoDetourLogSource
     /// <remarks>
     /// If a hook initializer throws, this method throws.
     /// </remarks>
-    public static void InvokeHookInitializers(Assembly assembly, bool reportUnloadableTypes = true)
-    {
-        foreach (Type type in ReflectionUtils.GetTypesFromAssembly(assembly, reportUnloadableTypes))
-        {
-            if (
-                !ReflectionUtils.HasCustomAttribute<IMonoDetourTargets>(type, reportUnloadableTypes)
-            )
-                continue;
-
-            InvokeHookInitializers(type, reportUnloadableTypes);
-        }
-    }
+    public static void InvokeHookInitializers(
+        Assembly assembly,
+        bool reportUnloadableTypes = true
+    ) => MonoDetourManager.InvokeHookInitializers(assembly, reportUnloadableTypes);
 
     /// <summary>
     /// Invokes hook initializers for the specified type.
@@ -90,22 +82,8 @@ public class AotMonoDetourManager(string id) : IMonoDetourLogSource
     /// <param name="type">The type whose hook initializers to invoke.</param>
     /// <inheritdoc cref="InvokeHookInitializers(Assembly, bool)"/>
     /// <param name="reportUnloadableTypes"></param>
-    public static void InvokeHookInitializers(Type type, bool reportUnloadableTypes = true)
-    {
-        MethodInfo[] methods = type.GetMethods((BindingFlags)~0);
-        foreach (var method in methods)
-        {
-            if (
-                !ReflectionUtils.HasCustomAttribute<MonoDetourHookInitializeAttribute>(
-                    method,
-                    reportUnloadableTypes
-                )
-            )
-                continue;
-
-            method.Invoke(null, null);
-        }
-    }
+    public static void InvokeHookInitializers(Type type, bool reportUnloadableTypes = true) =>
+        MonoDetourManager.InvokeHookInitializers(type, reportUnloadableTypes);
 
     /// <summary>
     /// Applies all hooks belonging to this manager.
@@ -123,7 +101,7 @@ public class AotMonoDetourManager(string id) : IMonoDetourLogSource
     public void UndoHooks() => Hooks.ForEach(x => x.Undo());
 
     /// <summary>
-    /// Creates a <see cref="ILHookDetour"/> hook using the information defined.
+    /// Creates a <see cref="AotILHookDetour"/> hook using the information defined.
     /// </summary>
     /// <param name="manipulator">The manipulator method.</param>
     /// <param name="config">The priority configuration for this hook.</param>
@@ -147,7 +125,7 @@ public class AotMonoDetourManager(string id) : IMonoDetourLogSource
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where TApplier : class, IAotMonoDetourHookApplier
+        where TApplier : class, IAotMonoDetourHookApplier, new()
     {
         return AotMonoDetourHook.Create<TApplier>(
             target,
@@ -159,13 +137,13 @@ public class AotMonoDetourManager(string id) : IMonoDetourLogSource
     }
 
     /// <summary>
-    /// Creates a MonoDetour Hook using the information defined.
+    /// Creates an AOT MonoDetour Hook using the information defined.
     /// </summary>
     /// <remarks>
     /// This method is not intended to be used directly, but is instead
     /// used by MonoDetour's HookGen.
     /// </remarks>
-    /// <typeparam name="TApplier">The <see cref="IMonoDetourHookApplier"/>
+    /// <typeparam name="TApplier">The <see cref="IAotMonoDetourHookApplier"/>
     /// type to define how to apply this hook.</typeparam>
     /// <param name="target">The method to be hooked.</param>
     /// <param name="manipulator">The hook or manipulator method.</param>
@@ -179,7 +157,7 @@ public class AotMonoDetourManager(string id) : IMonoDetourLogSource
         MonoDetourConfig? config = null,
         bool applyByDefault = true
     )
-        where TApplier : class, IAotMonoDetourHookApplier
+        where TApplier : class, IAotMonoDetourHookApplier, new()
     {
         return AotMonoDetourHook.Create<TApplier>(
             target,
