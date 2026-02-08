@@ -161,7 +161,7 @@ public partial class ILWeaver
     /// <remarks>
     /// Prefer <see cref="DefineAndMarkLabelToFutureNextInsert(out ILLabel)"/> if the label
     /// will always be redirected to an inserted instruction. Using this
-    /// method will then show that there branches where a next instruction isn't inserted.
+    /// method will then show that there are branches where a next instruction isn't inserted.
     /// </remarks>
     /// <param name="futureMarkedLabel">The marked label.</param>
     /// <returns>This <see cref="ILWeaver"/>.</returns>

@@ -9,6 +9,7 @@ using MonoDetour.Bindings.Reorg;
 using MonoDetour.Interop.MonoModUtils;
 using MonoMod.Cil;
 using MonoMod.Utils;
+using OverloadResolutionPriority = System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute;
 
 namespace MonoDetour.Cil;
 
@@ -23,7 +24,10 @@ public partial class ILWeaver
     /// and as such it steals all the labels of <paramref name="target"/> to itself.<br/>
     /// <br/>
     /// If <see cref="Current"/> points to the instruction being replaced,
-    /// it is moved to the <paramref name="replacement"/> instruction.
+    /// it is moved to the <paramref name="replacement"/> instruction.<br/>
+    /// <br/>
+    /// If <paramref name="target"/> is replaced with no instructions (null),
+    /// the <paramref name="target"/> instruction remains and is not removed from the method body.
     /// </remarks>
     /// <param name="target">The instruction to replace.</param>
     /// <param name="replacement">The replacement instruction.</param>
@@ -43,7 +47,7 @@ public partial class ILWeaver
     /// <returns>this <see cref="ILWeaver"/>.</returns>
     /// <inheritdoc cref="Replace(Instruction, Instruction)"/>
     /// <param name="target"></param>
-    public ILWeaver Replace(Instruction target, params IEnumerable<Instruction> replacement)
+    public ILWeaver Replace(Instruction target, params IEnumerable<Instruction?> replacement)
     {
         var noNull = replacement.Where(x => x is { });
         var first = noNull.FirstOrDefault();
@@ -59,7 +63,7 @@ public partial class ILWeaver
     /// <inheritdoc cref="Replace(Instruction, IEnumerable{Instruction})"/>
     public ILWeaver Replace(
         Instruction target,
-        params IEnumerable<InstructionOrEnumerable> replacement
+        params IEnumerable<InstructionOrEnumerable?> replacement
     ) => Replace(target, replacement.Unwrap());
 
     /// <summary>
@@ -68,7 +72,10 @@ public partial class ILWeaver
     /// <remarks>
     /// The <see cref="Current"/> instruction instance is left untouched and instead
     /// the actual instance of the instruction that replaces it takes its place,
-    /// and as such it steals all the labels of <see cref="Current"/> to itself.
+    /// and as such it steals all the labels of <see cref="Current"/> to itself.<br/>
+    /// <br/>
+    /// If <see cref="Current"/> is replaced with no instructions (null),
+    /// the instruction remains and is not removed from the method body.
     /// </remarks>
     /// <param name="replacement">The replacement instruction.</param>
     /// <returns>this <see cref="ILWeaver"/>.</returns>
@@ -86,11 +93,11 @@ public partial class ILWeaver
     /// The first instruction replaces the <see cref="Current"/>.</param>
     /// <returns>this <see cref="ILWeaver"/>.</returns>
     /// <inheritdoc cref="ReplaceCurrent(Instruction)"/>
-    public ILWeaver ReplaceCurrent(params IEnumerable<Instruction> replacement) =>
+    public ILWeaver ReplaceCurrent(params IEnumerable<Instruction?> replacement) =>
         Replace(Current, replacement);
 
     /// <inheritdoc cref="ReplaceCurrent(IEnumerable{Instruction})"/>
-    public ILWeaver ReplaceCurrent(params IEnumerable<InstructionOrEnumerable> replacement) =>
+    public ILWeaver ReplaceCurrent(params IEnumerable<InstructionOrEnumerable?> replacement) =>
         ReplaceCurrent(replacement.Unwrap());
 
     /// <summary>
@@ -521,7 +528,11 @@ public partial class ILWeaver
     /// exclusive, meaning that the inclusive end of a range is before the
     /// instruction marked as the end.
     /// </remarks>
-    public ILWeaver InsertBeforeStealLabels(int index, params IEnumerable<Instruction> instructions)
+    [OverloadResolutionPriority(1)]
+    public ILWeaver InsertBeforeStealLabels(
+        int index,
+        params IEnumerable<Instruction?> instructions
+    )
     {
         var noNull = instructions.Where(x => x is { });
         var first = noNull.FirstOrDefault();
@@ -533,7 +544,7 @@ public partial class ILWeaver
 
         foreach (var instruction in noNull.Skip(1))
         {
-            InsertAtInternal(ref index, instruction, InsertType.Before);
+            InsertAtInternal(ref index, instruction!, InsertType.Before);
             index++;
         }
 
@@ -543,22 +554,23 @@ public partial class ILWeaver
     /// <inheritdoc cref="InsertBeforeStealLabels(int, IEnumerable{Instruction})"/>
     public ILWeaver InsertBeforeStealLabels(
         int index,
-        params IEnumerable<InstructionOrEnumerable> instructions
+        params IEnumerable<InstructionOrEnumerable?> instructions
     ) => InsertBeforeStealLabels(index, instructions.Unwrap());
 
     /// <summary>
     /// Insert instructions before the provided instruction, stealing any labels.
     /// </summary>
     /// <inheritdoc cref="InsertBeforeStealLabels(int, IEnumerable{Instruction})"/>
+    [OverloadResolutionPriority(1)]
     public ILWeaver InsertBeforeStealLabels(
         Instruction target,
-        params IEnumerable<Instruction> instructions
+        params IEnumerable<Instruction?> instructions
     ) => InsertBeforeStealLabels(Instructions.IndexOf(target), instructions);
 
     /// <inheritdoc cref="InsertBeforeStealLabels(Instruction, IEnumerable{Instruction})"/>
     public ILWeaver InsertBeforeStealLabels(
         Instruction target,
-        params IEnumerable<InstructionOrEnumerable> instructions
+        params IEnumerable<InstructionOrEnumerable?> instructions
     ) => InsertBeforeStealLabels(target, instructions.Unwrap());
 
     /// <summary>
@@ -566,22 +578,24 @@ public partial class ILWeaver
     /// Current target doesn't change.
     /// </summary>
     /// <inheritdoc cref="InsertBeforeStealLabels(int, IEnumerable{Instruction})"/>
-    public ILWeaver InsertBeforeCurrentStealLabels(params IEnumerable<Instruction> instructions) =>
+    [OverloadResolutionPriority(1)]
+    public ILWeaver InsertBeforeCurrentStealLabels(params IEnumerable<Instruction?> instructions) =>
         InsertBeforeStealLabels(Index, instructions);
 
     /// <inheritdoc cref="InsertBeforeCurrentStealLabels(IEnumerable{Instruction})"/>
     public ILWeaver InsertBeforeCurrentStealLabels(
-        params IEnumerable<InstructionOrEnumerable> instructions
+        params IEnumerable<InstructionOrEnumerable?> instructions
     ) => InsertBeforeCurrentStealLabels(instructions.Unwrap());
 
     /// <summary>
     /// Insert instructions before the provided index.
     /// </summary>
-    public ILWeaver InsertBefore(int index, params IEnumerable<Instruction> instructions)
+    [OverloadResolutionPriority(1)]
+    public ILWeaver InsertBefore(int index, params IEnumerable<Instruction?> instructions)
     {
         foreach (var instruction in instructions.Where(x => x is { }))
         {
-            InsertAtInternal(ref index, instruction, InsertType.Before);
+            InsertAtInternal(ref index, instruction!, InsertType.Before);
             index++;
         }
 
@@ -591,41 +605,45 @@ public partial class ILWeaver
     /// <inheritdoc cref="InsertBefore(int, IEnumerable{Instruction})"/>
     public ILWeaver InsertBefore(
         int index,
-        params IEnumerable<InstructionOrEnumerable> instructions
+        params IEnumerable<InstructionOrEnumerable?> instructions
     ) => InsertBefore(index, instructions.Unwrap());
 
     /// <summary>
     /// Insert instructions before the provided instruction.
     /// </summary>
+    [OverloadResolutionPriority(1)]
     public ILWeaver InsertBefore(
         Instruction target,
-        params IEnumerable<Instruction> instructions
+        params IEnumerable<Instruction?> instructions
     ) => InsertBefore(Instructions.IndexOf(target), instructions);
 
     /// <inheritdoc cref="InsertBefore(Instruction, IEnumerable{Instruction})"/>
     public ILWeaver InsertBefore(
         Instruction target,
-        params IEnumerable<InstructionOrEnumerable> instructions
+        params IEnumerable<InstructionOrEnumerable?> instructions
     ) => InsertBefore(target, instructions.Unwrap());
 
     /// <summary>
     /// Insert instructions before this weaver's current position.
     /// </summary>
-    public ILWeaver InsertBeforeCurrent(params IEnumerable<Instruction> instructions) =>
+    [OverloadResolutionPriority(1)]
+    public ILWeaver InsertBeforeCurrent(params IEnumerable<Instruction?> instructions) =>
         InsertBefore(Index, instructions);
 
     /// <inheritdoc cref="InsertBeforeCurrent(IEnumerable{Instruction})"/>
-    public ILWeaver InsertBeforeCurrent(params IEnumerable<InstructionOrEnumerable> instructions) =>
-        InsertBeforeCurrent(instructions.Unwrap());
+    public ILWeaver InsertBeforeCurrent(
+        params IEnumerable<InstructionOrEnumerable?> instructions
+    ) => InsertBeforeCurrent(instructions.Unwrap());
 
     /// <summary>
     /// Insert instructions after the provided index.
     /// </summary>
-    public ILWeaver InsertAfter(int index, params IEnumerable<Instruction> instructions)
+    [OverloadResolutionPriority(1)]
+    public ILWeaver InsertAfter(int index, params IEnumerable<Instruction?> instructions)
     {
         foreach (var instruction in instructions.Where(x => x is { }))
         {
-            InsertAtInternal(ref index, instruction, InsertType.After);
+            InsertAtInternal(ref index, instruction!, InsertType.After);
             index++;
         }
 
@@ -635,32 +653,36 @@ public partial class ILWeaver
     /// <inheritdoc cref="InsertAfter(int, IEnumerable{Instruction})"/>
     public ILWeaver InsertAfter(
         int index,
-        params IEnumerable<InstructionOrEnumerable> instructions
+        params IEnumerable<InstructionOrEnumerable?> instructions
     ) => InsertAfter(index, instructions.Unwrap());
 
     /// <summary>
     /// Insert instructions after the provided instruction.
     /// </summary>
-    public ILWeaver InsertAfter(Instruction target, params IEnumerable<Instruction> instructions) =>
-        InsertAfter(Instructions.IndexOf(target), instructions);
+    [OverloadResolutionPriority(1)]
+    public ILWeaver InsertAfter(
+        Instruction target,
+        params IEnumerable<Instruction?> instructions
+    ) => InsertAfter(Instructions.IndexOf(target), instructions);
 
     /// <inheritdoc cref="InsertAfter(Instruction, IEnumerable{Instruction})"/>
     public ILWeaver InsertAfter(
         Instruction target,
-        params IEnumerable<InstructionOrEnumerable> instructions
+        params IEnumerable<InstructionOrEnumerable?> instructions
     ) => InsertAfter(target, instructions.Unwrap());
 
     /// <summary>
     /// Insert instructions after this weaver's current position.
     /// Retargets Current to the last inserted instruction.
     /// </summary>
-    public ILWeaver InsertAfterCurrent(params IEnumerable<Instruction> instructions)
+    [OverloadResolutionPriority(1)]
+    public ILWeaver InsertAfterCurrent(params IEnumerable<Instruction?> instructions)
     {
         int index = Index;
         foreach (var instruction in instructions.Where(x => x is { }))
         {
-            InsertAtInternal(ref index, instruction, InsertType.After);
-            CurrentTo(instruction);
+            InsertAtInternal(ref index, instruction!, InsertType.After);
+            CurrentTo(instruction!);
             index++;
         }
 
@@ -668,14 +690,14 @@ public partial class ILWeaver
     }
 
     /// <inheritdoc cref="InsertAfterCurrent(IEnumerable{Instruction})"/>
-    public ILWeaver InsertAfterCurrent(params IEnumerable<InstructionOrEnumerable> instructions) =>
+    public ILWeaver InsertAfterCurrent(params IEnumerable<InstructionOrEnumerable?> instructions) =>
         InsertAfterCurrent(instructions.Unwrap());
 
     private ILWeaver InsertBranchOverIfX(
         Instruction start,
         Instruction end,
         OpCode opCode,
-        params IEnumerable<Instruction> condition
+        params IEnumerable<Instruction?> condition
     )
     {
         var startIndex = Instructions.IndexOf(start);
@@ -697,31 +719,33 @@ public partial class ILWeaver
     /// <inheritdoc cref="InsertBranchOver(Instruction, Instruction)"/>
     /// <param name="start"/>
     /// <param name="end"/>
+    [OverloadResolutionPriority(1)]
     public ILWeaver InsertBranchOverIfTrue(
         Instruction start,
         Instruction end,
-        params IEnumerable<Instruction> condition
+        params IEnumerable<Instruction?> condition
     ) => InsertBranchOverIfX(start, end, OpCodes.Brtrue, condition);
 
     /// <inheritdoc cref="InsertBranchOverIfTrue(Instruction, Instruction, IEnumerable{Instruction})"/>
     public ILWeaver InsertBranchOverIfTrue(
         Instruction start,
         Instruction end,
-        params IEnumerable<InstructionOrEnumerable> condition
+        params IEnumerable<InstructionOrEnumerable?> condition
     ) => InsertBranchOverIfTrue(start, end, condition.Unwrap());
 
     /// <param name="range">A tuple of the first and last instructions to branch over.</param>
     /// <inheritdoc cref="InsertBranchOverIfTrue(Instruction, Instruction, IEnumerable{Instruction})"/>
     /// <param name="condition"/>
+    [OverloadResolutionPriority(1)]
     public ILWeaver InsertBranchOverIfTrue(
         (Instruction start, Instruction end) range,
-        params IEnumerable<Instruction> condition
+        params IEnumerable<Instruction?> condition
     ) => InsertBranchOverIfTrue(range.start, range.end, condition);
 
     /// <inheritdoc cref="InsertBranchOverIfTrue(ValueTuple{Instruction, Instruction}, IEnumerable{Instruction})"/>
     public ILWeaver InsertBranchOverIfTrue(
         (Instruction start, Instruction end) range,
-        params IEnumerable<InstructionOrEnumerable> condition
+        params IEnumerable<InstructionOrEnumerable?> condition
     ) => InsertBranchOverIfTrue(range, condition.Unwrap());
 
     /// <summary>
@@ -737,31 +761,33 @@ public partial class ILWeaver
     /// <inheritdoc cref="InsertBranchOver(Instruction, Instruction)"/>
     /// <param name="start"/>
     /// <param name="end"/>
+    [OverloadResolutionPriority(1)]
     public ILWeaver InsertBranchOverIfFalse(
         Instruction start,
         Instruction end,
-        params IEnumerable<Instruction> condition
+        params IEnumerable<Instruction?> condition
     ) => InsertBranchOverIfX(start, end, OpCodes.Brfalse, condition);
 
     /// <inheritdoc cref="InsertBranchOverIfFalse(Instruction, Instruction, IEnumerable{Instruction})"/>
     public ILWeaver InsertBranchOverIfFalse(
         Instruction start,
         Instruction end,
-        params IEnumerable<InstructionOrEnumerable> condition
+        params IEnumerable<InstructionOrEnumerable?> condition
     ) => InsertBranchOverIfFalse(start, end, condition.Unwrap());
 
     /// <param name="range">A tuple of the first and last instructions to branch over.</param>
     /// <inheritdoc cref="InsertBranchOverIfFalse(Instruction, Instruction, IEnumerable{Instruction})"/>
     /// <param name="condition"/>
+    [OverloadResolutionPriority(1)]
     public ILWeaver InsertBranchOverIfFalse(
         (Instruction start, Instruction end) range,
-        params IEnumerable<Instruction> condition
+        params IEnumerable<Instruction?> condition
     ) => InsertBranchOverIfFalse(range.start, range.end, condition);
 
     /// <inheritdoc cref="InsertBranchOverIfFalse(ValueTuple{Instruction, Instruction}, IEnumerable{Instruction})"/>
     public ILWeaver InsertBranchOverIfFalse(
         (Instruction start, Instruction end) range,
-        params IEnumerable<InstructionOrEnumerable> condition
+        params IEnumerable<InstructionOrEnumerable?> condition
     ) => InsertBranchOverIfFalse(range, condition.Unwrap());
 
     /// <summary>

@@ -180,7 +180,7 @@ public partial class ILWeaver
     /// <inheritdoc cref="HandlerWrapTryCatchStackSizeNonZero(Type?, Instruction, out Instruction, IEnumerable{Instruction})"/>
     public ILWeaver HandlerWrapTryCatchStackSizeNonZeroOnCurrent(
         Type? catchType,
-        params IEnumerable<Instruction> catchInstructions
+        params IEnumerable<Instruction?> catchInstructions
     ) =>
         HandlerWrapTryCatchStackSizeNonZeroOnCurrent(
             catchType,
@@ -193,7 +193,7 @@ public partial class ILWeaver
     /// <inheritdoc cref="HandlerWrapTryCatchStackSizeNonZeroOnCurrent(Type?, IEnumerable{Instruction})"/>
     public ILWeaver HandlerWrapTryCatchStackSizeNonZeroOnCurrent(
         Type? catchType,
-        params IEnumerable<InstructionOrEnumerable> catchInstructions
+        params IEnumerable<InstructionOrEnumerable?> catchInstructions
     ) => HandlerWrapTryCatchStackSizeNonZeroOnCurrent(catchType, catchInstructions.Unwrap());
 
     /// <summary>
@@ -238,17 +238,19 @@ public partial class ILWeaver
         Type? catchType,
         Instruction origin,
         out Instruction afterCatch,
-        params IEnumerable<Instruction> catchInstructions
+        params IEnumerable<Instruction?> catchInstructions
     )
     {
+        Instruction[] instructions = [.. catchInstructions.Where(x => x is { })!];
+
         HandlerWrapTryCatchStackSizeNonZero(
             catchType,
             origin,
             out afterCatch,
             tryEnd =>
             {
-                InsertAfter(tryEnd, catchInstructions);
-                return catchInstructions.Last();
+                InsertAfter(tryEnd, instructions);
+                return instructions.Last();
             }
         );
 
@@ -260,7 +262,7 @@ public partial class ILWeaver
         Type? catchType,
         Instruction origin,
         out Instruction afterCatch,
-        params IEnumerable<InstructionOrEnumerable> catchInstructions
+        params IEnumerable<InstructionOrEnumerable?> catchInstructions
     ) =>
         HandlerWrapTryCatchStackSizeNonZero(
             catchType,

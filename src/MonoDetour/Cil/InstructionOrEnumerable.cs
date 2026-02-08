@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,13 +17,13 @@ namespace MonoDetour.Cil;
 /// <remarks>
 /// This is a hacky workaround for the fact that C# does not have discriminated unions (as of C# 14).
 /// </remarks>
-public sealed class InstructionOrEnumerable : IEnumerable<Instruction>
+public sealed class InstructionOrEnumerable : IEnumerable<Instruction?>
 {
-    readonly IEnumerable<Instruction> _instructions;
+    readonly IEnumerable<Instruction?> _instructions;
 
     /// <inheritdoc cref="InstructionOrEnumerable"/>
     /// <param name="instructions">Value to wrap as <see cref="InstructionOrEnumerable"/>.</param>
-    public InstructionOrEnumerable(IEnumerable<Instruction> instructions) =>
+    public InstructionOrEnumerable(IEnumerable<Instruction?> instructions) =>
         _instructions = instructions;
 
     /// <inheritdoc cref="InstructionOrEnumerable"/>
@@ -34,11 +35,11 @@ public sealed class InstructionOrEnumerable : IEnumerable<Instruction>
         new(instruction);
 
     /// <inheritdoc cref="InstructionOrEnumerable(IEnumerable{Instruction})"/>
-    public static implicit operator InstructionOrEnumerable(Instruction[] instructions) =>
+    public static implicit operator InstructionOrEnumerable(Instruction?[] instructions) =>
         new(instructions);
 
     /// <inheritdoc cref="InstructionOrEnumerable(IEnumerable{Instruction})"/>
-    public static implicit operator InstructionOrEnumerable(List<Instruction> instructions) =>
+    public static implicit operator InstructionOrEnumerable(List<Instruction?> instructions) =>
         new(instructions);
 
     /// <summary>
@@ -46,7 +47,7 @@ public sealed class InstructionOrEnumerable : IEnumerable<Instruction>
     /// to a collection of the specified type.
     /// </summary>
     /// <param name="instructions">The wrapper.</param>
-    public static implicit operator Instruction[](InstructionOrEnumerable instructions) =>
+    public static implicit operator Instruction?[](InstructionOrEnumerable instructions) =>
         [.. instructions._instructions];
 
     /// <summary>
@@ -54,11 +55,11 @@ public sealed class InstructionOrEnumerable : IEnumerable<Instruction>
     /// to a collection of the specified type.
     /// </summary>
     /// <param name="instructions">The wrapper.</param>
-    public static implicit operator List<Instruction>(InstructionOrEnumerable instructions) =>
+    public static implicit operator List<Instruction?>(InstructionOrEnumerable instructions) =>
         [.. instructions._instructions];
 
     /// <inheritdoc/>
-    public IEnumerator<Instruction> GetEnumerator() => _instructions.GetEnumerator();
+    public IEnumerator<Instruction?> GetEnumerator() => _instructions.GetEnumerator();
 
     /// <inheritdoc/>
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -76,7 +77,7 @@ public static class InstructionOrEnumerableExtensions
     /// into a flat <see cref="IEnumerable"/> of <see cref="Instruction"/>.
     /// </summary>
     /// <returns>A flat <see cref="IEnumerable"/> of <see cref="Instruction"/>.</returns>
-    public static IEnumerable<Instruction> Unwrap(
-        this IEnumerable<InstructionOrEnumerable> instructions
-    ) => instructions.SelectMany(x => x);
+    public static IEnumerable<Instruction?> Unwrap(
+        this IEnumerable<InstructionOrEnumerable?> instructions
+    ) => instructions.Where(x => x is { }).SelectMany(x => x!);
 }
