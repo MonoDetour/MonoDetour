@@ -1,0 +1,13 @@
+import "Thunderstore/MdThunderstore.pkl"
+import "MonoDetour.BepInEx.5/MdBepInEx5.pkl"
+import "MonoDetour.BepInEx.5.Resonite/MdBepInEx5Resonite.pkl"
+import "MonoDetour.BepInEx.6/MdBepInEx6.pkl"
+
+output {
+  files {
+    ["Thunderstore/thunderstore.toml"] = MdThunderstore.output
+    ["MonoDetour.BepInEx.5/thunderstore.toml"] = MdBepInEx5.output
+    ["MonoDetour.BepInEx.5.Resonite/thunderstore.toml"] = MdBepInEx5Resonite.output
+    ["MonoDetour.BepInEx.6/thunderstore.toml"] = MdBepInEx6.output
+  }
+}

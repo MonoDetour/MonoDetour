@@ -12,6 +12,7 @@
     </RestoreAdditionalProjectSources>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../Thunderstore/PreBuild.proj" />
     <PackageReference Include="Hamunii.BepInEx.AutoPlugin" Version="2.0.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="6.0.0-pre.1" />
@@ -20,6 +21,6 @@
     <ProjectReference Include="$(SolutionRoot)src/MonoDetour.Interop.HarmonyX/MonoDetour.Interop.HarmonyX.csproj" />
   </ItemGroup>
   <Target Name="ProcessTcliConfig" BeforeTargets="Build">
-    <Exec Command="sed 's/__MonoDetour_Version__/$(Version)/' ./thunderstore.toml &gt; ./.processed.toml" />
+    <Exec Command="sed 's/__MonoDetour_Version__/$(Version)/' ./thunderstore.toml > ./.processed.toml" />
   </Target>
 </Project>

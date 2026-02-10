@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.Build.NoTargets/3.7.56">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <Target Name="RenderConfigs" BeforeTargets="Build">
+    <Exec Command="pkl eval -m '$(ProjectDir)../' '$(ProjectDir)../index.pkl'"/>
+  </Target>
+</Project>

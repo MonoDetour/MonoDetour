@@ -1,0 +1,42 @@
+amends "../Thunderstore.pkl"
+
+package {
+  name = "MonoDetour"
+  description = "Easy and convenient .NET detouring library, powered by MonoMod.RuntimeDetour."
+  dependOnMonoDetour = false
+}
+
+build {
+  shipInteropHarmonyX = false
+  copy {
+    new {
+      source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.dll"
+      target = "core/"
+    }
+    new {
+      source =
+        "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Reflection.dll"
+      target = "core/"
+    }
+    new {
+      source =
+        "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Bindings.Reorg.dll"
+      target = "core/"
+    }
+  }
+}
+
+publish {
+  communities {
+    // BepInEx 5
+    "lethal-company"
+    "repo"
+    "riskofrain2"
+    "peak"
+    "hollow-knight-silksong"
+    "gloomwood"
+    // Special BepInEx 5 layout and "normal" (custom) BepInEx 6
+    "resonite"
+    // BepInEx 6
+  }
+}

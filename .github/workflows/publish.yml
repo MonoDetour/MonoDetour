@@ -37,6 +37,11 @@ jobs:
             })
             console.log(result);
 
+      - name: Install pkl
+        uses: pkl-community/setup-pkl@a862c198115338598d769aaf03f5fa8c5123036e # v0.0.8
+        with:
+          pkl-version: 0.30.2
+
       - name: Restore and Build
         uses: ./.github/actions/build
 

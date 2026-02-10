@@ -1,0 +1,68 @@
+module Thunderstore
+
+import "@toml/toml.pkl"
+
+class Config {
+  schemaVersion: String = "0.0.1"
+}
+config: Config
+
+class General {
+  repository: String = "https://thunderstore.io"
+}
+general: General
+
+class Package {
+  namespace: String = "MonoDetour"
+  name: String
+  description: String
+  websiteUrl: String = "https://github.com/MonoDetour/MonoDetour"
+  containsNsfwContent: Boolean = false
+  dependencies: Mapping<String, String> = new {
+    when (dependOnMonoDetour) {
+      ["MonoDetour-MonoDetour"] = "__MonoDetour_Version__"
+    }
+  }
+  hidden dependOnMonoDetour: Boolean
+}
+package: Package
+
+class Build {
+  icon: String = "../../icon.png"
+  readme: String = "./README.md"
+  outdir: String = "../../artifacts/thunderstore/"
+  copy: Listing<BuildCopy> = new {
+    new { source = "../CHANGELOG.md" }
+    new { source = "../../LICENSE" }
+    when (shipInteropHarmonyX) {
+      new {
+        source =
+          "../../artifacts/bin/MonoDetour.Interop.HarmonyX/release/netstandard2.0/com.github.MonoDetour.Interop.HarmonyX.dll"
+        target = "core/"
+      }
+    }
+  }
+  hidden shipInteropHarmonyX: Boolean
+}
+class BuildCopy {
+  source: String
+  target: String = "/"
+}
+build: Build
+
+class Publish {
+  /// See communities at https://thunderstore.io/api/experimental/community/
+  communities: Listing<String>
+
+  /// See categories at `https://thunderstore.io/api/experimental/community/{slug}/category/`
+  categories: Mapping<String, Listing<String>> = new {
+    for (community in communities) {
+      [community] { "libraries" }
+    }
+  }
+}
+publish: Publish
+
+output {
+  renderer = new toml.Renderer {}
+}

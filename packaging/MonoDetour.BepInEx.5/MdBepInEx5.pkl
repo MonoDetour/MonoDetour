@@ -1,0 +1,30 @@
+amends "../Thunderstore.pkl"
+
+package {
+  name = "MonoDetour_BepInEx_5"
+  description =
+    "HarmonyX interop & BepInEx 5 logger integration for MonoDetour. Initializes MonoDetour early as a side effect."
+  dependOnMonoDetour = true
+}
+
+build {
+  shipInteropHarmonyX = true
+  copy {
+    new {
+      source =
+        "../../artifacts/bin/MonoDetour.BepInEx.5/release/0.com.github.MonoDetour.BepInEx.5.dll"
+      target = "patchers/"
+    }
+  }
+}
+
+publish {
+  communities {
+    "lethal-company"
+    "repo"
+    "riskofrain2"
+    "peak"
+    "hollow-knight-silksong"
+    "gloomwood"
+  }
+}

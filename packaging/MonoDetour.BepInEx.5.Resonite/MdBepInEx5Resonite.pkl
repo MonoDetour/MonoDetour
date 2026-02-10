@@ -1,0 +1,48 @@
+amends "../Thunderstore.pkl"
+
+package {
+  name = "MonoDetour_BepInEx_5_Resonite"
+  description =
+    "Full MonoDetour package (MonoDetour + MonoDetour.BepInEx.5) as a Resonite renderer preloader plugin. MonoDetour is an easy and convenient .NET detouring library, powered by MonoMod.RuntimeDetour."
+  dependencies {
+    ["ResoniteModding-RenderiteHook"] = "1.1.1"
+  }
+  dependOnMonoDetour = false
+}
+
+build {
+  // This package ships its own MonoDetour.Interop.HarmonyX to a nonstandard target directory.
+  shipInteropHarmonyX = false
+  copy {
+    new {
+      source =
+        "../../artifacts/bin/MonoDetour.BepInEx.5/release/0.com.github.MonoDetour.BepInEx.5.dll"
+      target = "Renderer/BepInEx/patchers/"
+    }
+    new {
+      source =
+        "../../artifacts/bin/MonoDetour.Interop.HarmonyX/release/netstandard2.0/com.github.MonoDetour.Interop.HarmonyX.dll"
+      target = "Renderer/BepInEx/core/"
+    }
+    new {
+      source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.dll"
+      target = "Renderer/BepInEx/core/"
+    }
+    new {
+      source =
+        "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Reflection.dll"
+      target = "Renderer/BepInEx/core/"
+    }
+    new {
+      source =
+        "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Bindings.Reorg.dll"
+      target = "Renderer/BepInEx/core/"
+    }
+  }
+}
+
+publish {
+  communities {
+    "resonite"
+  }
+}
