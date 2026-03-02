@@ -1795,9 +1795,7 @@ namespace MonoDetour.HookGen
                         continue;
                     }
 
-                    if (options.GenerateControlFlowVariants)
-                        generateControlFlowVariants = true;
-
+                    generateControlFlowVariants = true;
                     break;
                 }
 
