@@ -35,6 +35,8 @@ publish {
     "peak"
     "hollow-knight-silksong"
     "gloomwood"
+    "yapyap"
+    "super-battle-golf"
     // Special BepInEx 5 layout and "normal" (custom) BepInEx 6
     "resonite"
     // BepInEx 6

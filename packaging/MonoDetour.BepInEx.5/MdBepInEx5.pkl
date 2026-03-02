@@ -26,5 +26,7 @@ publish {
     "peak"
     "hollow-knight-silksong"
     "gloomwood"
+    "yapyap"
+    "super-battle-golf"
   }
 }
