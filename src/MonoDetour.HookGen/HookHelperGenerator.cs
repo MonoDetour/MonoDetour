@@ -1783,6 +1783,24 @@ namespace MonoDetour.HookGen
                 bool? alreadyMatchedWithDistinguishedOverloads = null;
                 var hasOverloads = type.GetMembers(member.Name).Length > 1;
 
+                // If any attribute with GenerateControlFlowVariants targets a member,
+                // we treat it as enabled for any attribute targeting that member
+                bool generateControlFlowVariants = false;
+                var controlFlowAttrs = attrModels.Where(x => x.Options.GenerateControlFlowVariants);
+                foreach (var attr in controlFlowAttrs)
+                {
+                    var options = attr.Options;
+                    if (!options.MatchesName(member.Name))
+                    {
+                        continue;
+                    }
+
+                    if (options.GenerateControlFlowVariants)
+                        generateControlFlowVariants = true;
+
+                    break;
+                }
+
                 foreach (var attr in attrModels)
                 {
                     var options = attr.Options;
@@ -1804,7 +1822,12 @@ namespace MonoDetour.HookGen
                     // the member matched, do our processing
 
                     var method = (IMethodSymbol)member;
-                    var model = GetModelForMember(method, options, hasOverloads);
+                    var model = GetModelForMember(
+                        method,
+                        options,
+                        hasOverloads,
+                        generateControlFlowVariants
+                    );
 
                     if (model is not null)
                     {
@@ -1882,7 +1905,8 @@ namespace MonoDetour.HookGen
         private static GeneratableMemberModel? GetModelForMember(
             IMethodSymbol method,
             AttributeOptions options,
-            bool hasOverloads
+            bool hasOverloads,
+            bool generateControlFlowVariants
         )
         {
             // skip generic methods
@@ -1981,7 +2005,7 @@ namespace MonoDetour.HookGen
                 method.MethodKind is MethodKind.Constructor or MethodKind.StaticConstructor,
                 method.DeclaredAccessibility,
                 options.Kind,
-                options.GenerateControlFlowVariants
+                generateControlFlowVariants
             );
         }
 

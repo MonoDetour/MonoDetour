@@ -1,6 +1,9 @@
 using Md.MonoDetour.UnitTests.TestLib.ControlFlowLib;
 
+// We also test that GenerateControlFlowVariants as true overrides false
+[assembly: MonoDetourTargets(typeof(ControlFlowLib), GenerateControlFlowVariants = false)]
 [assembly: MonoDetourTargets(typeof(ControlFlowLib), GenerateControlFlowVariants = true)]
+[assembly: MonoDetourTargets(typeof(ControlFlowLib), GenerateControlFlowVariants = false)]
 
 namespace MonoDetour.UnitTests.HookTests;
 
