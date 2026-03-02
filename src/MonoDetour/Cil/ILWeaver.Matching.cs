@@ -243,7 +243,8 @@ public partial class ILWeaver
             allowMultipleMatches: false,
             null,
             passType: MatchPassType.RelaxedAllowOriginalPass,
-            predicates
+            predicates,
+            matchRange: null
         );
 
     /// <summary>
@@ -282,7 +283,75 @@ public partial class ILWeaver
             allowMultipleMatches: false,
             null,
             passType: MatchPassType.StrictNoOriginalPass,
-            predicates
+            predicates,
+            matchRange: null
+        );
+
+    /// <summary>
+    /// Attempts to match a set of predicates to find one specific
+    /// location in the instructions within the specified range.
+    /// </summary>
+    /// <remarks>
+    /// This method searches the entire specified range
+    /// to ensure the match predicates are matching exactly what was attempted to match.<br/>
+    /// <br/>
+    /// If the match fails, the match is attempted again against the "original" instructions
+    /// of the method before it was manipulated. As such, you must NEVER offset
+    /// <see cref="Current"/> to another predicate by index, as there may be instructions
+    /// in between, or that instruction may not even exist in the current method body.<br/>
+    /// <br/>
+    /// If a <paramref name="start"/> or <paramref name="end"/> instruction is not in
+    /// the "original" instructions when matching against "original" instructions or vice versa,
+    /// then the closest neighbouring instruction outwards from the range is selected and tested
+    /// until an instruction that exists in the current context is found. If none is found, the
+    /// first and/or last instruction in the entire method body of the current context is used
+    /// as a fallback.
+    /// </remarks>
+    /// <param name="start">The first instruction in the match range.</param>
+    /// <param name="end">The last instruction in the match range.</param>
+    /// <inheritdoc cref="MatchRelaxed"/>
+    /// <param name="predicates"></param>
+    public ILWeaverResult MatchInRangeRelaxed(
+        Instruction start,
+        Instruction end,
+        params Predicate<Instruction>[] predicates
+    ) =>
+        MatchInternal(
+            allowMultipleMatches: false,
+            null,
+            passType: MatchPassType.RelaxedAllowOriginalPass,
+            predicates,
+            (start, end)
+        );
+
+    /// <summary>
+    /// Attempts to match a set of predicates to find one specific
+    /// location in the instructions within the specified range.
+    /// </summary>
+    /// <remarks>
+    /// This method searches the entire specified range
+    /// to ensure the match predicates are matching exactly what was attempted to match.<br/>
+    /// <br/>
+    /// Only a 1:1 match of the current method instructions matching predicates in order
+    /// are accepted unlike with <see cref="MatchInRangeRelaxed"/>. As such you should use that
+    /// method instead to keep your match more compatible with other mods, unless if you
+    /// really know what you are doing.
+    /// </remarks>
+    /// <param name="start">The first instruction in the match range.</param>
+    /// <param name="end">The last instruction in the match range.</param>
+    /// <inheritdoc cref="MatchStrict"/>
+    /// <param name="predicates"></param>
+    public ILWeaverResult MatchInRangeStrict(
+        Instruction start,
+        Instruction end,
+        params Predicate<Instruction>[] predicates
+    ) =>
+        MatchInternal(
+            allowMultipleMatches: false,
+            null,
+            passType: MatchPassType.StrictNoOriginalPass,
+            predicates,
+            (start, end)
         );
 
     /// <summary>
@@ -331,7 +400,8 @@ public partial class ILWeaver
             allowMultipleMatches: true,
             onMatch,
             passType: MatchPassType.RelaxedAllowOriginalPass,
-            predicates
+            predicates,
+            matchRange: null
         );
 
     /// <summary>
@@ -376,14 +446,16 @@ public partial class ILWeaver
             allowMultipleMatches: true,
             onMatch,
             passType: MatchPassType.StrictNoOriginalPass,
-            predicates
+            predicates,
+            matchRange: null
         );
 
     ILWeaverResult MatchInternal(
         bool allowMultipleMatches,
         Action<ILWeaver>? onMatched,
         MatchPassType passType,
-        params Predicate<Instruction>[] predicates
+        Predicate<Instruction>[] predicates,
+        (Instruction start, Instruction end)? matchRange
     )
     {
         Helpers.ThrowIfNull(predicates);
@@ -402,52 +474,108 @@ public partial class ILWeaver
                 ? ManipulationInfo.OriginalInstructions
                 : Instructions;
 
-        int predicatesMatched = 0;
-        for (int i = 0; i < instructions.Count; i++)
         {
-            if (!predicates[predicatesMatched](instructions[i]))
+            int startIndex = 0;
+            int endIndexPlus1 = instructions.Count;
+
+            if (matchRange is { } range)
             {
-                if (predicatesMatched > 0)
+                var (start, end) = range;
+
+                // Since the instructions for the range may or may not exist in the current
+                // instructions list because they might be from "original instructions",
+                // or if we are matching against "original instructions" right now then
+                // exclusively current instructions are not going to exist in that context,
+                // we try to find the closest real instruction from neighbours.
+
+                // It is unlikely to happen that the range is "original instructions"
+                // because SetCurrentTo and SetInstructionTo still ensure that the
+                // instruction exists in the current method body.
+                // This means the problem is mostly when matching "original instructions".
+
+                // TODO: ILWeaver/MonoDetour should track replaced instruction instances
+                // which would be useful here to make this system more reliable so it
+                // could check which instructions replaced which instructions.
+
+                while (start is { })
                 {
-                    if (bestAttempts[0].count < predicatesMatched)
-                    {
-                        bestAttempts.Clear();
-                        bestAttempts.Add((predicatesMatched, i - 1));
-                    }
-                    else if (bestAttempts[0].count == predicatesMatched)
-                        bestAttempts.Add((predicatesMatched, i - 1));
+                    startIndex = instructions.IndexOf(start);
+                    if (startIndex is not -1)
+                        break;
+
+                    start = start.Previous;
+                }
+                if (start is null)
+                {
+                    // Previous instructions didn't exist, fall back to first instruction
+                    startIndex = 0;
                 }
 
-                i -= predicatesMatched;
-                predicatesMatched = 0;
-                continue;
+                while (end is { })
+                {
+                    endIndexPlus1 = instructions.IndexOf(end);
+                    if (endIndexPlus1 is not -1)
+                    {
+                        endIndexPlus1 += 1;
+                        break;
+                    }
+
+                    end = end.Next;
+                }
+                if (end is null)
+                {
+                    // Next instructions didn't exist, fall back to last instruction
+                    endIndexPlus1 = instructions.Count;
+                }
             }
 
-            predicatesMatched++;
+            int predicatesMatched = 0;
+            for (int i = startIndex; i < endIndexPlus1; i++)
+            {
+                if (!predicates[predicatesMatched](instructions[i]))
+                {
+                    if (predicatesMatched > 0)
+                    {
+                        if (bestAttempts[0].count < predicatesMatched)
+                        {
+                            bestAttempts.Clear();
+                            bestAttempts.Add((predicatesMatched, i - 1));
+                        }
+                        else if (bestAttempts[0].count == predicatesMatched)
+                            bestAttempts.Add((predicatesMatched, i - 1));
+                    }
 
-            if (predicatesMatched != predicates.Length)
-                continue;
+                    i -= predicatesMatched;
+                    predicatesMatched = 0;
+                    continue;
+                }
 
-            predicatesMatched = 0;
-            matchedIndexes.Add(i);
-            matchedInstructionsStart.Add(instructions[i - predicates.Length + 1]);
+                predicatesMatched++;
 
-            // It's possible that the User didn't set Current in the matching predicates.
-            // We don't want that to happen, but I don't like the idea of keeping state about
-            // if Current was set, and it would only be caught at runtime anyways.
-            //
-            // I also don't like implicitly setting Current to the first matched predicate if
-            // it wasn't set, as the user might not read the xml docs and never learns they can
-            // set Current to any matched predicate.
-            //
-            // So I think the best solution is an analyzer that enforces setting Current.
+                if (predicatesMatched != predicates.Length)
+                    continue;
 
-            // if (allowMultipleMatches)
-            // {
-            //     We don't execute `onMatched` until everything is matched
-            //     because otherwise we would potentially be matching against
-            //     newly inserted instructions in an infinite loop.
-            // }
+                predicatesMatched = 0;
+                matchedIndexes.Add(i);
+                matchedInstructionsStart.Add(instructions[i - predicates.Length + 1]);
+
+                // It's possible that the User didn't set Current in the matching predicates.
+                // We don't want that to happen, but I don't like the idea of keeping state about
+                // if Current was set, and it would only be caught at runtime anyways.
+                //
+                // I also don't like implicitly setting Current to the first matched predicate if
+                // it wasn't set, as the user might not read the xml docs and never learns they can
+                // set Current to any matched predicate.
+                //
+                // So I think the best solution is an analyzer that enforces setting Current.
+
+                // if (allowMultipleMatches)
+                // {
+                //     We don't execute `onMatched` until everything is matched
+                //     because otherwise we would potentially be matching against
+                //     newly inserted instructions in an infinite loop.
+                // }
+            }
         }
 
         if (allowMultipleMatches)
@@ -483,7 +611,8 @@ public partial class ILWeaver
                     allowMultipleMatches,
                     onMatched,
                     passType: MatchPassType.IsOriginalPass,
-                    predicates
+                    predicates,
+                    matchRange
                 );
 
                 if (secondPassResult.IsValid)
@@ -519,7 +648,8 @@ public partial class ILWeaver
                     allowMultipleMatches,
                     onMatched,
                     passType: MatchPassType.IsOriginalPass,
-                    predicates
+                    predicates,
+                    matchRange
                 );
 
                 if (secondPassResult.IsValid)
@@ -575,8 +705,10 @@ public partial class ILWeaver
             }
 
             err.WriteLine(
-                    "Help: Add more predicates to find a unique match."
-                        + $" Documentation: {gotoMatchingDocsLink}"
+                    "Help: Add more predicates to find a unique match"
+                        + " or lessen the match range"
+                        + (matchRange is { } ? '.' : " using a MatchInRange method.")
+                        + $"\nDocumentation: {gotoMatchingDocsLink}"
                 )
                 .WriteLine(
                     $"Info: Use {nameof(ILWeaver)}.MatchMultiple* methods if you intend to match multiple instances."
