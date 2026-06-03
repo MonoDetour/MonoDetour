@@ -163,7 +163,7 @@ namespace MonoDetour.HookGen
                         /// which can affect the method's control flow.
                         /// With the hook method's <see cref="global::MonoDetour.DetourTypes.ReturnFlow"/> return value,
                         /// the hook can choose to cancel the execution of the target method and return early,
-                        /// in which case the hook can set the target methods return value if it has one.
+                        /// in which case the hook can set the target method's return value if it has one.
                         /// </summary>
                         /// <remarks>
                         /// If the hook method doesn't cancel the target method but sets the return value of the target method,
@@ -809,7 +809,7 @@ namespace MonoDetour.HookGen
                             if (
                                 methodSymbol!
                                     .DeclaringSyntaxReferences.FirstOrDefault()
-                                    ?.GetSyntax()
+                                    ?.GetSyntax(ct)
                                 is not MethodDeclarationSyntax methodSyntax
                             )
                             {
@@ -1841,11 +1841,11 @@ namespace MonoDetour.HookGen
                             return null;
                         }
                         break;
-                    case "IncludeNestedTypes" when named.Value is { Value: bool bval }:
-                        includeNested = bval;
+                    case "IncludeNestedTypes" when named.Value is { Value: bool bValue }:
+                        includeNested = bValue;
                         break;
-                    case "DistinguishOverloadsByName" when named.Value is { Value: bool bval }:
-                        distinguishOverloads = bval;
+                    case "DistinguishOverloadsByName" when named.Value is { Value: bool bValue }:
+                        distinguishOverloads = bValue;
                         break;
                     case "Members"
                         when named.Value is { Kind: TypedConstantKind.Array, Values: var values }:
