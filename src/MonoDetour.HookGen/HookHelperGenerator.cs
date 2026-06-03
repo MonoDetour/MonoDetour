@@ -516,6 +516,8 @@ namespace MonoDetour.HookGen
                 }
             );
 
+            // TODO: The following piece of code is not used, and never was. Is it important?
+            /*
             // then, for each type, we want to unify the requested attribute options
             var unifiedGroupedByType = groupedByType.Select(
                 (model, ct) =>
@@ -637,6 +639,7 @@ namespace MonoDetour.HookGen
                     };
                 }
             );
+            */
 
             // next, we want to go per-assembly, and perform the actual member lookups
             var mappedAssemblies = groupedByType
