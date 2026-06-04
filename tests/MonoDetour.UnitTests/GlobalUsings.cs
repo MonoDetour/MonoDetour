@@ -11,6 +11,8 @@ global using MonoMod.RuntimeDetour;
 global using MonoMod.Utils;
 
 [assembly: MonoDetourTargets(typeof(LibraryMethods))]
+[assembly: MonoDetourTargets(typeof(LibraryMethods.SubType))]
+[assembly: MonoDetourTargets(typeof(LibraryMethods.SubType.SubSubType))]
 
 // Test: duplicate attributes should NOT break HookGen
 [assembly: MonoDetourTargets(typeof(SomeType))]

@@ -108,9 +108,20 @@ namespace MonoDetour.HookGen
                     public global::System.Type? TargetType { get; } = targetType;
 
                     /// <summary>
-                    /// Whether to generate helpers for nested types. Defaults to <see langword="true"/>.
+                    /// Whether to generate helpers for nested types. Defaults to <see langword="false"/>.
                     /// </summary>
-                    public bool IncludeNestedTypes { get; set; } = true;
+                    public bool IncludeNestedTypes { get; set; }
+
+                    /// <summary>
+                    /// Whether or not MonoDetour will generate hook helper variants which can affect control flow of
+                    /// the target methods. Defaults to <see langword="false"/>.
+                    /// </summary>
+                    /// <remarks>
+                    /// Special MoveNext hook helpers always generate control flow variants regardless of this value.
+                    /// These hook helpers are generated as subtypes of hook helpers which are for methods making use of
+                    /// the <see langword="yield"/> statement.
+                    /// </remarks>
+                    public bool GenerateControlFlowVariants { get; set; }
 
                     /// <summary>
                     /// A list of members to generate hook helpers for in the target type, by exact name.
@@ -129,17 +140,6 @@ namespace MonoDetour.HookGen
                     /// suffixes will be included.
                     /// </summary>
                     public string[]? MemberNameSuffixes { get; set; }
-
-                    /// <summary>
-                    /// Whether or not MonoDetour will generate hook helper variants which can affect control flow of
-                    /// the target methods. Defaults to <see langword="false"/>.
-                    /// </summary>
-                    /// <remarks>
-                    /// Special MoveNext hook helpers always generate control flow variants regardless of this value.
-                    /// These hook helpers are generated as subtypes of hook helpers which are for methods making use of
-                    /// the <see langword="yield"/> statement.
-                    /// </remarks>
-                    public bool GenerateControlFlowVariants { get; set; }
                 }
             #if DEBUG
                 /// <summary>
@@ -1746,7 +1746,7 @@ namespace MonoDetour.HookGen
             if (attr.ConstructorArguments is not [{ Value: INamedTypeSymbol targetType }])
                 return null;
 
-            var includeNested = true;
+            var includeNested = false;
             var distinguishOverloads = true;
             bool generateControlFlowVariants = false;
             var kind = DetourKind.Hook;
