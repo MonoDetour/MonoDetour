@@ -141,18 +141,22 @@ namespace MonoDetour.HookGen
                     /// </remarks>
                     public bool GenerateControlFlowVariants { get; set; }
                 }
-
             #if DEBUG
                 /// <summary>
                 /// Extension methods for hooking with MonoDetour.HookGen's HookHelper types.
                 /// </summary>
             #endif
-                internal static class HookHelperExtensions
+                internal static partial class HookHelperExtensions
                 {
                     extension<THookHelper, TPrefixSignature, TPostfixSignature, TControlFlowPrefixSignature>(
-                        IHookHelper<THookHelper, TPrefixSignature, TPostfixSignature, TControlFlowPrefixSignature>
+                        global::MonoDetour.HookGen.IHookHelper<
+                            THookHelper,
+                            TPrefixSignature,
+                            TPostfixSignature,
+                            TControlFlowPrefixSignature
+                        >
                     )
-                        where THookHelper : IHookHelper<
+                        where THookHelper : global::MonoDetour.HookGen.IHookHelper<
                                 THookHelper,
                                 TPrefixSignature,
                                 TPostfixSignature,
@@ -185,13 +189,22 @@ namespace MonoDetour.HookGen
                         ) =>
                             (
                                 manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance
-                            ).Hook<global::MonoDetour.DetourTypes.PrefixDetour>(THookHelper.Target(), hook, config, applyByDefault);
+                            ).Hook<global::MonoDetour.DetourTypes.PrefixDetour>(
+                                GetTarget<THookHelper>(),
+                                hook,
+                                config,
+                                applyByDefault
+                            );
                     }
 
                     extension<THookHelper, TPrefixSignature, TPostfixSignature>(
-                        IHookHelper<THookHelper, TPrefixSignature, TPostfixSignature>
+                        global::MonoDetour.HookGen.IHookHelper<THookHelper, TPrefixSignature, TPostfixSignature>
                     )
-                        where THookHelper : IHookHelper<THookHelper, TPrefixSignature, TPostfixSignature>
+                        where THookHelper : global::MonoDetour.HookGen.IHookHelper<
+                                THookHelper,
+                                TPrefixSignature,
+                                TPostfixSignature
+                            >
                         where TPrefixSignature : global::System.Delegate
                         where TPostfixSignature : global::System.Delegate
                     {
@@ -206,7 +219,7 @@ namespace MonoDetour.HookGen
                         /// <param name="manager">The manager which will own this hook. If left null,
                         /// <see cref="global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance"/>
                         /// will be used.</param>
-                        /// <returns>A new MonoDetourHook.</returns>
+                        /// <returns>A new <see cref="MonoDetourHook"/>.</returns>
             #endif
                         public static global::MonoDetour.MonoDetourHook Prefix(
                             TPrefixSignature hook,
@@ -216,7 +229,12 @@ namespace MonoDetour.HookGen
                         ) =>
                             (
                                 manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance
-                            ).Hook<global::MonoDetour.DetourTypes.PrefixDetour>(THookHelper.Target(), hook, config, applyByDefault);
+                            ).Hook<global::MonoDetour.DetourTypes.PrefixDetour>(
+                                GetTarget<THookHelper>(),
+                                hook,
+                                config,
+                                applyByDefault
+                            );
 
             #if DEBUG
                         /// <summary>
@@ -232,11 +250,16 @@ namespace MonoDetour.HookGen
                         ) =>
                             (
                                 manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance
-                            ).Hook<global::MonoDetour.DetourTypes.PostfixDetour>(THookHelper.Target(), hook, config, applyByDefault);
+                            ).Hook<global::MonoDetour.DetourTypes.PostfixDetour>(
+                                GetTarget<THookHelper>(),
+                                hook,
+                                config,
+                                applyByDefault
+                            );
                     }
 
-                    extension<THookHelper>(IHookHelper<THookHelper>)
-                        where THookHelper : IHookHelper<THookHelper>
+                    extension<THookHelper>(global::MonoDetour.HookGen.IHookHelper<THookHelper>)
+                        where THookHelper : global::MonoDetour.HookGen.IHookHelper<THookHelper>
                     {
             #if DEBUG
                         /// <summary>
@@ -252,12 +275,29 @@ namespace MonoDetour.HookGen
                             global::MonoDetour.MonoDetourManager? manager = null
                         ) =>
                             (manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).ILHook(
-                                THookHelper.Target(),
+                                GetTarget<THookHelper>(),
                                 manipulator,
                                 config,
                                 applyByDefault
                             );
                     }
+
+                    private static global::System.Reflection.MethodBase GetTarget<THookHelper>()
+                        where THookHelper : global::MonoDetour.HookGen.IHookHelper =>
+            #if NET6_0_OR_GREATER
+                        THookHelper.Target();
+            #else
+                        GetTargetViaReflection(typeof(THookHelper));
+
+                    private static global::System.Reflection.MethodBase GetTargetViaReflection(Type type) =>
+                        (global::System.Reflection.MethodBase)
+                            type.GetMethod(
+                                        "Target",
+                                        global::System.Reflection.BindingFlags.Public
+                                            | global::System.Reflection.BindingFlags.Static
+                                    )!
+                                .Invoke(null, null)!;
+            #endif
                 }
 
             #if DEBUG
@@ -268,8 +308,8 @@ namespace MonoDetour.HookGen
                     TPrefixSignature,
                     TPostfixSignature,
                     TControlFlowPrefixSignature
-                > : IHookHelper<THookHelper, TPrefixSignature, TPostfixSignature>
-                    where THookHelper : IHookHelper<
+                > : global::MonoDetour.HookGen.IHookHelper<THookHelper, TPrefixSignature, TPostfixSignature>
+                    where THookHelper : global::MonoDetour.HookGen.IHookHelper<
                             THookHelper,
                             TPrefixSignature,
                             TPostfixSignature,
@@ -283,16 +323,20 @@ namespace MonoDetour.HookGen
                 /// <inheritdoc cref="global::MonoDetour.HookGen.IHookHelper"/>
             #endif
                 internal interface IHookHelper<THookHelper, TPrefixSignature, TPostfixSignature>
-                    : IHookHelper<THookHelper>
-                    where THookHelper : IHookHelper<THookHelper, TPrefixSignature, TPostfixSignature>
+                    : global::MonoDetour.HookGen.IHookHelper<THookHelper>
+                    where THookHelper : global::MonoDetour.HookGen.IHookHelper<
+                            THookHelper,
+                            TPrefixSignature,
+                            TPostfixSignature
+                        >
                     where TPrefixSignature : global::System.Delegate
                     where TPostfixSignature : global::System.Delegate;
 
             #if DEBUG
                 /// <inheritdoc cref="global::MonoDetour.HookGen.IHookHelper"/>
             #endif
-                internal interface IHookHelper<THookHelper> : IHookHelper
-                    where THookHelper : IHookHelper<THookHelper>;
+                internal interface IHookHelper<THookHelper> : global::MonoDetour.HookGen.IHookHelper
+                    where THookHelper : global::MonoDetour.HookGen.IHookHelper<THookHelper>;
 
             #if DEBUG
                 /// <summary>
