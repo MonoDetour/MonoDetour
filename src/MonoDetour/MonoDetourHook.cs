@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using MonoDetour.DetourTypes;
 using MonoDetour.DetourTypes.Manipulation;
 using MonoDetour.Interop.RuntimeDetour;
+using MonoDetour.Logging;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 
@@ -102,6 +103,26 @@ public class MonoDetourHook : IMonoDetourHook
         applierInstance.Hook = this;
 
         owner.Hooks.Add(this);
+
+        var manipulatorIdentifier = Manipulator.DeclaringType is { } manipulatorType
+            ? $"{manipulatorType.FullName}.{Manipulator.Name}"
+            : Manipulator.Name;
+
+        var targetIdentifier = Target.DeclaringType is { } targetType
+            ? $"{targetType.FullName}.{Target.Name}"
+            : Target.Name;
+
+        string applierTypeName;
+        if (ApplierType.Name.EndsWith("Detour", StringComparison.Ordinal))
+            applierTypeName = ApplierType.Name[..^6];
+        else
+            applierTypeName = ApplierType.Name;
+
+        var addWord = applyByDefault ? "Applied" : "Constructed";
+        owner.Log(
+            MonoDetourLogger.LogChannel.Info,
+            $"{addWord} {applierTypeName} '{manipulatorIdentifier}' targeting '{targetIdentifier}'"
+        );
 
         ILContext.Manipulator applierManipulator = applierInstance.ApplierManipulator;
 

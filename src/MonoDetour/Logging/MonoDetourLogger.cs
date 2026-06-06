@@ -26,10 +26,10 @@ public static class MonoDetourLogger
         /// </summary>
         None = 0,
 
-        // /// <summary>
-        // /// Basic information.
-        // /// </summary>
-        // Info = 1 << 1,
+        /// <summary>
+        /// Basic information.
+        /// </summary>
+        Info = 1 << 1,
 
         /// <summary>
         /// Full IL dumps of manipulated methods.
@@ -61,7 +61,7 @@ public static class MonoDetourLogger
         channel switch
         {
             LogChannel.None => "None   ",
-            // LogChannel.Info => "Info   ",
+            LogChannel.Info => "Info   ",
             LogChannel.IL => "IL     ",
             LogChannel.Warning => "Warning",
             LogChannel.Error => "Error  ",
@@ -76,14 +76,61 @@ public static class MonoDetourLogger
     /// </summary>
     private static LogChannel GlobalFilter { get; set; } = LogChannel.Warning | LogChannel.Error;
 
+    static LogChannel OverrideFilter { get; set; } = LogChannel.None;
+
     /// <summary>
     /// Event fired on any incoming message that passes the channel filter.
     /// </summary>
     internal static event LogReceiver? OnLog;
 
+    internal static void ParseEnvironmentVariables()
+    {
+        var variable = "MONODETOUR_LOG_OVERRIDE";
+        var value = Environment.GetEnvironmentVariable(variable);
+        if (value is { })
+        {
+            var entries = value.Split(':');
+            foreach (var entry in entries)
+            {
+                if (!Enum.TryParse<LogChannel>(entry, ignoreCase: true, out var result))
+                {
+                    Log(
+                        LogChannel.Error,
+                        $"Failed to parse value '{entry}' in '{value}' from environment variable '{variable}'"
+                    );
+                    continue;
+                }
+
+                OverrideFilter |= result;
+            }
+        }
+    }
+
     internal static bool IsEnabledFor(LogChannel caller, LogChannel channel)
     {
-        return (caller & channel) != LogChannel.None;
+        return ((caller | OverrideFilter) & channel) != LogChannel.None;
+    }
+
+    internal static void Log(
+        this MonoDetourManager caller,
+        LogChannel channel,
+        Func<string> message
+    )
+    {
+        if (!IsEnabledFor(caller.LogFilter, channel))
+        {
+            return;
+        }
+
+        var messageStr = $"[{caller.Id}] {message()}";
+
+        if (OnLog is null)
+        {
+            DefaultLog(channel, messageStr);
+            return;
+        }
+
+        OnLog.Invoke(channel, messageStr);
     }
 
     internal static void Log(
@@ -103,7 +150,7 @@ public static class MonoDetourLogger
             return;
         }
 
-        OnLog?.Invoke(channel, message());
+        OnLog.Invoke(channel, message());
     }
 
     internal static void Log(LogChannel channel, Func<string> message)
@@ -119,7 +166,23 @@ public static class MonoDetourLogger
             return;
         }
 
-        OnLog?.Invoke(channel, message());
+        OnLog.Invoke(channel, message());
+    }
+
+    internal static void Log(this MonoDetourManager caller, LogChannel channel, string message)
+    {
+        if (!IsEnabledFor(caller.LogFilter, channel))
+            return;
+
+        message = $"[{caller.Id}] {message}";
+
+        if (OnLog is null)
+        {
+            DefaultLog(channel, message);
+            return;
+        }
+
+        OnLog.Invoke(channel, message);
     }
 
     internal static void Log(this IMonoDetourLogSource caller, LogChannel channel, string message)
@@ -133,7 +196,7 @@ public static class MonoDetourLogger
             return;
         }
 
-        OnLog?.Invoke(channel, message);
+        OnLog.Invoke(channel, message);
     }
 
     internal static void Log(LogChannel channel, string message)
@@ -147,7 +210,7 @@ public static class MonoDetourLogger
             return;
         }
 
-        OnLog?.Invoke(channel, message);
+        OnLog.Invoke(channel, message);
     }
 
     static void DefaultLog(LogChannel channel, string message)

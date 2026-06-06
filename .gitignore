@@ -2,7 +2,7 @@
 /*
 
 # Ignore always
-*csproj.user
+*proj.user
 bin/
 obj/
 
