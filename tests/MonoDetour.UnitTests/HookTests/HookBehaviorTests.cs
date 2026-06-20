@@ -38,6 +38,11 @@ public static partial class HookBehaviorTests
     private static int PerformHooks()
     {
         var m = DefaultMonoDetourManager.New();
+        // m.LogFilter =
+        //     MonoDetourLogger.LogChannel.Info
+        //     | MonoDetourLogger.LogChannel.Warning
+        //     | MonoDetourLogger.LogChannel.Error
+        //     | MonoDetourLogger.LogChannel.IL;
 
         TakeAndReturnInt.ILHook(ILHook1_5th_ReturnWithLdarg1, manager: m);
         TakeAndReturnInt.Postfix(Postfix2_4th_Add1ToNum, manager: m);

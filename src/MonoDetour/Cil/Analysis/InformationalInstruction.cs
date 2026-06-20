@@ -231,8 +231,8 @@ public interface IInformationalInstruction
 
 internal sealed class InformationalInstruction(
     Instruction instruction,
-    int stackSize,
-    int stackSizeDelta,
+    IReadOnlyMonoDetourHook? source,
+    bool isFromILHook,
     List<IHandlerInfo> handlerParts
 ) : IInformationalInstruction
 {
@@ -241,18 +241,12 @@ internal sealed class InformationalInstruction(
     public IInformationalInstruction? Previous { get; internal set; }
     public IInformationalInstruction? Next => next;
     internal InformationalInstruction? next;
+    internal IReadOnlyMonoDetourHook? source = source;
+    internal bool isFromILHook = isFromILHook;
 
     public Instruction Instruction => instruction;
-    public int StackSize
-    {
-        get => stackSize;
-        private set => stackSize = value;
-    }
-    public int StackDelta
-    {
-        get => stackSizeDelta;
-        private set => stackSizeDelta = value;
-    }
+    public int StackSize { get; private set; }
+    public int StackDelta { get; private set; }
     public int IncomingStackSize =>
         PreviousChronological?.StackSize
         ?? (
@@ -278,8 +272,11 @@ internal sealed class InformationalInstruction(
 
     internal const char LongPipe = '│';
     internal const char LeftWall = LongPipe;
-    internal const string EmptyPad = $"│   ¦ ";
-    internal static string VariableEmptyPad = $"{LeftWall}   ¦ ";
+    internal const string Spacer25Chars = "                         ";
+    const int SpaceForId = 25;
+    const int SpaceForIdMinus1 = SpaceForId - 1;
+    internal const string EmptyPad = $"│ {Spacer25Chars}   ¦ ";
+    internal static string VariableEmptyPad = $"{LeftWall} {Spacer25Chars}   ¦ ";
 
     internal class HandlerInfo(HandlerPart handlerPart, ExceptionHandler handler) : IHandlerInfo
     {
@@ -463,8 +460,24 @@ internal sealed class InformationalInstruction(
             }
         }
 
+        var sourceId = !isFromILHook
+            ? Spacer25Chars
+            : Truncate(source?.Owner.Id ?? "<unknown to MonoDetour>").PadRight(SpaceForId);
+
+        static string Truncate(string str)
+        {
+            if (str.Length <= SpaceForId)
+                return str;
+
+            return str[..SpaceForIdMinus1] + '…';
+        }
+
         if (!IsEvaluated)
-            sb.Append(LeftWall).Append(" - | ").Append(Instruction.ToStringSafe());
+            sb.Append(LeftWall)
+                .Append(' ')
+                .Append(sourceId)
+                .Append(" - | ")
+                .Append(Instruction.ToStringSafe());
         else
         {
             var stackSize = StackSize.ToString(CultureInfo.InvariantCulture).PadLeft(2);
@@ -473,6 +486,8 @@ internal sealed class InformationalInstruction(
             {
                 TryAppendIncomingBranchesInfo(sb, IncomingBranches);
                 sb.Append(LeftWall)
+                    .Append(' ')
+                    .Append(sourceId)
                     .Append(stackSize)
                     .Append(" | ")
                     .Append(Instruction.ToStringSafe());
@@ -487,18 +502,19 @@ internal sealed class InformationalInstruction(
         {
             if (HasErrorAnnotations)
             {
-                VariableEmptyPad = $"{LeftWall} {LongPipe}  ";
+                var basePad = $"{LeftWall} {Spacer25Chars}";
+                VariableEmptyPad = $"{basePad} {LongPipe} ¦ ";
                 var last = ErrorAnnotations[^1];
                 foreach (var annotation in ErrorAnnotations)
                 {
                     sb.AppendLine();
                     if (annotation != last)
                     {
-                        sb.Append(LeftWall).Append(" ├ ");
+                        sb.Append(basePad).Append(" ├ ");
                     }
                     else
                     {
-                        sb.Append(LeftWall).Append(" └ ");
+                        sb.Append(basePad).Append(" └ ");
                         VariableEmptyPad = EmptyPad;
                     }
                     sb.Append(annotation.ToString());

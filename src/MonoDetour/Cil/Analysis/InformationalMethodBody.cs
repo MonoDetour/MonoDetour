@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Mono.Cecil.Cil;
+using MonoDetour.DetourTypes.Manipulation;
 using MonoMod.Utils;
 using static MonoDetour.Cil.Analysis.IInformationalInstruction;
 using static MonoDetour.Cil.Analysis.InformationalInstruction;
@@ -106,6 +107,8 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
         InformationalInstruction first = null!;
         InformationalInstruction? previous = null;
 
+        var targetInfo = HookTargetRecords.GetHookTargetInfo(body.Method);
+
         for (int i = 0; i < bodyInstructions.Count; i++)
         {
             var cecilIns = bodyInstructions[i];
@@ -136,7 +139,15 @@ internal sealed class InformationalMethodBody : IInformationalMethodBody
                 handlerParts.Add(new HandlerInfo(handlerPart, eh));
             }
 
-            InformationalInstruction ins = new(cecilIns, default, default, handlerParts);
+            var isFromILHook = targetInfo.InstructionToSource.TryGetValue(
+                cecilIns,
+                out var insSource
+            );
+            if (!isFromILHook)
+            {
+                isFromILHook = !targetInfo.OriginalInstructionsHashSet.Contains(cecilIns);
+            }
+            InformationalInstruction ins = new(cecilIns, insSource, isFromILHook, handlerParts);
             informationalInstructions.Add(ins);
             map[cecilIns] = ins;
 
@@ -357,7 +368,13 @@ internal static class IInformationalMethodBodyExtensions
         sb.AppendLine(informationalBody.Body.Method.FullName);
         sb.AppendLine("--- MonoDetour CIL Analysis Start Full Method ---");
         sb.AppendLine();
-        sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
+        sb.AppendLine(
+            """
+            Info: Format is: | <instruction source?> <stack size> | <instruction>
+                  If instruction is known to have existed initially, instruction source is left empty.
+                  MonoDetour only knows the exact instruction source if MonoDetour.Cil.ILWeaver was used.
+            """
+        );
         sb.AppendLine();
 
         if (informationalBody.InformationalInstructions.Count == 0)
@@ -378,19 +395,20 @@ internal static class IInformationalMethodBodyExtensions
                 .AppendLine("The errors may not be directly stack behavior related.")
                 .AppendLine("Operands or types on the stack aren't validated.")
                 .AppendLine("You can improve the analysis:")
-                .AppendLine(
-                    "https://github.com/MonoDetour/MonoDetour/blob/main/src/MonoDetour/Cil/Analysis/CilAnalyzer.cs"
-                );
+                .AppendLine("https://github.com/MonoDetour/MonoDetour/issues/28");
         }
         else
         {
-            sb.AppendLine("Info: Stack size is on the left, instructions are on the right.");
+            sb.AppendLine("Info: Format is: | <instruction source?> <stack size> | <instruction>");
             sb.AppendLine();
 
             sb.Append(informationalBody.ToStringWithAnnotationsExclusive());
 
             sb.AppendLine();
-            sb.AppendLine("Note: This analysis may not be perfect.");
+            sb.AppendLine("Note: This analysis may not be perfect.")
+                .AppendLine(
+                    "In case of false positives, leave an issue: https://github.com/MonoDetour/MonoDetour/issues"
+                );
         }
 
         analysisEnd:

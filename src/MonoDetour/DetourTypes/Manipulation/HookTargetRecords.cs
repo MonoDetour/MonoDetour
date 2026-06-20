@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -121,7 +122,30 @@ public static class HookTargetRecords
         /// This list has the same instruction instances as the current <see cref="ILContext"/>,
         /// meaning some may have been modified.
         /// </remarks>
-        public ReadOnlyCollection<Instruction> OriginalInstructions { get; internal set; }
+        public ReadOnlyCollection<Instruction> OriginalInstructions
+        {
+            get;
+            internal set
+            {
+                field = value;
+                isOriginalInstructionsHashSetDirty = true;
+            }
+        }
+
+        bool isOriginalInstructionsHashSetDirty;
+
+        internal HashSet<Instruction> OriginalInstructionsHashSet
+        {
+            get
+            {
+                if (!isOriginalInstructionsHashSetDirty)
+                {
+                    return field ??= [.. OriginalInstructions];
+                }
+
+                return field = [.. OriginalInstructions];
+            }
+        }
 
         internal HashSet<Instruction> PersistentInstructions { get; } = [];
 

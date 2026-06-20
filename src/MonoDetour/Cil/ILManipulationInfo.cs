@@ -27,7 +27,7 @@ public class ILManipulationInfo
     )
         : this(il, hook.Target, out invokeOnManipulatorFinished)
     {
-        Hook = hook;
+        Hook = Helpers.ThrowIfNull(hook);
     }
 
     /// <param name="invokeOnManipulatorFinished">
