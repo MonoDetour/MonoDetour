@@ -15,6 +15,21 @@ namespace MonoDetour.Cil;
 /// </summary>
 public class ILManipulationInfo
 {
+    /// <param name="hook">The hook this <see cref="ILManipulationInfo"/>
+    /// was constructed for.</param>
+    /// <inheritdoc cref="ILManipulationInfo(ILContext, MethodBase?, out Action)"/>
+    /// <param name="il"></param>
+    /// <param name="invokeOnManipulatorFinished"></param>
+    public ILManipulationInfo(
+        ILContext il,
+        IReadOnlyMonoDetourHook hook,
+        out Action invokeOnManipulatorFinished
+    )
+        : this(il, hook.Target, out invokeOnManipulatorFinished)
+    {
+        Hook = hook;
+    }
+
     /// <param name="invokeOnManipulatorFinished">
     /// A delegate which invokes an event which should run right after the
     /// manipulator method this <see cref="ILManipulationInfo"/> was passed to returns.
@@ -94,6 +109,8 @@ public class ILManipulationInfo
     public ILContext UnmanipulatedContext =>
         _unmanipulated ??= new ILContext(new DynamicMethodDefinition(Original).Definition);
     ILContext? _unmanipulated;
+
+    internal IReadOnlyMonoDetourHook? Hook { get; }
 
     /// <summary>
     /// Event which runs right after the manipulator method this

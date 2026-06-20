@@ -125,6 +125,9 @@ public static class HookTargetRecords
 
         internal HashSet<Instruction> PersistentInstructions { get; } = [];
 
+        internal Dictionary<Instruction, IReadOnlyMonoDetourHook?> InstructionToSource { get; } =
+        [];
+
         /// <summary>
         /// Makes the specified instruction non-redirectable by HarmonyX.
         /// </summary>

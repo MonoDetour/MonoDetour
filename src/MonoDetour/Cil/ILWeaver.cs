@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoDetour.DetourTypes.Manipulation;
 using MonoDetour.Logging;
 using MonoMod.Cil;
 using InstrList = Mono.Collections.Generic.Collection<Mono.Cecil.Cil.Instruction>;
@@ -127,6 +128,7 @@ public partial class ILWeaver : IMonoDetourLogSource
 
     readonly List<ILLabel> pendingFutureNextInsertLabels = [];
     readonly List<IWeaverExceptionHandler> pendingHandlers = [];
+    readonly HookTargetRecords.HookTargetInfo targetInfo;
 
     const string gotoMatchingDocsLink = "<documentation link will be here once it exists>";
 
@@ -139,6 +141,7 @@ public partial class ILWeaver : IMonoDetourLogSource
     {
         ManipulationInfo = Helpers.ThrowIfNull(il);
         Context = il.Context;
+        targetInfo = HookTargetRecords.GetHookTargetInfo(il.Context);
 
         var first = Instructions.FirstOrDefault();
         if (first is { })

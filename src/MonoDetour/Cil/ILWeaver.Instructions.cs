@@ -396,7 +396,7 @@ public partial class ILWeaver
         RetargetLabels(pendingFutureNextInsertLabels, instruction);
         pendingFutureNextInsertLabels.Clear();
 
-        InstructionOperandToILLabel(instruction);
+        ProcessInstructionForInsert(instruction);
         Instructions.Insert(index, instruction);
         return this;
     }
@@ -478,6 +478,12 @@ public partial class ILWeaver
         }
     }
 
+    private void ProcessInstructionForInsert(Instruction instruction)
+    {
+        InstructionOperandToILLabel(instruction);
+        targetInfo.InstructionToSource[instruction] = ManipulationInfo.Hook;
+    }
+
     // MonoMod's instruction matching extensions expect ILLabel[] or ILLabel.
     private void InstructionOperandToILLabel(Instruction instruction)
     {
@@ -501,7 +507,7 @@ public partial class ILWeaver
     /// </summary>
     ILWeaver GhostInsertBefore(Instruction target, Instruction instruction)
     {
-        InstructionOperandToILLabel(instruction);
+        ProcessInstructionForInsert(instruction);
         Instructions.Insert(Instructions.IndexOf(target), instruction);
         return this;
     }
@@ -511,7 +517,7 @@ public partial class ILWeaver
     /// </summary>
     ILWeaver GhostInsertAfter(Instruction target, Instruction instruction)
     {
-        InstructionOperandToILLabel(instruction);
+        ProcessInstructionForInsert(instruction);
         Instructions.Insert(Instructions.IndexOf(target) + 1, instruction);
         return this;
     }
