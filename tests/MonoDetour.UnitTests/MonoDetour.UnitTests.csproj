@@ -21,7 +21,7 @@
     <PackageReference Include="xunit.v3" Version="2.0.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.0.2" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.*" />
-    <PackageReference Include="MonoMod.RuntimeDetour" Version="25.3.3" />
+    <PackageReference Include="MonoMod.RuntimeDetour" Version="25.3.4" />
     <PackageReference Include="HarmonyX" Version="2.15.0" />
   </ItemGroup>
   <!-- Local project references -->
