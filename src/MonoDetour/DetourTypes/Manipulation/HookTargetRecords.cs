@@ -17,6 +17,34 @@ public static class HookTargetRecords
 {
     static readonly ConditionalWeakTable<MethodDefinition, HookTargetInfo> s_MethodToInfo = new();
 
+    /// <param name="il">The <see cref="ILContext"/> for the target method.</param>
+    /// <inheritdoc cref="GetHookTargetInfo(MethodDefinition)"/>
+    public static HookTargetInfo GetHookTargetInfo(ILContext il) => GetHookTargetInfo(il.Method);
+
+    /// <summary>
+    /// Gets a <see cref="HookTargetInfo"/> for a target method.
+    /// </summary>
+    /// <param name="method">The target <see cref="MethodDefinition"/>.</param>
+    /// <returns>A <see cref="HookTargetInfo"/> for the target method.</returns>
+    public static HookTargetInfo GetHookTargetInfo(MethodDefinition method)
+    {
+        if (s_MethodToInfo.TryGetValue(method, out HookTargetInfo? info))
+        {
+            return info;
+        }
+
+        VariableDefinition? returnValue = null;
+        if (method.ReturnType.MetadataType != MetadataType.Void)
+        {
+            returnValue = new VariableDefinition(method.ReturnType);
+            method.Body.Variables.Add(returnValue);
+        }
+
+        info = new(method, returnValue, GetOriginalInstructions(method));
+        s_MethodToInfo.Add(method, info);
+        return info;
+    }
+
     /// <summary>
     /// Gets the original instructions for the <see cref="MethodDefinition"/>.<br/>
     /// <br/>
@@ -132,34 +160,6 @@ public static class HookTargetRecords
 
             hookTargetInfo.MarkPersistentInstruction(newInstruction);
         }
-    }
-
-    /// <param name="il">The <see cref="ILContext"/> for the target method.</param>
-    /// <inheritdoc cref="GetHookTargetInfo(MethodDefinition)"/>
-    public static HookTargetInfo GetHookTargetInfo(ILContext il) => GetHookTargetInfo(il.Method);
-
-    /// <summary>
-    /// Gets a <see cref="HookTargetInfo"/> for a target method.
-    /// </summary>
-    /// <param name="method">The target <see cref="MethodDefinition"/>.</param>
-    /// <returns>A <see cref="HookTargetInfo"/> for the target method.</returns>
-    public static HookTargetInfo GetHookTargetInfo(MethodDefinition method)
-    {
-        if (s_MethodToInfo.TryGetValue(method, out HookTargetInfo? info))
-        {
-            return info;
-        }
-
-        VariableDefinition? returnValue = null;
-        if (method.ReturnType.MetadataType != MetadataType.Void)
-        {
-            returnValue = new VariableDefinition(method.ReturnType);
-            method.Body.Variables.Add(returnValue);
-        }
-
-        info = new(method, returnValue, GetOriginalInstructions(method));
-        s_MethodToInfo.Add(method, info);
-        return info;
     }
 
     /// <summary>
