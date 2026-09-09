@@ -48,16 +48,90 @@ public static class HookTargetRecords
 #endif
     }
 
+    [Obsolete(
+        "For backwards compatibility with old MonoDetour.Interop.HarmonyX versions, just to be safe for now."
+    )]
     internal static void SwapOriginalInstructionsCollection(
         MethodDefinition method,
         HookTargetInfo info,
         ReadOnlyCollection<Instruction> replacement
+    ) => SwapOriginalInstructions(method, info, replacement, null);
+
+    internal static void SwapOriginalInstructions(
+        MethodDefinition method,
+        HookTargetInfo info,
+        ReadOnlyCollection<Instruction> replacement,
+        Dictionary<Instruction, Instruction>? oldToNew
     )
     {
         ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions.Remove(method);
         ILHookDMDManipulation.s_MethodDefinitionToOriginalInstructions.Add(method, replacement);
-
         info.OriginalInstructions = replacement;
+
+        if (oldToNew is null)
+        {
+            // Old MonoDetour.Interop.HarmonyX. Remove this check later.
+            return;
+        }
+
+        SwapInstructionToSourceInstructions(info, oldToNew);
+        SwapOriginalPostfixes(info, oldToNew);
+        SwapPersistentInstructions(info, oldToNew);
+    }
+
+    private static void SwapInstructionToSourceInstructions(
+        HookTargetInfo info,
+        Dictionary<Instruction, Instruction> oldToNew
+    )
+    {
+        var instructionToSource = info.InstructionToSource;
+
+        foreach (var pair in oldToNew)
+        {
+            var oldInstruction = pair.Key;
+            var newInstruction = pair.Value;
+
+            if (!instructionToSource.TryGetValue(oldInstruction, out var source))
+                continue;
+
+            instructionToSource.Remove(oldInstruction);
+            instructionToSource[newInstruction] = source;
+        }
+    }
+
+    private static void SwapOriginalPostfixes(
+        HookTargetInfo info,
+        Dictionary<Instruction, Instruction> oldToNew
+    )
+    {
+        var postfixes = info.PostfixInfo.FirstPostfixInstructions;
+
+        for (int i = 0; i < postfixes.Count; i++)
+        {
+            var oldInstruction = postfixes[i];
+
+            if (!oldToNew.TryGetValue(oldInstruction, out var newInstruction))
+                continue;
+
+            postfixes[i] = newInstruction;
+        }
+    }
+
+    private static void SwapPersistentInstructions(
+        HookTargetInfo hookTargetInfo,
+        Dictionary<Instruction, Instruction> oldToNew
+    )
+    {
+        var oldPersistentInstructions = hookTargetInfo.PersistentInstructions.ToArray();
+        hookTargetInfo.PersistentInstructions.Clear();
+
+        foreach (var oldInstruction in oldPersistentInstructions)
+        {
+            if (!oldToNew.TryGetValue(oldInstruction, out var newInstruction))
+                continue;
+
+            hookTargetInfo.MarkPersistentInstruction(newInstruction);
+        }
     }
 
     /// <param name="il">The <see cref="ILContext"/> for the target method.</param>

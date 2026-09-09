@@ -199,35 +199,13 @@ static class TrackInstructions
     )
     {
         var method = body.Method;
-        var hookTargetInfo = HookTargetRecords.GetHookTargetInfo(body.Method);
+        var hookTargetInfo = HookTargetRecords.GetHookTargetInfo(method);
 
-        HookTargetRecords.SwapOriginalInstructionsCollection(
+        HookTargetRecords.SwapOriginalInstructions(
             method,
             hookTargetInfo,
-            new(newOriginalInstructions)
+            new(newOriginalInstructions),
+            oldToNew
         );
-
-        var postfixes = hookTargetInfo.PostfixInfo.FirstPostfixInstructions;
-
-        for (int i = 0; i < postfixes.Count; i++)
-        {
-            var oldInstruction = postfixes[i];
-
-            if (!oldToNew.TryGetValue(oldInstruction, out var newInstruction))
-                continue;
-
-            postfixes[i] = newInstruction;
-        }
-
-        var oldPersistentInstructions = hookTargetInfo.PersistentInstructions.ToArray();
-        hookTargetInfo.PersistentInstructions.Clear();
-
-        foreach (var oldInstruction in oldPersistentInstructions)
-        {
-            if (!oldToNew.TryGetValue(oldInstruction, out var newInstruction))
-                continue;
-
-            hookTargetInfo.MarkPersistentInstruction(newInstruction);
-        }
     }
 }
