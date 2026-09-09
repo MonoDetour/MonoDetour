@@ -223,8 +223,10 @@ public static class HookTargetRecords
 
         internal HashSet<Instruction> PersistentInstructions { get; } = [];
 
-        internal Dictionary<Instruction, (IReadOnlyMonoDetourHook?, string?)?> InstructionToSource { get; } =
-        [];
+        internal Dictionary<
+            Instruction,
+            (IReadOnlyMonoDetourHook?, string?)?
+        > InstructionToSource { get; } = [];
 
         /// <summary>
         /// Give the provided instruction an owner name to identify it by
