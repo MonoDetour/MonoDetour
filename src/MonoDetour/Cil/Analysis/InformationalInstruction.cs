@@ -231,7 +231,7 @@ public interface IInformationalInstruction
 
 internal sealed class InformationalInstruction(
     Instruction instruction,
-    IReadOnlyMonoDetourHook? source,
+    (IReadOnlyMonoDetourHook?, string?)? source,
     bool isFromILHook,
     List<IHandlerInfo> handlerParts
 ) : IInformationalInstruction
@@ -241,7 +241,7 @@ internal sealed class InformationalInstruction(
     public IInformationalInstruction? Previous { get; internal set; }
     public IInformationalInstruction? Next => next;
     internal InformationalInstruction? next;
-    internal IReadOnlyMonoDetourHook? source = source;
+    internal (IReadOnlyMonoDetourHook? hook, string? name)? source = source;
     internal bool isFromILHook = isFromILHook;
 
     public Instruction Instruction => instruction;
@@ -462,7 +462,21 @@ internal sealed class InformationalInstruction(
 
         var sourceId = !isFromILHook
             ? Spacer25Chars
-            : Truncate(source?.Owner.Id ?? "<unknown to MonoDetour>").PadRight(SpaceForId);
+            : Truncate(GetSourceName()).PadRight(SpaceForId);
+
+        string GetSourceName()
+        {
+            if (source is not { } s)
+                return "<unknown to MonoDetour>";
+
+            if (s.hook is { } hook)
+                return hook.Owner.Id;
+
+            if (s.name is { } name)
+                return name;
+
+            return "<null>";
+        }
 
         static string Truncate(string str)
         {

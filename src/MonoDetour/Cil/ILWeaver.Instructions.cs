@@ -481,7 +481,7 @@ public partial class ILWeaver
     private void ProcessInstructionForInsert(Instruction instruction)
     {
         InstructionOperandToILLabel(instruction);
-        targetInfo.InstructionToSource[instruction] = ManipulationInfo.Hook;
+        targetInfo.InstructionToSource[instruction] = (ManipulationInfo.Hook, null);
     }
 
     // MonoMod's instruction matching extensions expect ILLabel[] or ILLabel.

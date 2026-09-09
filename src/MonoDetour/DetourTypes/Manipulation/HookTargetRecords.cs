@@ -223,8 +223,23 @@ public static class HookTargetRecords
 
         internal HashSet<Instruction> PersistentInstructions { get; } = [];
 
-        internal Dictionary<Instruction, IReadOnlyMonoDetourHook?> InstructionToSource { get; } =
+        internal Dictionary<Instruction, (IReadOnlyMonoDetourHook?, string?)?> InstructionToSource { get; } =
         [];
+
+        /// <summary>
+        /// Give the provided instruction an owner name to identify it by
+        /// in MonoDetour's CIL analysis exception reports.
+        /// </summary>
+        /// <remarks>
+        /// Names above 25 characters are truncated.
+        /// Note that this limit could be changed in the future.
+        /// </remarks>
+        /// <param name="instruction">The instruction to give an owner to.</param>
+        /// <param name="owner">The owner name.</param>
+        public void SetInstructionOwner(Instruction instruction, string owner)
+        {
+            InstructionToSource[instruction] = (null, Helpers.ThrowIfNull(owner));
+        }
 
         /// <summary>
         /// Makes the specified instruction non-redirectable by HarmonyX.
