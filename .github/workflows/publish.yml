@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       publish-on:
-        description: 'Publish on Platforms'
+        description: "Publish on Platforms"
         required: true
-        default: 'all'
+        default: "all"
         type: choice
         options:
-          - 'all'
-          - 'thunderstore'
+          - "all"
+          - "thunderstore"
 
 jobs:
   publish:
@@ -59,3 +59,9 @@ jobs:
         env:
           TCLI_AUTH_TOKEN: ${{ secrets.THUNDERSTORE_API_TOKEN }}
         run: dotnet build ./packaging/ -c Release -property:PublishMonoDetour=true
+
+      - name: Upload Thunderstore artifacts to GitHub Release
+        if: ${{ github.event.release.tag_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload ${{ github.event.release.tag_name }} ./artifacts/thunderstore/*.zip
