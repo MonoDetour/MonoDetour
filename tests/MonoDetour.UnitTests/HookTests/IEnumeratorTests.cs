@@ -1,5 +1,4 @@
-using System.Collections;
-using MonoDetour.Reflection.Unspeakable;
+using System.Reflection;
 
 namespace MonoDetour.UnitTests.HookTests;
 
@@ -7,13 +6,14 @@ public static partial class IEnumeratorTests
 {
     private static readonly Queue<int> order = [];
 
-    static readonly EnumeratorFieldReferenceGetter<int> stateRef = EnumerateRange
-        .StateMachineTarget()
-        .EnumeratorFastFieldReferenceState();
+    // FIXME: MoveNext.Target() should return MethodInfo
+    static readonly EnumeratorFieldReferenceGetter<int> stateRef = (
+        (MethodInfo)EnumerateRange.MoveNext.Target()
+    ).EnumeratorFastFieldReferenceState();
 
-    static readonly EnumeratorFieldReferenceGetter<object> currentRef = EnumerateRange
-        .StateMachineTarget()
-        .EnumeratorFastFieldReferenceCurrent<object>();
+    static readonly EnumeratorFieldReferenceGetter<object> currentRef = (
+        (MethodInfo)EnumerateRange.MoveNext.Target()
+    ).EnumeratorFastFieldReferenceCurrent<object>();
 
     [Fact]
     public static void CanHookIEnumerator()
@@ -21,8 +21,8 @@ public static partial class IEnumeratorTests
         order.Clear();
 
         using var m = DefaultMonoDetourManager.New();
-        EnumerateRange.PrefixMoveNext(Hook_MoveNextPrefix, manager: m);
-        EnumerateRange.PostfixMoveNext(Hook_MoveNextPostfix, manager: m);
+        EnumerateRange.MoveNext.Prefix(Hook_MoveNextPrefix, manager: m);
+        EnumerateRange.MoveNext.Postfix(Hook_MoveNextPostfix, manager: m);
 
         var lib = new LibraryMethods();
 

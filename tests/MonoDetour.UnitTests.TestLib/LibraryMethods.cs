@@ -43,7 +43,25 @@ public class LibraryMethods
         }
     }
 
+    public IEnumerable EnumerateRangeEnumerable(int iterations)
+    {
+        for (int i = 1; i <= iterations; i++)
+        {
+            Number = i;
+            yield return i;
+        }
+    }
+
     public IEnumerator<int> EnumerateIntRange(int iterations)
+    {
+        for (int i = 1; i <= iterations; i++)
+        {
+            Number = i;
+            yield return i;
+        }
+    }
+
+    public IEnumerable<int> EnumerateIntRangeEnumerable(int iterations)
     {
         for (int i = 1; i <= iterations; i++)
         {

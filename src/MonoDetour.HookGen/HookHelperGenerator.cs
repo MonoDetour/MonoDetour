@@ -108,9 +108,20 @@ namespace MonoDetour.HookGen
                     public global::System.Type? TargetType { get; } = targetType;
 
                     /// <summary>
-                    /// Whether to generate helpers for nested types. Defaults to <see langword="true"/>.
+                    /// Whether to generate helpers for nested types. Defaults to <see langword="false"/>.
                     /// </summary>
-                    public bool IncludeNestedTypes { get; set; } = true;
+                    public bool IncludeNestedTypes { get; set; }
+
+                    /// <summary>
+                    /// Whether or not MonoDetour will generate hook helper variants which can affect control flow of
+                    /// the target methods. Defaults to <see langword="false"/>.
+                    /// </summary>
+                    /// <remarks>
+                    /// Special MoveNext hook helpers always generate control flow variants regardless of this value.
+                    /// These hook helpers are generated as subtypes of hook helpers which are for methods making use of
+                    /// the <see langword="yield"/> statement.
+                    /// </remarks>
+                    public bool GenerateControlFlowVariants { get; set; }
 
                     /// <summary>
                     /// A list of members to generate hook helpers for in the target type, by exact name.
@@ -129,12 +140,228 @@ namespace MonoDetour.HookGen
                     /// suffixes will be included.
                     /// </summary>
                     public string[]? MemberNameSuffixes { get; set; }
+                }
+            #if DEBUG
+                /// <summary>
+                /// Extension methods for hooking with MonoDetour.HookGen's HookHelper types.
+                /// </summary>
+            #endif
+                internal static partial class HookHelperExtensions
+                {
+                    extension<THookHelper, TPrefixSignature, TPostfixSignature, TControlFlowPrefixSignature>(
+                        global::MonoDetour.HookGen.IHookHelper<
+                            THookHelper,
+                            TPrefixSignature,
+                            TPostfixSignature,
+                            TControlFlowPrefixSignature
+                        >
+                    )
+                        where THookHelper : global::MonoDetour.HookGen.IHookHelper<
+                                THookHelper,
+                                TPrefixSignature,
+                                TPostfixSignature,
+                                TControlFlowPrefixSignature
+                            >
+                        where TPrefixSignature : global::System.Delegate
+                        where TPostfixSignature : global::System.Delegate
+                        where TControlFlowPrefixSignature : global::System.Delegate
+                    {
+            #if DEBUG
+                        /// <summary>
+                        /// Creates a prefix hook for <typeparamref name="THookHelper"/>'s target method
+                        /// which can affect the method's control flow.
+                        /// With the hook method's <see cref="global::MonoDetour.DetourTypes.ReturnFlow"/> return value,
+                        /// the hook can choose to cancel the execution of the target method and return early,
+                        /// in which case the hook can set the target method's return value if it has one.
+                        /// </summary>
+                        /// <remarks>
+                        /// If the hook method doesn't cancel the target method but sets the return value of the target method,
+                        /// the original return value of the method will still be used unless if some other control flow prefix
+                        /// hook after your hook decides to cancel the target method and doesn't override the return value you set.
+                        /// </remarks>
+                        /// <inheritdoc cref="global::MonoDetour.HookGen.HookHelperExtensions.Prefix{THookHelper, TPrefixSignature, TPostfixSignature}(TPrefixSignature, MonoDetourConfig?, bool, MonoDetourManager?)"/>
+            #endif
+                        public static global::MonoDetour.MonoDetourHook ControlFlowPrefix(
+                            TControlFlowPrefixSignature hook,
+                            global::MonoDetour.MonoDetourConfig? config = null,
+                            bool applyByDefault = true,
+                            global::MonoDetour.MonoDetourManager? manager = null
+                        ) =>
+                            (
+                                manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance
+                            ).Hook<global::MonoDetour.DetourTypes.PrefixDetour>(
+                                GetTarget<THookHelper>(),
+                                hook,
+                                config,
+                                applyByDefault
+                            );
+                    }
 
+                    extension<THookHelper, TPrefixSignature, TPostfixSignature>(
+                        global::MonoDetour.HookGen.IHookHelper<THookHelper, TPrefixSignature, TPostfixSignature>
+                    )
+                        where THookHelper : global::MonoDetour.HookGen.IHookHelper<
+                                THookHelper,
+                                TPrefixSignature,
+                                TPostfixSignature
+                            >
+                        where TPrefixSignature : global::System.Delegate
+                        where TPostfixSignature : global::System.Delegate
+                    {
+            #if DEBUG
+                        /// <summary>
+                        /// Creates a prefix hook for <typeparamref name="THookHelper"/>'s target method.
+                        /// </summary>
+                        /// <param name="hook">The hook method.</param>
+                        /// <param name="config">Metadata configuration for the MonoDetourHook.</param>
+                        /// <param name="applyByDefault">Whether or not the hook should be applied
+                        /// after it has been constructed.</param>
+                        /// <param name="manager">The manager which will own this hook. If left null,
+                        /// <see cref="global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance"/>
+                        /// will be used.</param>
+                        /// <returns>A new <see cref="MonoDetourHook"/>.</returns>
+            #endif
+                        public static global::MonoDetour.MonoDetourHook Prefix(
+                            TPrefixSignature hook,
+                            global::MonoDetour.MonoDetourConfig? config = null,
+                            bool applyByDefault = true,
+                            global::MonoDetour.MonoDetourManager? manager = null
+                        ) =>
+                            (
+                                manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance
+                            ).Hook<global::MonoDetour.DetourTypes.PrefixDetour>(
+                                GetTarget<THookHelper>(),
+                                hook,
+                                config,
+                                applyByDefault
+                            );
+
+            #if DEBUG
+                        /// <summary>
+                        /// Creates a postfix hook for <typeparamref name="THookHelper"/>'s target method.
+                        /// </summary>
+                        /// <inheritdoc cref="global::MonoDetour.HookGen.HookHelperExtensions.Prefix{THookHelper, TPrefixSignature, TPostfixSignature}(TPrefixSignature, MonoDetourConfig?, bool, MonoDetourManager?)"/>
+            #endif
+                        public static global::MonoDetour.MonoDetourHook Postfix(
+                            TPostfixSignature hook,
+                            global::MonoDetour.MonoDetourConfig? config = null,
+                            bool applyByDefault = true,
+                            global::MonoDetour.MonoDetourManager? manager = null
+                        ) =>
+                            (
+                                manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance
+                            ).Hook<global::MonoDetour.DetourTypes.PostfixDetour>(
+                                GetTarget<THookHelper>(),
+                                hook,
+                                config,
+                                applyByDefault
+                            );
+                    }
+
+                    extension<THookHelper>(global::MonoDetour.HookGen.IHookHelper<THookHelper>)
+                        where THookHelper : global::MonoDetour.HookGen.IHookHelper<THookHelper>
+                    {
+            #if DEBUG
+                        /// <summary>
+                        /// Creates an ILHook for <typeparamref name="THookHelper"/>'s target method.<br/>
+                        /// Learn more: https://monodetour.github.io/ilhooking/introduction/
+                        /// </summary>
+                        /// <inheritdoc cref="global::MonoDetour.HookGen.HookHelperExtensions.Prefix{THookHelper, TPrefixSignature, TPostfixSignature}(TPrefixSignature, MonoDetourConfig?, bool, MonoDetourManager?)"/>
+            #endif
+                        public static global::MonoDetour.MonoDetourHook ILHook(
+                            global::MonoDetour.Cil.ILManipulationInfo.Manipulator manipulator,
+                            global::MonoDetour.MonoDetourConfig? config = null,
+                            bool applyByDefault = true,
+                            global::MonoDetour.MonoDetourManager? manager = null
+                        ) =>
+                            (manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance).ILHook(
+                                GetTarget<THookHelper>(),
+                                manipulator,
+                                config,
+                                applyByDefault
+                            );
+                    }
+
+                    private static global::System.Reflection.MethodBase GetTarget<THookHelper>()
+                        where THookHelper : global::MonoDetour.HookGen.IHookHelper =>
+            #if NET6_0_OR_GREATER
+                        THookHelper.Target();
+            #else
+                        GetTargetViaReflection(typeof(THookHelper));
+
+                    private static global::System.Reflection.MethodBase GetTargetViaReflection(Type type) =>
+                        (global::System.Reflection.MethodBase)
+                            type.GetMethod(
+                                        "Target",
+                                        global::System.Reflection.BindingFlags.Public
+                                            | global::System.Reflection.BindingFlags.Static
+                                    )!
+                                .Invoke(null, null)!;
+            #endif
+                }
+
+            #if DEBUG
+                /// <inheritdoc cref="global::MonoDetour.HookGen.IHookHelper"/>
+            #endif
+                internal interface IHookHelper<
+                    THookHelper,
+                    TPrefixSignature,
+                    TPostfixSignature,
+                    TControlFlowPrefixSignature
+                > : global::MonoDetour.HookGen.IHookHelper<THookHelper, TPrefixSignature, TPostfixSignature>
+                    where THookHelper : global::MonoDetour.HookGen.IHookHelper<
+                            THookHelper,
+                            TPrefixSignature,
+                            TPostfixSignature,
+                            TControlFlowPrefixSignature
+                        >
+                    where TPrefixSignature : global::System.Delegate
+                    where TPostfixSignature : global::System.Delegate
+                    where TControlFlowPrefixSignature : global::System.Delegate;
+
+            #if DEBUG
+                /// <inheritdoc cref="global::MonoDetour.HookGen.IHookHelper"/>
+            #endif
+                internal interface IHookHelper<THookHelper, TPrefixSignature, TPostfixSignature>
+                    : global::MonoDetour.HookGen.IHookHelper<THookHelper>
+                    where THookHelper : global::MonoDetour.HookGen.IHookHelper<
+                            THookHelper,
+                            TPrefixSignature,
+                            TPostfixSignature
+                        >
+                    where TPrefixSignature : global::System.Delegate
+                    where TPostfixSignature : global::System.Delegate;
+
+            #if DEBUG
+                /// <inheritdoc cref="global::MonoDetour.HookGen.IHookHelper"/>
+            #endif
+                internal interface IHookHelper<THookHelper> : global::MonoDetour.HookGen.IHookHelper
+                    where THookHelper : global::MonoDetour.HookGen.IHookHelper<THookHelper>;
+
+            #if DEBUG
+                /// <summary>
+                /// A MonoDetour.HookGen interface which is implemented in generated hook helper types
+                /// and made use of in <see cref="global::MonoDetour.HookGen.HookHelperExtensions"/>.
+                /// </summary>
+                /// <remarks>
+                /// This interface may be changed in future versions without warning,
+                /// and already depends on the features your target framework's runtime supports.<br/>
+                /// If your target framework is .NET 6 or greater, static abstract members in interfaces
+                /// are supported. If not, MonoDetour's HookGen system will still work, but will rely on
+                /// reflection for accessing its own hook helper types' static members.
+                /// </remarks>
+            #endif
+                internal interface IHookHelper
+                {
+            #if NET6_0_OR_GREATER
+            #if DEBUG
                     /// <summary>
-                    /// Whether or not MonoDetour will generate hook helper variants which can affect control flow of
-                    /// the target methods. Defaults to <see langword="false"/>.
+                    /// Gets the target method of the hook helper type.
                     /// </summary>
-                    public bool GenerateControlFlowVariants { get; set; }
+                    /// <returns>The target method.</returns>
+            #endif
+                    public static abstract global::System.Reflection.MethodBase Target();
+            #endif
                 }
             }
             """;
@@ -333,6 +560,8 @@ namespace MonoDetour.HookGen
                 }
             );
 
+            // TODO: The following piece of code is not used, and never was. Is it important?
+            /*
             // then, for each type, we want to unify the requested attribute options
             var unifiedGroupedByType = groupedByType.Select(
                 (model, ct) =>
@@ -454,6 +683,7 @@ namespace MonoDetour.HookGen
                     };
                 }
             );
+            */
 
             // next, we want to go per-assembly, and perform the actual member lookups
             var mappedAssemblies = groupedByType
@@ -640,7 +870,7 @@ namespace MonoDetour.HookGen
                             if (
                                 methodSymbol!
                                     .DeclaringSyntaxReferences.FirstOrDefault()
-                                    ?.GetSyntax()
+                                    ?.GetSyntax(ct)
                                 is not MethodDeclarationSyntax methodSyntax
                             )
                             {
@@ -927,40 +1157,80 @@ namespace MonoDetour.HookGen
                 }
             }
 
-            var bindingFlags = member.Accessibility switch
+            // Should this code just be removed (not just uncommented)?
+            // The binding flags didn't work properly which is why they are ignored.
+            // var bindingFlags = member.Accessibility switch
+            // {
+            //     Accessibility.NotApplicable => BindingFlags.NonPublic,
+            //     Accessibility.Private => BindingFlags.NonPublic,
+            //     Accessibility.ProtectedAndInternal => BindingFlags.NonPublic,
+            //     Accessibility.Protected => BindingFlags.NonPublic,
+            //     Accessibility.Internal => BindingFlags.NonPublic,
+            //     Accessibility.ProtectedOrInternal => BindingFlags.NonPublic,
+            //     Accessibility.Public => BindingFlags.Public,
+            //     _ => BindingFlags.NonPublic,
+            // };
+
+            // bindingFlags |= member.Signature.ThisType is null
+            //     ? BindingFlags.Static
+            //     : BindingFlags.Instance;
+
+            static void AppendClassName(CodeBuilder cb, GeneratableMemberModel member)
             {
-                Accessibility.NotApplicable => BindingFlags.NonPublic,
-                Accessibility.Private => BindingFlags.NonPublic,
-                Accessibility.ProtectedAndInternal => BindingFlags.NonPublic,
-                Accessibility.Protected => BindingFlags.NonPublic,
-                Accessibility.Internal => BindingFlags.NonPublic,
-                Accessibility.ProtectedOrInternal => BindingFlags.NonPublic,
-                Accessibility.Public => BindingFlags.Public,
-                _ => BindingFlags.NonPublic,
-            };
-
-            bindingFlags |= member.Signature.ThisType is null
-                ? BindingFlags.Static
-                : BindingFlags.Instance;
-
-            var hookType = "global::MonoDetour.MonoDetourHook";
-            var parameterType = il
-                ? ILHookParameterType
-                : "global::MonoMod.HookGen." + GetHookDelegateName(member.Signature);
-
-            cb.Write("internal static partial class ").Write(SanitizeName(member.Name));
-
-            if (member.DistinguishByName)
-            {
-                AppendSignatureIdentifier(cb, member.Signature);
+                cb.Write(SanitizeName(member.Name));
+                if (member.DistinguishByName)
+                {
+                    AppendSignatureIdentifier(cb, member.Signature);
+                }
             }
-            cb.WriteLine().OpenBlock();
+
+            cb.Write("internal sealed partial class ");
+            AppendClassName(cb, member);
 
             if (!generateContent)
             {
-                cb.CloseBlock();
+                cb.WriteLine(" { }");
                 return;
             }
+
+            // IHookHelper takes: the implementing class, prefix sig, postfix sig
+            // and optionally, control flow prefix.
+            cb.WriteLine();
+            cb.IncreaseIndent()
+                .WriteLine(": global::MonoDetour.HookGen.IHookHelper<")
+                .IncreaseIndent();
+
+            AppendClassName(cb, member);
+
+            cb.WriteLine(',');
+            AppendClassName(cb, member);
+
+            if (!HasReturnValue(member))
+            {
+                // Case: we can unify prefix and postfix signatures.
+                cb.WriteLine(".Signature,");
+                AppendClassName(cb, member);
+                cb.Write(".Signature");
+            }
+            else
+            {
+                cb.WriteLine(".SignaturePrefix,");
+                AppendClassName(cb, member);
+                cb.Write(".SignaturePostfix");
+            }
+
+            if (member.GenerateControlFlowVariants)
+            {
+                cb.WriteLine(',');
+                AppendClassName(cb, member);
+                cb.Write(".SignatureControlFlowPrefix");
+            }
+
+            cb.WriteLine().DecreaseIndent().WriteLine('>').DecreaseIndent().OpenBlock();
+
+            cb.Write("private ");
+            AppendClassName(cb, member);
+            cb.WriteLine("() { }");
 
             var sig = member.Signature;
             var parameters = sig.ParameterTypes.AsImmutableArray();
@@ -1004,17 +1274,37 @@ namespace MonoDetour.HookGen
             }
 
             var takenParameters = takenParameterNamesPool.Allocate();
-            takenParameters.Clear();
-            takenParameters.Add("self");
-            takenParameters.Add("returnValue");
-            cb.Write("public delegate void PrefixSignature(").IncreaseIndent();
-            WriteDelegateTypes(takenParameters);
-            cb.WriteLine(");").DecreaseIndent();
+            // One day this code will be cleaned.
+            if (!HasReturnValue(member))
+            {
+                takenParameters.Clear();
+                takenParameters.Add("self");
+                cb.Write("public delegate void Signature(").IncreaseIndent();
+                WriteDelegateTypes(takenParameters);
+                cb.WriteLine(");").DecreaseIndent();
+            }
+            else
+            {
+                takenParameters.Clear();
+                takenParameters.Add("self");
+                takenParameters.Add("returnValue");
+                cb.Write("public delegate void SignaturePrefix(").IncreaseIndent();
+                WriteDelegateTypes(takenParameters);
+                cb.WriteLine(");").DecreaseIndent();
+
+                cb.Write("public delegate void SignaturePostfix(").IncreaseIndent();
+                takenParameters.Clear();
+                takenParameters.Add("self");
+                takenParameters.Add("returnValue");
+                WriteDelegateTypes(takenParameters);
+                WriteReturnValueIfExists();
+                cb.WriteLine(");").DecreaseIndent();
+            }
 
             if (member.GenerateControlFlowVariants)
             {
                 cb.WriteLine(
-                        "public delegate global::MonoDetour.DetourTypes.ReturnFlow ControlFlowPrefixSignature("
+                        "public delegate global::MonoDetour.DetourTypes.ReturnFlow SignatureControlFlowPrefix("
                     )
                     .IncreaseIndent();
                 takenParameters.Clear();
@@ -1024,19 +1314,16 @@ namespace MonoDetour.HookGen
                 WriteReturnValueIfExists();
                 cb.WriteLine(");").DecreaseIndent();
             }
-
-            cb.Write("public delegate void PostfixSignature(").IncreaseIndent();
-            takenParameters.Clear();
-            takenParameters.Add("self");
-            takenParameters.Add("returnValue");
-            WriteDelegateTypes(takenParameters);
             takenParameterNamesPool.Free(takenParameters);
-            WriteReturnValueIfExists();
-            cb.WriteLine(");").DecreaseIndent();
+
+            static bool HasReturnValue(GeneratableMemberModel member)
+            {
+                return member.Signature.ReturnType.FqName != "void";
+            }
 
             void WriteReturnValueIfExists()
             {
-                if (member.Signature.ReturnType.FqName != "void")
+                if (HasReturnValue(member))
                 {
                     if (parameters.Length != 0 || sig.ThisType is not null)
                     {
@@ -1052,12 +1339,31 @@ namespace MonoDetour.HookGen
                 }
             }
 
+            // This will be removed in the future.
+            // Replacement will be MoveNext as a subtype.
+
             if (member.Signature.IteratorStateMachine is { } iterator)
             {
+                // IHookHelper takes: the implementing class, prefix sig, postfix sig
+                // and optionally, control flow prefix.
+                cb.WriteLine("internal sealed partial class MoveNext")
+                    .IncreaseIndent()
+                    .WriteLine(": global::MonoDetour.HookGen.IHookHelper<")
+                    .IncreaseIndent()
+                    .WriteLine("MoveNext,")
+                    .WriteLine("MoveNext.SignaturePrefix,")
+                    .WriteLine("MoveNext.SignaturePostfix,")
+                    .WriteLine("MoveNext.SignatureControlFlowPrefix")
+                    .DecreaseIndent()
+                    .WriteLine('>')
+                    .DecreaseIndent()
+                    .OpenBlock()
+                    .WriteLine("private MoveNext() { }");
+
                 var genericEnumerator =
                     "global::MonoDetour.Reflection.Unspeakable.SpeakableEnumerator";
 
-                cb.Write("public delegate void PrefixMoveNextSignature(")
+                cb.Write("public delegate void SignaturePrefix(")
                     .Write(genericEnumerator)
                     .Write('<')
                     .Write(iterator.EnumeratorType.FqName);
@@ -1067,21 +1373,22 @@ namespace MonoDetour.HookGen
                 }
                 cb.WriteLine("> self);");
 
-                if (member.GenerateControlFlowVariants)
+                // MoveNext hooks often have a real reason to affect control flow due
+                // to the state machine nature of the target method. Due to this,
+                // ControlFlow hooks shall always be generated for these methods.
+                cb.Write(
+                        "public delegate global::MonoDetour.DetourTypes.ReturnFlow SignatureControlFlowPrefix("
+                    )
+                    .Write(genericEnumerator)
+                    .Write('<')
+                    .Write(iterator.EnumeratorType.FqName);
+                if (iterator.ThisField)
                 {
-                    cb.Write(
-                            "public delegate global::MonoDetour.DetourTypes.ReturnFlow ControlFlowPrefixMoveNextSignature("
-                        )
-                        .Write(genericEnumerator)
-                        .Write('<')
-                        .Write(iterator.EnumeratorType.FqName);
-                    if (iterator.ThisField)
-                    {
-                        cb.Write(", ").Write(type.Type.InnermostType.FqName);
-                    }
-                    cb.WriteLine("> self, ref bool continueEnumeration);");
+                    cb.Write(", ").Write(type.Type.InnermostType.FqName);
                 }
-                cb.Write("public delegate void PostfixMoveNextSignature(")
+                cb.WriteLine("> self, ref bool continueEnumeration);");
+
+                cb.Write("public delegate void SignaturePostfix(")
                     .Write(genericEnumerator)
                     .Write('<')
                     .Write(iterator.EnumeratorType.FqName);
@@ -1090,137 +1397,14 @@ namespace MonoDetour.HookGen
                     cb.Write(", ").Write(type.Type.InnermostType.FqName);
                 }
                 cb.WriteLine("> self, ref bool continueEnumeration);").WriteLine();
-            }
 
-            void PrintIEnumeratorWarning(string correspondingIEnumeratorHook)
-            {
-                cb.WriteLine("#if DEBUG")
-                    .WriteLine(
-                        "/// <remarks>WARNING: The target method is an IEnumerator"
-                            + " which is a method that returns a state machine."
-                            + " This hook would run before the state machine is enumerated with MoveNext()."
-                    )
-                    .WriteLine("/// <br/><br/>")
-                    .Write("/// The hook you are probably looking for would be ")
-                    .Write(correspondingIEnumeratorHook)
-                    .WriteLine(".")
-                    .WriteLine(
-                        "/// See http://monodetour.github.io/hooking/ienumerators/ for more information.</remarks>"
-                    )
-                    .WriteLine("#endif");
-            }
-
-            WriteHooks(forMoveNext: false);
-
-            if (member.Signature.IteratorStateMachine is not null)
-            {
-                WriteHooks(forMoveNext: true);
-            }
-
-            void WriteHooks(bool forMoveNext)
-            {
-                bool warnIEnumerator =
-                    !forMoveNext && member.Signature.IteratorStateMachine is not null;
-
-                if (warnIEnumerator)
-                    PrintIEnumeratorWarning("PrefixMoveNext");
-
-                cb.Write("public static ").Write(hookType);
-                if (forMoveNext)
-                    cb.Write(" PrefixMoveNext(PrefixMoveNextSignature hook, ");
-                else
-                    cb.Write(" Prefix(PrefixSignature hook, ");
-                cb.WriteLine(
-                        "global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                    )
+                cb.WriteLine("public static global::System.Reflection.MethodBase Target() =>")
                     .IncreaseIndent()
-                    .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance)"
-                    )
-                    .IncreaseIndent();
-                if (forMoveNext)
-                    cb.Write(".Hook<PrefixDetour>(StateMachineTarget()");
-                else
-                    cb.Write(".Hook<PrefixDetour>(Target()");
-                cb.WriteLine(", hook, config, applyByDefault);")
-                    .DecreaseIndent()
-                    .DecreaseIndent()
-                    .WriteLine();
-
-                if (member.GenerateControlFlowVariants)
-                {
-                    cb.Write("public static ").Write(hookType);
-                    if (forMoveNext)
-                        cb.Write(
-                            " ControlFlowPrefixMoveNext(ControlFlowPrefixMoveNextSignature hook, "
-                        );
-                    else
-                        cb.Write(" ControlFlowPrefix(ControlFlowPrefixSignature hook, ");
-                    cb.WriteLine(
-                            "global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                        )
-                        .IncreaseIndent()
-                        .WriteLine(
-                            "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance)"
-                        )
-                        .IncreaseIndent();
-                    if (forMoveNext)
-                        cb.Write(".Hook<PrefixDetour>(StateMachineTarget()");
-                    else
-                        cb.Write(".Hook<PrefixDetour>(Target()");
-                    cb.WriteLine(", hook, config, applyByDefault);")
-                        .DecreaseIndent()
-                        .DecreaseIndent()
-                        .WriteLine();
-                }
-
-                if (warnIEnumerator)
-                    PrintIEnumeratorWarning("PostfixMoveNext");
-
-                cb.Write("public static ").Write(hookType);
-                if (forMoveNext)
-                    cb.Write(" PostfixMoveNext(PostfixMoveNextSignature hook, ");
-                else
-                    cb.Write(" Postfix(PostfixSignature hook, ");
-                cb.WriteLine(
-                        "global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                    )
-                    .IncreaseIndent()
-                    .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance)"
-                    )
-                    .IncreaseIndent();
-                if (forMoveNext)
-                    cb.Write(".Hook<PostfixDetour>(StateMachineTarget()");
-                else
-                    cb.Write(".Hook<PostfixDetour>(Target()");
-                cb.WriteLine(", hook, config, applyByDefault);")
-                    .DecreaseIndent()
-                    .DecreaseIndent()
-                    .WriteLine();
-
-                if (warnIEnumerator)
-                    PrintIEnumeratorWarning("ILHookMoveNext");
-
-                cb.Write("public static ").Write(hookType).Write(" ILHook");
-                if (forMoveNext)
-                    cb.Write("MoveNext");
-                cb.WriteLine(
-                        "(global::MonoDetour.Cil.ILManipulationInfo.Manipulator manipulator, global::MonoDetour.MonoDetourConfig? config = null, bool applyByDefault = true, global::MonoDetour.MonoDetourManager? manager = null) =>"
-                    )
-                    .IncreaseIndent()
-                    .WriteLine(
-                        "(manager ?? global::MonoDetour.HookGen.DefaultMonoDetourManager.Instance)"
-                    )
-                    .IncreaseIndent();
-                if (forMoveNext)
-                    cb.Write(".ILHook(StateMachineTarget()");
-                else
-                    cb.Write(".ILHook(Target()");
-                cb.WriteLine(", manipulator, config, applyByDefault);")
-                    .DecreaseIndent()
-                    .DecreaseIndent()
-                    .WriteLine();
+                    .Write(
+                        "global::MonoMod.Utils.Extensions.GetStateMachineTarget((global::System.Reflection.MethodInfo)"
+                    );
+                AppendClassName(cb, member);
+                cb.Write(".Target())!;").DecreaseIndent().WriteLine().CloseBlock();
             }
 
             cb.Write("public static ")
@@ -1300,23 +1484,8 @@ namespace MonoDetour.HookGen
             cb.WriteLine(", null);").Write("if (method is null) ");
             EmitThrowMissing(type, member, cb);
             cb.WriteLine($"return method{(ctx.Bcl.DoesNotReturnAttribute ? "" : "!")};")
+                .CloseBlock()
                 .CloseBlock();
-
-            if (member.Signature.IteratorStateMachine is not null)
-            {
-                cb.WriteLine()
-                    .Write("public static ")
-                    .Write("global::System.Reflection.MethodInfo")
-                    .WriteLine(" StateMachineTarget() =>")
-                    .IncreaseIndent()
-                    .Write(
-                        "global::MonoMod.Utils.Extensions.GetStateMachineTarget((global::System.Reflection.MethodInfo)Target())!;"
-                    )
-                    .DecreaseIndent()
-                    .WriteLine();
-            }
-
-            cb.CloseBlock();
         }
 
         private static void EmitOpenArray(CodeBuilder cb, ContextSupportOptions ctx, string type)
@@ -1577,7 +1746,7 @@ namespace MonoDetour.HookGen
             if (attr.ConstructorArguments is not [{ Value: INamedTypeSymbol targetType }])
                 return null;
 
-            var includeNested = true;
+            var includeNested = false;
             var distinguishOverloads = true;
             bool generateControlFlowVariants = false;
             var kind = DetourKind.Hook;
@@ -1602,11 +1771,11 @@ namespace MonoDetour.HookGen
                             return null;
                         }
                         break;
-                    case "IncludeNestedTypes" when named.Value is { Value: bool bval }:
-                        includeNested = bval;
+                    case "IncludeNestedTypes" when named.Value is { Value: bool bValue }:
+                        includeNested = bValue;
                         break;
-                    case "DistinguishOverloadsByName" when named.Value is { Value: bool bval }:
-                        distinguishOverloads = bval;
+                    case "DistinguishOverloadsByName" when named.Value is { Value: bool bValue }:
+                        distinguishOverloads = bValue;
                         break;
                     case "Members"
                         when named.Value is { Kind: TypedConstantKind.Array, Values: var values }:
