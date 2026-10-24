@@ -6,6 +6,17 @@
     <VersionSuffix>$(MonoDetourVersionSuffix)</VersionSuffix>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+  <!-- NuGet props -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MonoDetour.Interop.HarmonyX</PackageId>
+    <Description>Hooks HarmonyX at runtime to make it and MonoDetour play nice together.</Description>
+    <PackageTags>MonoMod;RuntimeDetour;detour;detours;patch;patching;hook;$(PackageTags)</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="./README.md" Pack="true" PackagePath="/" />
+    <None Include="$(SolutionRoot)icon.png" Pack="true" PackagePath="/" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../MonoDetour/MonoDetour.csproj" PrivateAssets="all" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" />
