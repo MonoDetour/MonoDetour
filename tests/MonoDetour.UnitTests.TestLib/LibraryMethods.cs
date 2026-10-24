@@ -91,4 +91,6 @@ public class LibraryMethods
     {
         void LocalMethod() { }
     }
+
+    public static void StaticMethod() { }
 }

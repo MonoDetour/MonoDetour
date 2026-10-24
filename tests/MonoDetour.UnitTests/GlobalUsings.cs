@@ -15,3 +15,5 @@ global using MonoMod.Utils;
 
 // Test: duplicate attributes should NOT break HookGen
 [assembly: MonoDetourTargets(typeof(SomeType))]
+
+[assembly: MonoDetourTargets(typeof(TypeWithConstructor))]

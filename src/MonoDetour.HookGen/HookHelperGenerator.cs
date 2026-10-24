@@ -927,26 +927,26 @@ namespace MonoDetour.HookGen
                 }
             }
 
-            var bindingFlags = member.Accessibility switch
-            {
-                Accessibility.NotApplicable => BindingFlags.NonPublic,
-                Accessibility.Private => BindingFlags.NonPublic,
-                Accessibility.ProtectedAndInternal => BindingFlags.NonPublic,
-                Accessibility.Protected => BindingFlags.NonPublic,
-                Accessibility.Internal => BindingFlags.NonPublic,
-                Accessibility.ProtectedOrInternal => BindingFlags.NonPublic,
-                Accessibility.Public => BindingFlags.Public,
-                _ => BindingFlags.NonPublic,
-            };
+            // We can't know the accessibility flags because of publicizers,
+            // so we use both NonPublic and Public when needed.
+            // member.Accessibility switch
+            // {
+            //     Accessibility.NotApplicable => BindingFlags.NonPublic,
+            //     Accessibility.Private => BindingFlags.NonPublic,
+            //     Accessibility.ProtectedAndInternal => BindingFlags.NonPublic,
+            //     Accessibility.Protected => BindingFlags.NonPublic,
+            //     Accessibility.Internal => BindingFlags.NonPublic,
+            //     Accessibility.ProtectedOrInternal => BindingFlags.NonPublic,
+            //     Accessibility.Public => BindingFlags.Public,
+            //     _ => BindingFlags.NonPublic,
+            // };
 
-            bindingFlags |= member.Signature.ThisType is null
-                ? BindingFlags.Static
-                : BindingFlags.Instance;
+            var isStatic = member.Signature.ThisType is null;
 
             var hookType = "global::MonoDetour.MonoDetourHook";
-            var parameterType = il
-                ? ILHookParameterType
-                : "global::MonoMod.HookGen." + GetHookDelegateName(member.Signature);
+            // var parameterType = il
+            //     ? ILHookParameterType
+            //     : "global::MonoMod.HookGen." + GetHookDelegateName(member.Signature);
 
             cb.Write("internal static partial class ").Write(SanitizeName(member.Name));
 
@@ -1265,8 +1265,11 @@ namespace MonoDetour.HookGen
                 cb.Write("GetMethod(\"").Write(member.Name).Write("\", ");
             }
 
-            cb.Write("(global::System.Reflection.BindingFlags)~0").Write(", null, ");
-
+            cb.Write(
+                    "global::System.Reflection.BindingFlags.NonPublic | global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.DeclaredOnly | global::System.Reflection.BindingFlags."
+                )
+                .Write(isStatic ? "Static" : "Instance")
+                .Write(", null, ");
             EmitOpenArray(cb, ctx, "global::System.Type");
 
             foreach (var param in member.Signature.ParameterTypes.AsImmutableArray())
@@ -1914,6 +1917,14 @@ namespace MonoDetour.HookGen
             }
 
             if (method.IsAbstract)
+            {
+                return null;
+            }
+
+            // static constructors always run before they can be hooked at runtime.
+            // TODO: for hooking ahead-of-time, we want to generate these,
+            // but MonoDetour doesn't yet support AOT hooking.
+            if (method.MethodKind is MethodKind.StaticConstructor)
             {
                 return null;
             }
