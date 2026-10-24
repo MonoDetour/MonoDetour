@@ -17,6 +17,23 @@ public static class HookTargetRecords
 {
     static readonly ConditionalWeakTable<MethodDefinition, HookTargetInfo> s_MethodToInfo = new();
 
+    /// <summary>
+    /// Initializes MonoDetour's hooks on MonoMod to allow tracking
+    /// of "original" instructions of methods.
+    /// </summary>
+    /// <remarks>
+    /// It is only necessary to call this if you need to use
+    /// <see cref="GetHookTargetInfo(MethodDefinition)"/>
+    /// without using any <see cref="MonoDetourHook"/>s
+    /// which would have initialized this automatically.
+    /// <br/>
+    /// This also initializes some other unrelated but useful tweaks MonoDetour expects.
+    /// </remarks>
+    public static void InitializeIfNeeded()
+    {
+        ModuleInitialization.InitializeModule();
+    }
+
     /// <param name="il">The <see cref="ILContext"/> for the target method.</param>
     /// <inheritdoc cref="GetHookTargetInfo(MethodDefinition)"/>
     public static HookTargetInfo GetHookTargetInfo(ILContext il) => GetHookTargetInfo(il.Method);

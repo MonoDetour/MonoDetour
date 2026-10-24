@@ -99,6 +99,8 @@ public class MonoDetourHook : IMonoDetourHook
         ApplierType = applierType;
         Config = config;
 
+        HookTargetRecords.InitializeIfNeeded();
+
         var applierInstance = (IMonoDetourHookApplier)Activator.CreateInstance(applierType)!;
         applierInstance.Hook = this;
 

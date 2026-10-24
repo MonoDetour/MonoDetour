@@ -13,7 +13,7 @@ public static class MonoDetourLogger
     /// </summary>
     /// <param name="channel">Log channel of the message.</param>
     /// <param name="message">The log message.</param>
-    internal delegate void LogReceiver(LogChannel channel, string message);
+    public delegate void LogReceiver(LogChannel channel, string message);
 
     /// <summary>
     /// Log channel for the messages.
@@ -46,10 +46,13 @@ public static class MonoDetourLogger
         /// </summary>
         Error = 1 << 4,
 
-        // /// <summary>
-        // /// Additional debug information that is related to patching.
-        // /// </summary>
-        // Debug = 1 << 5,
+        /// <summary>
+        /// Additional debug information that is related to hooking.
+        /// </summary>
+        /// <remarks>
+        /// This is currently unused.
+        /// </remarks>
+        Debug = 1 << 5,
 
         // /// <summary>
         // /// All channels.
@@ -76,15 +79,28 @@ public static class MonoDetourLogger
     /// </summary>
     private static LogChannel GlobalFilter { get; set; } = LogChannel.Warning | LogChannel.Error;
 
-    static LogChannel OverrideFilter { get; set; } = LogChannel.None;
+    static LogChannel OverrideFilter { get; set; }
+
+    static bool parsedEnvironmentVariables;
 
     /// <summary>
     /// Event fired on any incoming message that passes the channel filter.
     /// </summary>
-    internal static event LogReceiver? OnLog;
+    public static event LogReceiver? OnLog;
 
-    internal static void ParseEnvironmentVariables()
+    /// <summary>
+    /// Whether or not MonoDetour will log to console. Set this to <see langword="false"/>
+    /// if you are adding a "native" logger via <see cref="OnLog"/>.
+    /// </summary>
+    public static bool LogToConsole { get; set; } = true;
+
+    static void ParseEnvironmentVariablesIfNeeded()
     {
+        if (parsedEnvironmentVariables)
+            return;
+
+        parsedEnvironmentVariables = true;
+
         var variable = "MONODETOUR_LOG_OVERRIDE";
         var value = Environment.GetEnvironmentVariable(variable);
         if (value is { })
@@ -108,6 +124,7 @@ public static class MonoDetourLogger
 
     internal static bool IsEnabledFor(LogChannel caller, LogChannel channel)
     {
+        ParseEnvironmentVariablesIfNeeded();
         return ((caller | OverrideFilter) & channel) != LogChannel.None;
     }
 
@@ -124,13 +141,12 @@ public static class MonoDetourLogger
 
         var messageStr = $"[{caller.Id}] {message()}";
 
-        if (OnLog is null)
+        if (LogToConsole)
         {
             DefaultLog(channel, messageStr);
-            return;
         }
 
-        OnLog.Invoke(channel, messageStr);
+        OnLog?.Invoke(channel, messageStr);
     }
 
     internal static void Log(
@@ -144,13 +160,12 @@ public static class MonoDetourLogger
             return;
         }
 
-        if (OnLog is null)
+        if (LogToConsole)
         {
             DefaultLog(channel, message());
-            return;
         }
 
-        OnLog.Invoke(channel, message());
+        OnLog?.Invoke(channel, message());
     }
 
     internal static void Log(LogChannel channel, Func<string> message)
@@ -160,13 +175,12 @@ public static class MonoDetourLogger
             return;
         }
 
-        if (OnLog is null)
+        if (LogToConsole)
         {
             DefaultLog(channel, message());
-            return;
         }
 
-        OnLog.Invoke(channel, message());
+        OnLog?.Invoke(channel, message());
     }
 
     internal static void Log(this MonoDetourManager caller, LogChannel channel, string message)
@@ -176,13 +190,12 @@ public static class MonoDetourLogger
 
         message = $"[{caller.Id}] {message}";
 
-        if (OnLog is null)
+        if (LogToConsole)
         {
             DefaultLog(channel, message);
-            return;
         }
 
-        OnLog.Invoke(channel, message);
+        OnLog?.Invoke(channel, message);
     }
 
     internal static void Log(this IMonoDetourLogSource caller, LogChannel channel, string message)
@@ -190,13 +203,12 @@ public static class MonoDetourLogger
         if (!IsEnabledFor(caller.LogFilter, channel))
             return;
 
-        if (OnLog is null)
+        if (LogToConsole)
         {
             DefaultLog(channel, message);
-            return;
         }
 
-        OnLog.Invoke(channel, message);
+        OnLog?.Invoke(channel, message);
     }
 
     internal static void Log(LogChannel channel, string message)
@@ -204,13 +216,12 @@ public static class MonoDetourLogger
         if (!IsEnabledFor(GlobalFilter, channel))
             return;
 
-        if (OnLog is null)
+        if (LogToConsole)
         {
             DefaultLog(channel, message);
-            return;
         }
 
-        OnLog.Invoke(channel, message);
+        OnLog?.Invoke(channel, message);
     }
 
     static void DefaultLog(LogChannel channel, string message)

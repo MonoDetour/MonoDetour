@@ -1,8 +1,6 @@
 using System;
-using System.Runtime.CompilerServices;
 using BepInEx.Logging;
 using BepInEx.Preloader.Core.Patching;
-using static MonoDetour.Logging.MonoDetourLogger;
 
 namespace MonoDetour.Logging;
 
@@ -13,33 +11,21 @@ internal partial class Patcher : BasePatcher
 
     public override void Initialize()
     {
-        Environment.SetEnvironmentVariable(
-            "MONODETOUR_MANUAL_INIT",
-            "1",
-            EnvironmentVariableTarget.Process
-        );
-
-        Init();
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    static void Init()
-    {
-        OnLog += LogHandler;
-        ModuleInitialization.Initialize();
+        MonoDetourLogger.LogToConsole = false;
+        MonoDetourLogger.OnLog += LogHandler;
         Interop.HarmonyX.HarmonyXInterop.Initialize();
     }
 
-    static void LogHandler(LogChannel channel, string message)
+    static void LogHandler(MonoDetourLogger.LogChannel channel, string message)
     {
         var logLevel = channel switch
         {
-            LogChannel.None => LogLevel.None,
-            // LogChannel.Debug => LogLevel.Debug,
-            LogChannel.Info => LogLevel.Info,
-            LogChannel.Warning => LogLevel.Warning,
-            LogChannel.Error => LogLevel.Error,
-            LogChannel.IL => LogLevel.Info,
+            MonoDetourLogger.LogChannel.None => LogLevel.None,
+            MonoDetourLogger.LogChannel.Debug => LogLevel.Debug,
+            MonoDetourLogger.LogChannel.Info => LogLevel.Info,
+            MonoDetourLogger.LogChannel.Warning => LogLevel.Warning,
+            MonoDetourLogger.LogChannel.Error => LogLevel.Error,
+            MonoDetourLogger.LogChannel.IL => LogLevel.Info,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(channel),
                 "A log can only have a single known channel."

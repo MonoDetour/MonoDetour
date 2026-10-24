@@ -1,4 +1,8 @@
 <Solution>
+  <Project Path="../src/MonoDetour.Bindings.Reorg/MonoDetour.Bindings.Reorg.csproj" />
+  <Project Path="../src/MonoDetour.Interop.HarmonyX/MonoDetour.Interop.HarmonyX.csproj" />
+  <Project Path="../src/MonoDetour.Reflection/MonoDetour.Reflection.csproj" />
+  <Project Path="../src/MonoDetour/MonoDetour.csproj" />
   <Project Path="MonoDetour.BepInEx.5/MonoDetour.BepInEx.5.csproj" />
   <Project Path="MonoDetour.BepInEx.6/MonoDetour.BepInEx.6.csproj" />
   <Project Path="Thunderstore/Thunderstore.proj" Type="C#" />
