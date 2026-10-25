@@ -7,12 +7,9 @@
 Easy and convenient .NET detouring library based around HookGen with C# source generators, powered by MonoMod.RuntimeDetour.
 
 > [!WARNING]
-> This library is not fully released, and things *will* change.
->
-> - Bugs and missing functionality is expected
-> - Documentation may not reflect reality
+> This library is not fully released, and some things will change. For more info, see <https://monodetour.github.io/getting-started/overview/>.
 
-Note: MonoDetour implements interop support for HarmonyX. This means that MonoDetour prefix and postfix hooks are aware of HarmonyX prefix and postfix hooks, and they respect each other.
+Note: MonoDetour implements (optional) interop support for HarmonyX via [MonoDetour.Interop.HarmonyX](./src/MonoDetour.Interop.HarmonyX/README.md). This means that MonoDetour prefix and postfix hooks are aware of HarmonyX prefix and postfix hooks, and they respect each other.
 
 > [!NOTE]
 > MonoDetour.HookGen's default HookGen namespace used to be `On` in versions `< 0.7`. Since `>= 0.7`, the HookGen namespace is `Md` (which stands for "**M**ono**D**etour").
