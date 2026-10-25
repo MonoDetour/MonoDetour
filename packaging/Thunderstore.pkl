@@ -37,7 +37,7 @@ class Build {
     when (shipInteropHarmonyX) {
       new {
         source =
-          "../../artifacts/bin/MonoDetour.Interop.HarmonyX/release/netstandard2.0/com.github.MonoDetour.Interop.HarmonyX.dll"
+          "../../artifacts/bin/MonoDetour.Interop.HarmonyX/__config__/netstandard2.0/com.github.MonoDetour.Interop.HarmonyX.dll"
         target = "core/"
       }
     }

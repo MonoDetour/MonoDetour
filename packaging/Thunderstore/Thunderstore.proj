@@ -11,10 +11,20 @@
     <ProjectReference Include="../MonoDetour.BepInEx.6/MonoDetour.BepInEx.6.csproj" />
   </ItemGroup>
 
+  <Target Name="ProcessTcliConfigs" BeforeTargets="Build">
+    <PropertyGroup>
+      <ProcessCommand><![CDATA[sed -e 's/__MonoDetour_Version__/$(Version)/' -e 's/__config__/$(ConfigurationLower)/' ./thunderstore.toml > ./.processed.toml]]></ProcessCommand>
+    </PropertyGroup>
+    <Exec Command="$(ProcessCommand)" WorkingDirectory="." />
+    <Exec Command="$(ProcessCommand)" WorkingDirectory="../MonoDetour.BepInEx.5/" />
+    <Exec Command="$(ProcessCommand)" WorkingDirectory="../MonoDetour.BepInEx.5.Resonite/" />
+    <Exec Command="$(ProcessCommand)" WorkingDirectory="../MonoDetour.BepInEx.6/" />
+  </Target>
+
   <Target Name="PackThunderstore" AfterTargets="Build">
-    <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)thunderstore.toml&quot; --package-version $(Version)" />
+    <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir).processed.toml&quot; --package-version $(Version)" />
     <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5/.processed.toml&quot; --package-version $(Version)" />
-    <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5.Resonite/thunderstore.toml&quot; --package-version $(Version)" />
+    <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5.Resonite/.processed.toml&quot; --package-version $(Version)" />
     <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.6/.processed.toml&quot; --package-version $(Version)" />
   </Target>
 
@@ -24,9 +34,9 @@
   -->
   <!-- Call with `dotnet build ./packaging/ -c Release -property:PublishMonoDetour=true` -->
   <Target Name="PublishThunderstore" AfterTargets="PackThunderstore" Condition="'$(PublishMonoDetour)' == 'true'" >
-    <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)thunderstore.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour-$(Version).zip&quot;" />
+    <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir).processed.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour-$(Version).zip&quot;" />
     <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5/.processed.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour_BepInEx_5-$(Version).zip&quot;" />
-    <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5.Resonite/thunderstore.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour_BepInEx_5_Resonite-$(Version).zip&quot;" />
+    <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5.Resonite/.processed.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour_BepInEx_5_Resonite-$(Version).zip&quot;" />
     <Exec Command="dotnet tcli publish --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.6/.processed.toml&quot; --file &quot;$(SolutionRoot)artifacts/thunderstore/MonoDetour-MonoDetour_BepInEx_6-$(Version).zip&quot;" />
   </Target>
 </Project>

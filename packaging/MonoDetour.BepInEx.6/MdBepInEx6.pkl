@@ -12,7 +12,7 @@ build {
   copy {
     new {
       source =
-        "../../artifacts/bin/MonoDetour.BepInEx.6/release/0.com.github.MonoDetour.BepInEx.6.dll"
+        "../../artifacts/bin/MonoDetour.BepInEx.6/__config__/0.com.github.MonoDetour.BepInEx.6.dll"
       target = "patchers/"
     }
   }

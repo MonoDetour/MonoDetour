@@ -16,7 +16,8 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisMode>Recommended</AnalysisMode>
     <UseArtifactsOutput>true</UseArtifactsOutput>
-    <ArtifactsPivots>$([System.String]::Copy('$(Configuration)').ToLower())/$(TargetFramework)</ArtifactsPivots>
+    <ConfigurationLower>$([System.String]::Copy('$(Configuration)').ToLower())</ConfigurationLower>
+    <ArtifactsPivots>$(ConfigurationLower)/$(TargetFramework)</ArtifactsPivots>
     <Product>$(MSBuildProjectName)</Product>
     <AssemblyTitle>$(MSBuildProjectName)</AssemblyTitle>
     <DebugSymbols>true</DebugSymbols>

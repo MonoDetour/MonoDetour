@@ -16,26 +16,26 @@ build {
   copy {
     new {
       source =
-        "../../artifacts/bin/MonoDetour.BepInEx.5/release/0.com.github.MonoDetour.BepInEx.5.dll"
+        "../../artifacts/bin/MonoDetour.BepInEx.5/__config__/0.com.github.MonoDetour.BepInEx.5.dll"
       target = "Renderer/BepInEx/patchers/"
     }
     new {
       source =
-        "../../artifacts/bin/MonoDetour.Interop.HarmonyX/release/netstandard2.0/com.github.MonoDetour.Interop.HarmonyX.dll"
+        "../../artifacts/bin/MonoDetour.Interop.HarmonyX/__config__/netstandard2.0/com.github.MonoDetour.Interop.HarmonyX.dll"
       target = "Renderer/BepInEx/core/"
     }
     new {
-      source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.dll"
-      target = "Renderer/BepInEx/core/"
-    }
-    new {
-      source =
-        "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Reflection.dll"
+      source = "../../artifacts/bin/MonoDetour/__config__/netstandard2.0/com.github.MonoDetour.dll"
       target = "Renderer/BepInEx/core/"
     }
     new {
       source =
-        "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Bindings.Reorg.dll"
+        "../../artifacts/bin/MonoDetour/__config__/netstandard2.0/com.github.MonoDetour.Reflection.dll"
+      target = "Renderer/BepInEx/core/"
+    }
+    new {
+      source =
+        "../../artifacts/bin/MonoDetour/__config__/netstandard2.0/com.github.MonoDetour.Bindings.Reorg.dll"
       target = "Renderer/BepInEx/core/"
     }
   }

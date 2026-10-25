@@ -20,7 +20,4 @@
     <ProjectReference Include="$(SolutionRoot)src/MonoDetour/MonoDetour.csproj" />
     <ProjectReference Include="$(SolutionRoot)src/MonoDetour.Interop.HarmonyX/MonoDetour.Interop.HarmonyX.csproj" />
   </ItemGroup>
-  <Target Name="ProcessTcliConfig" BeforeTargets="Build">
-    <Exec Command="sed 's/__MonoDetour_Version__/$(Version)/' ./thunderstore.toml > ./.processed.toml" />
-  </Target>
 </Project>

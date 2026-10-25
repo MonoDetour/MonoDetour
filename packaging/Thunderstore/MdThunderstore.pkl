@@ -10,17 +10,17 @@ build {
   shipInteropHarmonyX = false
   copy {
     new {
-      source = "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.dll"
+      source = "../../artifacts/bin/MonoDetour/__config__/netstandard2.0/com.github.MonoDetour.dll"
       target = "core/"
     }
     new {
       source =
-        "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Reflection.dll"
+        "../../artifacts/bin/MonoDetour/__config__/netstandard2.0/com.github.MonoDetour.Reflection.dll"
       target = "core/"
     }
     new {
       source =
-        "../../artifacts/bin/MonoDetour/release/netstandard2.0/com.github.MonoDetour.Bindings.Reorg.dll"
+        "../../artifacts/bin/MonoDetour/__config__/netstandard2.0/com.github.MonoDetour.Bindings.Reorg.dll"
       target = "core/"
     }
   }
