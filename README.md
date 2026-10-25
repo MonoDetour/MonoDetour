@@ -11,11 +11,6 @@ Easy and convenient .NET detouring library based around HookGen with C# source g
 
 Note: MonoDetour implements (optional) interop support for HarmonyX via [MonoDetour.Interop.HarmonyX](./src/MonoDetour.Interop.HarmonyX/README.md). This means that MonoDetour prefix and postfix hooks are aware of HarmonyX prefix and postfix hooks, and they respect each other.
 
-> [!NOTE]
-> MonoDetour.HookGen's default HookGen namespace used to be `On` in versions `< 0.7`. Since `>= 0.7`, the HookGen namespace is `Md` (which stands for "**M**ono**D**etour").
->
-> This change was made due to an issue where if an API uses MonoDetour.HookGen with the `On` namespace, any consumers of that API who are also using MonoMod's own HookGen will get conflicts from a namespace with the same name as a type.
-
 ## Documentation
 
 - Website: <https://monodetour.github.io/>
@@ -110,6 +105,9 @@ If the default HookGen namespace `Md` causes collisions or you just don't like i
   <MonoDetourHookGenNamespace>Md</MonoDetourHookGenNamespace>
 </PropertyGroup>
 ```
+
+> [!CAUTION]
+> Avoid using `On` if you are developing a library. If a library uses MonoDetour.HookGen with the `On` namespace, any consumers of that library who are using MonoMod's own HookGen will get conflicts from a namespace with the same name as a type due to differences between it and MonoDetour.HookGen. For whatever reason, .NET/C# really doesn't like this even if the types are internal and not visible to consumers.
 
 ## Usage
 
