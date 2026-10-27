@@ -16,6 +16,7 @@ on:
           - "thunderstore"
 
 permissions:
+  id-token: write # enable GitHub OIDC token issuance for this job
   contents: write
 
 jobs:
@@ -54,9 +55,15 @@ jobs:
       - name: Pack
         run: dotnet pack -c Release --no-build
 
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Publish NuGet
         if: ${{ inputs.publish-on != 'thunderstore' }}
-        run: dotnet nuget push ./artifacts/package/release/*.nupkg --skip-duplicate --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        run: dotnet nuget push ./artifacts/package/release/*.nupkg --skip-duplicate --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
       - name: Publish Thunderstore
         env:
