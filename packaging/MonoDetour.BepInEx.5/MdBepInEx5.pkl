@@ -28,5 +28,6 @@ publish {
     "gloomwood"
     "yapyap"
     "super-battle-golf"
+    "mycopunk"
   }
 }

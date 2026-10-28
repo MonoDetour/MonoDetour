@@ -37,6 +37,7 @@ publish {
     "gloomwood"
     "yapyap"
     "super-battle-golf"
+    "mycopunk"
     // Special BepInEx 5 layout and "normal" (custom) BepInEx 6
     "resonite"
     // BepInEx 6
