@@ -15,6 +15,7 @@ general: General
 class Package {
   namespace: String = "MonoDetour"
   name: String
+  versionNumber: "__MonoDetour_Version__"
   description: String
   websiteUrl: String = "https://github.com/MonoDetour/MonoDetour"
   containsNsfwContent: Boolean = false

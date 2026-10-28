@@ -37,6 +37,7 @@
     <!-- Release version for main MonoDetour package -->
     <MonoDetourVersionPrefix>0.7.17</MonoDetourVersionPrefix>
     <MonoDetourVersionSuffix></MonoDetourVersionSuffix>
+    <ThunderstoreSubVersion>1</ThunderstoreSubVersion>
     <!-- Release version for HookGen and Analyzers packages -->
     <HookGenAndAnalyzersVersionPrefix>0.7.17</HookGenAndAnalyzersVersionPrefix>
     <HookGenAndAnalyzersVersionSuffix></HookGenAndAnalyzersVersionSuffix>
