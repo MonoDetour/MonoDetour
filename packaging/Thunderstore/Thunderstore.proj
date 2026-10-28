@@ -21,7 +21,7 @@
     <ProjectReference Include="../MonoDetour.BepInEx.6/MonoDetour.BepInEx.6.csproj" />
   </ItemGroup>
 
-  <Target Name="ProcessTcliConfigs" BeforeTargets="Build">
+  <Target Name="ProcessTcliConfigs" AfterTargets="Build">
     <PropertyGroup>
       <ProcessCommand><![CDATA[sed -e 's/__MonoDetour_Version__/$(ThunderstoreVersion)/' -e 's/__config__/$(ConfigurationLower)/' ./thunderstore.toml > ./.processed.toml]]></ProcessCommand>
     </PropertyGroup>
@@ -31,7 +31,7 @@
     <Exec Command="$(ProcessCommand)" WorkingDirectory="../MonoDetour.BepInEx.6/" />
   </Target>
 
-  <Target Name="PackThunderstore" AfterTargets="Build">
+  <Target Name="PackThunderstore" AfterTargets="ProcessTcliConfigs">
     <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir).processed.toml&quot;" />
     <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5/.processed.toml&quot;" />
     <Exec Command="dotnet tcli build --config-path &quot;$(ProjectDir)../MonoDetour.BepInEx.5.Resonite/.processed.toml&quot;" />
