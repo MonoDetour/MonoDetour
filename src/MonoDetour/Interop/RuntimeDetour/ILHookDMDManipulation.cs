@@ -141,6 +141,22 @@ static class ILHookDMDManipulation
 
     static void TryCatchAnalyzeCompilationReorg(ILManipulationInfo info)
     {
+        // We wrap the entire following range in a try catch.
+
+        // MonoMod.RuntimeDetour >= 25.4.0
+        //
+        // IL_00d5: ldloc.0
+        // IL_00d6: callvirt instance class [System.Runtime]System.Reflection.MethodInfo [MonoMod.Utils]MonoMod.Utils.DynamicMethodDefinition::Generate() /* 0A000077 */
+        // IL_00db: stloc.3
+        // IL_00dc: call class [MonoMod.Core]MonoMod.Core.Platforms.PlatformTriple [MonoMod.Core]MonoMod.Core.Platforms.PlatformTriple::get_Current() /* 0A00003A */
+        // IL_00e1: ldloc.3
+        // IL_00e2: ldloca.s 5
+        // IL_00e4: initobj [System.Runtime]System.RuntimeMethodHandle /* 01000054 */
+        // IL_00ea: ldloc.s 5
+        // IL_00ec: callvirt instance void [MonoMod.Core]MonoMod.Core.Platforms.PlatformTriple::Compile(class [System.Runtime]System.Reflection.MethodBase, valuetype [System.Runtime]System.RuntimeMethodHandle) /* 0A00011C */
+
+        // MonoMod.RuntimeDetour < 25.4.0
+        //
         // IL_00d5: ldloc.0
         // IL_00d6: callvirt instance class [System.Runtime]System.Reflection.MethodInfo [MonoMod.Utils]MonoMod.Utils.DynamicMethodDefinition::Generate() /* 0A000077 */
         // IL_00db: stloc.3
@@ -153,26 +169,41 @@ static class ILHookDMDManipulation
         int localIndexDmd = 0;
         Instruction tryStart = null!;
 
-        w.MatchRelaxed(
+        var result = w.MatchRelaxed(
+            x => x.MatchLdloc(out localIndexDmd),
+            x => x.MatchCallvirt(out _),
+            x => x.MatchStloc(out _),
+            x => x.MatchCall(out _) && w.SetInstructionTo(ref tryStart, x),
+            x => x.MatchLdloc(out _),
+            x => x.MatchLdloca(out _),
+            x => x.MatchInitobj(out _),
+            x => x.MatchLdloc(out _),
+            x => x.MatchCallvirt(out _) && w.SetCurrentTo(x)
+        );
+
+        if (!result.IsValid)
+        {
+            var result2 = w.MatchRelaxed(
                 x => x.MatchLdloc(out localIndexDmd),
                 x => x.MatchCallvirt(out _),
                 x => x.MatchStloc(out _),
                 x => x.MatchCall(out _) && w.SetInstructionTo(ref tryStart, x),
                 x => x.MatchLdloc(out _),
                 x => x.MatchCallvirt(out _) && w.SetCurrentTo(x)
-            )
-            .Extract(out var result);
-
-        if (!result.IsValid)
-        {
-            MonoDetourLogger.Log(
-                MonoDetourLogger.LogChannel.Error,
-                "MonoDetour's invalid IL analysis failed to be applied. "
-                    + $"Please report this issue: https://github.com/MonoDetour/MonoDetour: "
-                    + $"'{typeof(Hook).Assembly}'"
             );
-            MonoDetourLogger.Log(MonoDetourLogger.LogChannel.Error, result.FailureMessage);
-            return;
+            if (!result2.IsValid)
+            {
+                MonoDetourLogger.Log(
+                    MonoDetourLogger.LogChannel.Error,
+                    "MonoDetour's invalid IL analysis failed to be applied;"
+                        + " MonoDetour can't provide help in stack traces when an ILHook produces invalid IL."
+                        + $" Please report this issue: https://github.com/MonoDetour/MonoDetour:"
+                        + $" '{typeof(Hook).Assembly}'"
+                        + $"\nMatch Attempt 1: {result.FailureMessage}"
+                        + $"\nMatch Attempt 2: {result2.FailureMessage}"
+                );
+                return;
+            }
         }
 
         w.HandlerCreateCatch(typeof(InvalidProgramException), out var handler);
