@@ -8,6 +8,10 @@ MonoDetour adds a padding version for Thunderstore releases to allow uploading M
 
 This Thunderstore specific changelog lists Thunderstore communities MonoDetour has been added to. Also note that this changelog is shared for all MonoDetour packages.
 
+### 0.7.1801
+
+- added to `casualties-unknown` (BepInEx 5)
+
 ### 0.7.1701
 
 - added to `mycopunk` (BepInEx 5)

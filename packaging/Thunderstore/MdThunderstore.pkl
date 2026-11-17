@@ -38,6 +38,7 @@ publish {
     "yapyap"
     "super-battle-golf"
     "mycopunk"
+    "casualties-unknown"
     // Special BepInEx 5 layout and "normal" (custom) BepInEx 6
     "resonite"
     // BepInEx 6

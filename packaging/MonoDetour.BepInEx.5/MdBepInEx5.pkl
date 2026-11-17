@@ -29,5 +29,6 @@ publish {
     "yapyap"
     "super-battle-golf"
     "mycopunk"
+    "casualties-unknown"
   }
 }
