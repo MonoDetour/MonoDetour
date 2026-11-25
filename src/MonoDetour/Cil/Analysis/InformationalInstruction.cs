@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoDetour.Cil;
 using MonoDetour.Interop.MonoModUtils;
 using MonoMod.Cil;
 using static MonoDetour.Cil.Analysis.IInformationalInstruction;
@@ -829,7 +830,7 @@ internal sealed class InformationalInstruction(
                 // https://github.com/jbevain/cecil/blob/master/Mono.Cecil.Cil/OpCodes.cs
                 if (instruction.OpCode == OpCodes.Ret)
                 {
-                    if (body.Method.ReturnType.MetadataType != MetadataType.Void)
+                    if (body.Method.GetILReturnType().MetadataType != MetadataType.Void)
                     {
                         stackSize--;
                         informationalInstruction.StackPop = 1;

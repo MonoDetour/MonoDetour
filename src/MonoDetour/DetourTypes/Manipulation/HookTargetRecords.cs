@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using MonoDetour.Cil;
 using MonoDetour.Interop.RuntimeDetour;
 using MonoMod.Cil;
 
@@ -50,10 +51,12 @@ public static class HookTargetRecords
             return info;
         }
 
+        var returnType = method.GetILReturnType();
+
         VariableDefinition? returnValue = null;
-        if (method.ReturnType.MetadataType != MetadataType.Void)
+        if (returnType.MetadataType != MetadataType.Void)
         {
-            returnValue = new VariableDefinition(method.ReturnType);
+            returnValue = new VariableDefinition(returnType);
             method.Body.Variables.Add(returnValue);
         }
 
@@ -202,7 +205,8 @@ public static class HookTargetRecords
         public TargetPostfixInfo PostfixInfo { get; } = new();
 
         /// <summary>
-        /// The local variable containing the return value of the method.
+        /// The local variable containing the IL return value of the method.
+        /// For runtime-async methods, this is the unwrapped result rather than the declared task.
         /// </summary>
         public VariableDefinition? ReturnValue { get; }
 

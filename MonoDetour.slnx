@@ -8,6 +8,7 @@
     <Project Path="src/MonoDetour/MonoDetour.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/MonoDetour.UnitTests.RuntimeAsyncLib/MonoDetour.UnitTests.RuntimeAsyncLib.csproj" />
     <Project Path="tests/MonoDetour.UnitTests.TestLib/MonoDetour.UnitTests.TestLib.csproj" />
     <Project Path="tests/MonoDetour.UnitTests/MonoDetour.UnitTests.csproj" />
   </Folder>
