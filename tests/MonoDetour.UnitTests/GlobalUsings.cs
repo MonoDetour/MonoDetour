@@ -17,3 +17,4 @@ global using MonoMod.Utils;
 [assembly: MonoDetourTargets(typeof(SomeType))]
 
 [assembly: MonoDetourTargets(typeof(TypeWithConstructor))]
+[assembly: MonoDetourTargets(typeof(StrippingWorks))]

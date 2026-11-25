@@ -594,16 +594,16 @@ namespace MonoDetour.HookGen
 
             var methodsToAnalyze = context
                 .SyntaxProvider.CreateSyntaxProvider(
-                    predicate: static (node, _) => node is MethodDeclarationSyntax,
+                    predicate: static (node, _) => node is BaseMethodDeclarationSyntax,
                     transform: static (ctx, _) =>
                     {
-                        var methodSyntax = (MethodDeclarationSyntax)ctx.Node;
+                        var methodSyntax = (BaseMethodDeclarationSyntax)ctx.Node;
                         return (ctx.SemanticModel, methodSyntax);
                     }
                 )
                 .Combine(userConfig)
                 .Select(
-                    (x, _) =>
+                    (x, ct) =>
                     {
                         var ((semanticModel, methodSyntax), (stripUnusedHooks, _)) = x;
                         if (stripUnusedHooks is StripType.None)
@@ -611,7 +611,7 @@ namespace MonoDetour.HookGen
                             return null;
                         }
 
-                        return semanticModel.GetDeclaredSymbol(methodSyntax);
+                        return semanticModel.GetDeclaredSymbol(methodSyntax, ct);
                     }
                 );
 
@@ -641,7 +641,7 @@ namespace MonoDetour.HookGen
                                 methodSymbol!
                                     .DeclaringSyntaxReferences.FirstOrDefault()
                                     ?.GetSyntax()
-                                is not MethodDeclarationSyntax methodSyntax
+                                is not BaseMethodDeclarationSyntax methodSyntax
                             )
                             {
                                 continue;
@@ -672,7 +672,7 @@ namespace MonoDetour.HookGen
                 string,
                 ImmutableArray<(GeneratableMemberModel, GeneratableTypeModel)>
             > memberNameToModel,
-            MethodDeclarationSyntax methodSyntax
+            BaseMethodDeclarationSyntax methodSyntax
         )
         {
             foreach (
