@@ -10,8 +10,8 @@ Change the version number to optimally the newest:
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="MonoDetour.HookGen" Version="0.6.*" PrivateAssets="all" />
-  <PackageReference Include="MonoDetour" Version="0.6.*" />
+  <PackageReference Include="MonoDetour.HookGen" Version="0.7.*" PrivateAssets="all" />
+  <PackageReference Include="MonoDetour" Version="[*,2.0)" /> <!-- Highest version below 2.0 -->
 </ItemGroup>
 ```
 
